@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Macadam - Independent Delivery Earnings</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="static/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#dc3545">
+  <script>
+    window.currencySymbol = "$";
+    window.csrfToken = "";
+  </script>
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <i class="bi bi-car-front-fill me-2"></i>Macadam
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          
+          <li class="nav-item">
+            <a class="nav-link" href="index.html">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="weekly.html">Weekly Log</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="expenses.html">Expenses</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="settings.html">Settings</a>
+          </li>
+          
+        </ul>
+        <div class="d-flex align-items-center">
+          
+          
+          
+          
+          <button id="themeToggle" type="button" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-circle-half"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mt-4">
+    
+
+    
+<style>
+    :root {
+        --primary-color: #4f46e5;
+        --secondary-color: #64748b;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --bg-color: #f3f4f6;
+        --card-bg: #ffffff;
+        --border-color: #e2e8f0;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+    }
+
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-main);
+    }
+
+    /* Clean Card Style */
+    .card {
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        background: var(--card-bg);
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        height: 100%;
+    }
+
+    .card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07);
+    }
+
+    .card-header {
+        background-color: transparent;
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.25rem 1.5rem;
+        font-weight: 600;
+        color: var(--text-main);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* KPI Cards */
+    .kpi-card .kpi-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .kpi-card .kpi-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 0.25rem;
+    }
+
+    .kpi-card .kpi-trend {
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .kpi-trend.positive {
+        color: var(--success-color);
+    }
+
+    .kpi-trend.negative {
+        color: var(--danger-color);
+    }
+
+    .kpi-trend.neutral {
+        color: var(--secondary-color);
+    }
+
+    .kpi-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .bg-primary-soft {
+        background-color: rgba(79, 70, 229, 0.1);
+        color: var(--primary-color);
+    }
+
+    .bg-success-soft {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: var(--success-color);
+    }
+
+    .bg-warning-soft {
+        background-color: rgba(245, 158, 11, 0.1);
+        color: var(--warning-color);
+    }
+
+    .bg-info-soft {
+        background-color: rgba(6, 182, 212, 0.1);
+        color: #06b6d4;
+    }
+
+    /* Mini Metric Cards */
+    .metric-mini-card {
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        text-align: center;
+    }
+
+    .metric-mini-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    .metric-mini-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-top: 0.25rem;
+    }
+
+    /* Skeleton Loading */
+    .skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 4px;
+        color: transparent !important;
+    }
+
+    @keyframes shimmer {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
+    /* Filter Bar */
+    .filter-bar {
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border-color);
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Table Styling */
+    .table-custom th {
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        background-color: #f8fafc;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .btn-primary:hover {
+        background-color: #4338ca;
+    }
+
+    /* Performance Cards */
+    .performance-card {
+        color: white;
+        border: none;
+    }
+
+    .performance-card.best {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .performance-card.worst {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+</style>
+
+<div class="container-fluid pt-4 px-md-4">
+
+    <!-- Header & Date Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Financial Overview</h1>
+            <p class="text-muted mb-0">Track your delivery performance and earnings.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="" class="btn btn-outline-secondary btn-sm"><i class="bi bi-calendar3"></i> Weekly Log</a>
+            <a href="" class="btn btn-outline-secondary btn-sm"><i class="bi bi-receipt"></i> Expenses</a>
+            <a href="" class="btn btn-outline-primary btn-sm"><i class="bi bi-download"></i>
+                Export</a>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <form id="filterForm" class="row g-3 align-items-center">
+            <div class="col-md-auto">
+                <span class="text-muted small fw-bold text-uppercase me-2">Date Range:</span>
+            </div>
+            <div class="col-6 col-md-auto">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light"><i class="bi bi-calendar"></i></span>
+                    <input type="date" class="form-control" id="startDate" name="start">
+                </div>
+            </div>
+            <div class="col-6 col-md-auto">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light"><i class="bi bi-arrow-right"></i></span>
+                    <input type="date" class="form-control" id="endDate" name="end">
+                </div>
+            </div>
+            <div class="col-md-auto ms-auto">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary preset" data-range="this_week">Week</button>
+                    <button type="button" class="btn btn-outline-secondary preset"
+                        data-range="this_month">Month</button>
+                    <button type="button" class="btn btn-outline-secondary preset" data-range="ytd">YTD</button>
+                    <button type="button" class="btn btn-outline-secondary preset" data-range="all">All</button>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm ms-2"><i class="bi bi-funnel-fill"></i>
+                    Apply</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- KPI Section -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card kpi-card">
+                <div class="card-body d-flex justify-content-between">
+                    <div>
+                        <div class="kpi-label">Total Earnings</div>
+                        <div class="kpi-value"><span id="sumEarnings">0.00</span></div>
+                        <div class="kpi-trend positive" id="earningsTrend">
+                            <i class="bi bi-arrow-up-right"></i> <span></span>
+                        </div>
+                    </div>
+                    <div class="kpi-icon-wrapper bg-primary-soft">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card kpi-card">
+                <div class="card-body d-flex justify-content-between">
+                    <div>
+                        <div class="kpi-label">Net Income</div>
+                        <div class="kpi-value"><span id="netIncome">0.00</span></div>
+                        <div class="kpi-trend positive" id="netTrend">
+                            <i class="bi bi-arrow-up-right"></i> <span></span>
+                        </div>
+                    </div>
+                    <div class="kpi-icon-wrapper bg-success-soft">
+                        <i class="bi bi-piggy-bank"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card kpi-card">
+                <div class="card-body d-flex justify-content-between">
+                    <div>
+                        <div class="kpi-label">Avg Rate / Hr</div>
+                        <div class="kpi-value"><span id="avgRate">0.00</span></div>
+                        <div class="kpi-trend neutral" id="rateTrend">
+                            <i class="bi bi-dash"></i> <span></span>
+                        </div>
+                    </div>
+                    <div class="kpi-icon-wrapper bg-info-soft">
+                        <i class="bi bi-speedometer2"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card kpi-card">
+                <div class="card-body d-flex justify-content-between">
+                    <div>
+                        <div class="kpi-label">Total Hours</div>
+                        <div class="kpi-value"><span id="sumHours">0</span> <span
+                                class="fs-6 text-muted fw-normal">hrs</span></div>
+                        <div class="kpi-trend neutral" id="hoursTrend">
+                            <i class="bi bi-dash"></i> <span></span>
+                        </div>
+                    </div>
+                    <div class="kpi-icon-wrapper bg-warning-soft">
+                        <i class="bi bi-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="metric-mini-card">
+                <div class="metric-mini-label">Deliveries</div>
+                <div class="metric-mini-value" id="totalDeliveries">0</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="metric-mini-card">
+                <div class="metric-mini-label">$/Delivery</div>
+                <div class="metric-mini-value"><span id="avgEarningsPerDelivery">0.00</span></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="metric-mini-card">
+                <div class="metric-mini-label">Tips Total</div>
+                <div class="metric-mini-value text-success"><span id="totalTips">0.00</span></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="metric-mini-card">
+                <div class="metric-mini-label">Expenses</div>
+                <div class="metric-mini-value text-danger"><span id="sumExpenses">0.00</span></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="metric-mini-card">
+                <div class="metric-mini-label">Out of Pocket</div>
+                <div class="metric-mini-value text-danger"><span id="outOfPocket">0.00</span></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="metric-mini-card">
+                <div class="metric-mini-label">Effective $/Hr</div>
+                <div class="metric-mini-value text-primary"><span id="effRate">0.00</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card performance-card best">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="opacity-75 small text-uppercase fw-bold mb-1">Best Performance</div>
+                            <h4 class="mb-0" id="bestWeekLabel">--</h4>
+                            <div class="mt-2 opacity-75"><i class="bi bi-trophy-fill"></i> Highest earnings recorded
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <h2 class="mb-0" id="bestWeek">$0</h2>
+                            <span class="opacity-75">Net Profit</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card performance-card worst">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="opacity-75 small text-uppercase fw-bold mb-1">Needs Improvement</div>
+                            <h4 class="mb-0" id="worstWeekLabel">--</h4>
+                            <div class="mt-2 opacity-75"><i class="bi bi-exclamation-triangle-fill"></i> Lower earnings
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <h2 class="mb-0" id="worstWeek">$0</h2>
+                            <span class="opacity-75">Net Profit</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Charts -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Earnings vs Expenses</h5>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary chart-toggle active"
+                            data-chart="earningsExpenses" data-type="line">Line</button>
+                        <button type="button" class="btn btn-outline-secondary chart-toggle"
+                            data-chart="earningsExpenses" data-type="bar">Bar</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="earningsExpensesChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart-fill me-2"></i>Earnings Breakdown</h5>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <div style="width: 100%; max-width: 280px;">
+                        <canvas id="earningsBreakdownChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart-fill me-2"></i>Weekly Earnings Trend</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="earningsChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-speedometer me-2"></i>Hourly Rate Performance</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="rateChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- More Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Rolling 4-Week Average</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="rollingChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-truck me-2"></i>Deliveries & Efficiency</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="deliveriesChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense & Monthly Charts -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Expenses by Category</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="expenseChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-calendar-month me-2"></i>Monthly Earnings Comparison</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyEarningsChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Breakdown Table -->
+    <div class="card mb-5">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-table me-2"></i>Monthly Breakdown</h5>
+            <div class="btn-group btn-group-sm">
+                <a class="btn btn-outline-secondary" href=""><i class="bi bi-download"></i> Weekly</a>
+                <a class="btn btn-outline-secondary" href=""><i class="bi bi-download"></i>
+                    Expenses</a>
+                <a class="btn btn-outline-secondary" href=""><i class="bi bi-download"></i>
+                    Summary</a>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-custom align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Period</th>
+                        <th>Earnings</th>
+                        <th>Expenses</th>
+                        <th>Out of Pocket</th>
+                        <th>Net</th>
+                        <th>Hours</th>
+                        <th>Efficiency</th>
+                    </tr>
+                </thead>
+                <tbody id="monthlyBody">
+                    <tr>
+                        <td colspan="7" class="text-muted text-center py-4">Loading data...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- YTD Summary -->
+        <div class="card-footer bg-light">
+            <div class="row text-center g-3" id="ytdStats">
+                <div class="col-6 col-md-2">
+                    <div class="small text-muted text-uppercase fw-bold">YTD Earnings</div>
+                    <div class="h5 mb-0"><span data-target="earnings">0.00</span></div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="small text-muted text-uppercase fw-bold">YTD Expenses</div>
+                    <div class="h5 mb-0"><span data-target="expenses">0.00</span></div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="small text-muted text-uppercase fw-bold">Out of Pocket</div>
+                    <div class="h5 mb-0"><span data-target="out">0.00</span></div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="small text-muted text-uppercase fw-bold">YTD Net</div>
+                    <div class="h5 mb-0 text-success"><span data-target="net">0.00</span></div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="small text-muted text-uppercase fw-bold">Avg $/Hr</div>
+                    <div class="h5 mb-0"><span data-target="avg">0.00</span></div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="small text-muted text-uppercase fw-bold">Effective $/Hr</div>
+                    <div class="h5 mb-0 text-primary"><span data-target="eff">0.00</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="static/vault_aggregation.js"></script>
+
+  </main>
+
+  <footer class="container mt-5 py-4 border-top text-center text-muted small">
+    &copy; 2024 Macadam. All rights reserved.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"></script>
+  <script src="static/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+  <script src="static/db.js"></script>
+  <script src="static/script.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('Macadam PWA Engine (SW) registered with scope:', registration.scope);
+          })
+          .catch(error => {
+            console.error('Macadam PWA Engine registration failed:', error);
+          });
+      });
+    }
+  </script>
+</body>
+
+</html>

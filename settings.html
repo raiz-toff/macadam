@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Macadam - Independent Delivery Earnings</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="static/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#dc3545">
+  <script>
+    window.currencySymbol = "$";
+    window.csrfToken = "";
+  </script>
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <i class="bi bi-car-front-fill me-2"></i>Macadam
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          
+          <li class="nav-item">
+            <a class="nav-link" href="index.html">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="weekly.html">Weekly Log</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="expenses.html">Expenses</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="settings.html">Settings</a>
+          </li>
+          
+        </ul>
+        <div class="d-flex align-items-center">
+          
+          
+          
+          
+          <button id="themeToggle" type="button" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-circle-half"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container mt-4">
+    
+
+    
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-safe"></i> Vault Settings</h1>
+    <p class="text-muted mb-0">Manage your offline database and system settings</p>
+</div>
+
+<!-- System Info Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card border-primary h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <i class="bi bi-device-hdd fs-1 text-primary mb-2"></i>
+                <h5 class="card-title">Storage</h5>
+                <p class="text-muted mb-0">IndexedDB (Local-First)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card border-success h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <i class="bi bi-wifi-off fs-1 text-success mb-2"></i>
+                <h5 class="card-title">Offline Status</h5>
+                <p class="text-muted mb-0" id="offlineStatus">Checking...</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card border-info h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <i class="bi bi-cloud-arrow-down fs-1 text-info mb-2"></i>
+                <h5 class="card-title">Data Ownership</h5>
+                <p class="text-muted mb-0">100% Yours (No Cloud)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vault Actions -->
+<div class="row">
+    <!-- EXPORT -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-box-arrow-up"></i> Export Vault (.json)</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Download a raw JSON copy of your entire Private Vault. Keep this safe! Since your data is not stored on a cloud server, this file is your only backup.</p>
+                <ul class="list-unstyled">
+                    <li><i class="bi bi-check-circle text-success"></i> Includes all Weekly Earnings</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Includes all Expenses & Categories</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Highly portable standard JSON</li>
+                </ul>
+            </div>
+            <div class="card-footer bg-transparent border-0 pb-3">
+                <button class="btn btn-primary w-100" id="btnExportVault">
+                    <i class="bi bi-download"></i> Generate & Download Backup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- IMPORT -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-box-arrow-in-down"></i> Import Vault</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted"><strong>Warning:</strong> Uploading a backup will merge or overwrite existing data in your current browser.</p>
+                <div class="alert alert-warning py-2 mb-3">
+                    <i class="bi bi-exclamation-triangle"></i> Ensure you are uploading a valid Macadam JSON backup.
+                </div>
+                
+                <div class="mb-3">
+                    <label for="importFile" class="form-label fw-bold">Select Backup File (.json)</label>
+                    <input type="file" class="form-control" id="importFile" accept=".json">
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pb-3">
+                <button class="btn btn-danger w-100" id="btnImportVault" disabled>
+                    <i class="bi bi-upload"></i> Restore Vault Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="static/vault_backup.js?v=2"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const statusEl = document.getElementById('offlineStatus');
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            statusEl.textContent = "PWA Engine Active (Ready)";
+            statusEl.className = "text-success mb-0 fw-bold";
+        } else {
+            statusEl.textContent = "PWA Engine Inactive";
+            statusEl.className = "text-danger mb-0";
+        }
+    });
+</script>
+
+  </main>
+
+  <footer class="container mt-5 py-4 border-top text-center text-muted small">
+    &copy; 2024 Macadam. All rights reserved.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"></script>
+  <script src="static/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+  <script src="static/db.js"></script>
+  <script src="static/script.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('Macadam PWA Engine (SW) registered with scope:', registration.scope);
+          })
+          .catch(error => {
+            console.error('Macadam PWA Engine registration failed:', error);
+          });
+      });
+    }
+  </script>
+</body>
+
+</html>

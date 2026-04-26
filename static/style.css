@@ -1,0 +1,217 @@
+:root {
+    --bs-body-bg: #f5f7fb;
+    --bs-body-color: #1f2733;
+    --bs-tertiary-bg: #ffffff;
+    --bs-border-color: #e5e7eb;
+    --chart-line-color-1: #2458e0;
+    --chart-line-color-2: #16a34a;
+    --chart-line-color-3: #a855f7;
+    --chart-doughnut-colors: #2563eb, #16a34a, #f97316, #a855f7, #eab308, #f43f5e, #0ea5e9;
+}
+
+[data-bs-theme="dark"] {
+    --bs-body-bg: #0f172a;
+    --bs-body-color: #e5e7eb;
+    --bs-tertiary-bg: #111827;
+    --bs-border-color: #1f2937;
+    --bs-table-striped-bg: #1f2937;
+    --bs-table-striped-color: #e5e7eb;
+    --chart-line-color-1: #60a5fa;
+    --chart-line-color-2: #4ade80;
+    --chart-line-color-3: #c084fc;
+    --chart-doughnut-colors: #3b82f6, #4ade80, #fb923c, #c084fc, #facc15, #f87171, #38bdf8;
+}
+
+.card {
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
+}
+
+[data-bs-theme="dark"] .card {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.chart-card {
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.chart-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+/* KPI Cards */
+.kpi-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-width: 2px !important;
+    height: 100%;
+}
+
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(17, 24, 39, 0.15) !important;
+}
+
+[data-bs-theme="dark"] .kpi-card:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+.kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+}
+
+.kpi-card h3 {
+    font-weight: 700;
+    font-size: 1.75rem;
+}
+
+.kpi-card h6 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* Metric Cards */
+.metric-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    height: 100%;
+    border: 1px solid var(--bs-border-color);
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12) !important;
+}
+
+[data-bs-theme="dark"] .metric-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+.metric-card h4 {
+    font-weight: 700;
+    color: var(--bs-body-color);
+}
+
+.metric-card h6 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* Chart Containers */
+.chart-container {
+    border: 1px solid var(--bs-border-color);
+    transition: box-shadow 0.2s;
+}
+
+.chart-container:hover {
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12) !important;
+}
+
+[data-bs-theme="dark"] .chart-container:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+.chart-container .card-header {
+    background: var(--bs-tertiary-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 1rem 1.25rem;
+}
+
+.chart-container .card-header h5 {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.chart-toggle.active {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+
+/* Trend Indicators */
+.trend-up {
+    color: #16a34a;
+}
+
+.trend-down {
+    color: #dc2626;
+}
+
+.trend-neutral {
+    color: #6b7280;
+}
+
+/* Flash Messages */
+.flash-area {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1050;
+    max-width: 400px;
+}
+
+.flash-area .alert {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .kpi-card h3 {
+        font-size: 1.5rem;
+    }
+    
+    .metric-card h4 {
+        font-size: 1.25rem;
+    }
+    
+    .chart-container {
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* Loading state */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Table enhancements */
+.table thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--bs-border-color);
+}
+
+.table tbody tr {
+    transition: background-color 0.15s;
+}
+
+.table tbody tr:hover {
+    background-color: var(--bs-table-hover-bg);
+}
