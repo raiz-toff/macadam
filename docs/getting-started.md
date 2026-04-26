@@ -1,47 +1,51 @@
-# Getting Started with Macadam
+# Getting Started
 
-Macadam is a serverless, offline-first financial tracker. There is no backend to install and no database to configure—everything runs directly in your browser.
+Macadam is a serverless, offline-first financial tracker.
+There is no backend to install and no database to configure.
+Everything runs in the browser.
 
-## 🚀 Quick Start
+## Quick Start
 
-1. **Clone the Repository**:
+1. Clone the repository:
    ```bash
    git clone https://github.com/raiz-toff/macadam.git
    cd macadam
    ```
 
-2. **Open the App**:
-   Simply open `index.html` in any modern web browser (Chrome, Firefox, Safari, or Edge).
-   
-   *Tip: For the best experience (including PWA installation), serve the files using a simple local server.*
+2. Serve the files over HTTP (required for service worker registration):
    ```bash
-   # Using Python's built-in server (optional)
    python3 -m http.server 8000
    ```
 
-3. **Install as an App**:
-   Since Macadam is a Progressive Web App (PWA), you can install it on your device:
-   - **Desktop**: Click the "Install" icon in the browser address bar.
-   - **Mobile**: Use "Add to Home Screen" from your browser's share/settings menu.
+3. Open `http://localhost:8000` in a modern browser.
 
-## 🔒 Security & Data
+That is it. The IndexedDB database is created automatically on first load
+with default expense categories and settings.
 
-- **The Vault**: All your data is stored in a local "Vault" (IndexedDB) on your device. It never leaves your machine.
-- **PIN Protection**: On your first visit, you will be prompted to set a local PIN to secure your data.
-- **Backups**: We strongly recommend using the **Download Backup** feature in the Settings page regularly. This saves your data as a JSON file which you can restore on any other device.
+## Installing as a PWA
 
-## 📊 Using the App
+Because Macadam includes a `manifest.json` and a service worker, modern
+browsers will offer to install it as a standalone app:
 
-1. **Dashboard**: Your financial overview, including earnings charts and expense summaries.
-2. **Weekly Log**: Enter your platform earnings (DoorDash, UberEats, etc.) and tips.
-3. **Expenses**: Track fuel, maintenance, and business costs.
-4. **Settings**: Manage your vault, export backups, or clear local data.
+- **Desktop (Chrome/Edge)**: Click the install icon in the address bar.
+- **Android (Chrome)**: Tap the browser menu, then "Add to Home Screen".
+- **iOS (Safari)**: Tap the share button, then "Add to Home Screen".
 
-## 🛠️ Development
+Once installed, the app opens in its own window without a browser address bar
+and works fully offline.
 
-If you want to modify Macadam:
-- Core logic is in `static/script.js` and `static/db.js`.
-- Styling is handled in `static/style.css`.
-- Service worker logic is in `sw.js`.
+## Pages
 
-No build step is required—just save your changes and refresh the browser!
+| Page           | URL              | Purpose                                          |
+|----------------|------------------|--------------------------------------------------|
+| Dashboard      | `index.html`     | KPIs, charts, monthly breakdown, date filtering  |
+| Weekly Log     | `weekly.html`    | Add/edit/delete weekly earnings records           |
+| Expenses       | `expenses.html`  | Add/edit/delete expenses, category management     |
+| Settings       | `settings.html`  | Vault status, backup export, backup restore       |
+
+## First Things to Do
+
+1. Go to **Weekly Log** and add your first week of earnings.
+2. Go to **Expenses** and log any business costs.
+3. Return to the **Dashboard** to see your data reflected in the charts and KPIs.
+4. Go to **Settings** and export a backup. Store the JSON file somewhere safe.
