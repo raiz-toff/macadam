@@ -13,9 +13,6 @@
     --bs-body-bg: #0f172a;
     --bs-body-color: #e5e7eb;
     --bs-tertiary-bg: #111827;
-    --bs-border-color: #1f2937;
-    --bs-table-striped-bg: #1f2937;
-    --bs-table-striped-color: #e5e7eb;
     --chart-line-color-1: #60a5fa;
     --chart-line-color-2: #4ade80;
     --chart-line-color-3: #c084fc;
@@ -212,6 +209,3 @@
     transition: background-color 0.15s;
 }
 
-.table tbody tr:hover {
-    background-color: var(--bs-table-hover-bg);
-}
