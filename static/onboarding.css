@@ -610,3 +610,217 @@
         justify-content: center;
     }
 }
+
+/* NEW ONBOARDING FEATURES STYLES */
+
+/* Validation */
+.wizard-form-group input:invalid {
+    border-color: #f43f5e;
+}
+.wizard-form-group.error input {
+    border-color: #f43f5e;
+    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.2);
+}
+.error-msg {
+    color: #f43f5e;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    display: none;
+}
+.wizard-form-group.error .error-msg {
+    display: block;
+}
+
+/* Tooltips */
+.help-tooltip {
+    display: inline-block;
+    margin-left: 0.35rem;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: help;
+    position: relative;
+}
+.help-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: #fff;
+    padding: 0.5rem;
+    border-radius: 0.4rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 10;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+/* Avatars */
+.avatar-grid {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    justify-content: center;
+}
+.avatar-option {
+    font-size: 2rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.2s;
+    padding: 0.5rem;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+}
+.avatar-option:hover {
+    opacity: 0.8;
+}
+.avatar-option.selected {
+    opacity: 1;
+    background: rgba(255,255,255,0.2);
+    box-shadow: 0 0 0 2px #f43f5e;
+}
+
+/* Checkboxes & Toggles */
+.wizard-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.wizard-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.08);
+    padding: 0.5rem 1rem;
+    border-radius: 0.6rem;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.15);
+    transition: all 0.2s;
+}
+.wizard-checkbox-label:hover {
+    background: rgba(255,255,255,0.15);
+}
+.wizard-checkbox-label input:checked + span {
+    color: #fff;
+}
+.wizard-checkbox-label input:checked {
+    accent-color: #f43f5e;
+}
+.wizard-checkbox-label.selected {
+    border-color: #f43f5e;
+    background: rgba(244,63,94,0.1);
+}
+
+/* Required Indicator */
+.required-star {
+    color: #f43f5e;
+    margin-left: 0.2rem;
+}
+
+/* Quick-fill Buttons */
+.quick-fill-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.quick-fill-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.4rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.quick-fill-btn:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Confetti */
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #f00;
+    opacity: 0;
+}
+
+/* Input group */
+.input-group {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.6rem;
+    padding-left: 0.75rem;
+}
+.input-group span {
+    color: rgba(255,255,255,0.5);
+    margin-right: 0.25rem;
+}
+.input-group input {
+    border: none;
+    background: transparent;
+    padding: 0.65rem 0.5rem;
+    flex: 1;
+}
+.input-group:focus-within {
+    border-color: #f43f5e;
+    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.2);
+}
+.input-group input:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+
+/* Dashboard Preview */
+.dashboard-preview {
+    width: 100%;
+    height: 120px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 0.6rem;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.5);
+    border: 1px dashed rgba(255,255,255,0.2);
+}
+
+/* Transitions */
+.wizard-step {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Editable category chip */
+.category-chip input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    width: 80px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    outline: none;
+}
+.category-chip input:focus {
+    border-bottom: 1px solid #fff;
+}
+
+/* Color Picker */
+.color-picker {
+    display: flex;
+    gap: 0.5rem;
+}
+.color-swatch {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+.color-swatch.selected {
+    border-color: #fff;
+    box-shadow: 0 0 8px rgba(255,255,255,0.5);
+}

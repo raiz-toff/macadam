@@ -96,6 +96,18 @@
                         <div class="gate-card-action">Load Demo Data <i class="bi bi-arrow-right"></i></div>
                     </div>
 
+                    <!-- CSV Import -->
+                    <div class="gate-card" id="gateCsv" style="display:none;"> <!-- Hidden for now as it requires backend/complex parser -->
+                        <div class="gate-card-icon demo">
+                            <i class="bi bi-file-earmark-spreadsheet"></i>
+                        </div>
+                        <div class="gate-card-title">Import CSV</div>
+                        <div class="gate-card-desc">
+                            Import historical data from Stride, Gridwise, etc.
+                        </div>
+                        <div class="gate-card-action">Upload CSV <i class="bi bi-arrow-right"></i></div>
+                    </div>
+
                     <!-- Start Fresh -->
                     <div class="gate-card" id="gateFresh">
                         <div class="gate-card-icon fresh">
@@ -332,10 +344,15 @@
         const area = gate.querySelector('#wizardArea');
         area.style.display = 'block';
 
-        const defaultCategories = ['Fuel', 'Maintenance', 'Supplies', 'Insurance', 'Phone/Data', 'Taxes/Fees'];
+        const defaultCategoriesGas = ['Fuel', 'Maintenance', 'Supplies', 'Insurance', 'Phone/Data', 'Taxes/Fees'];
+        const defaultCategoriesEV = ['Charging', 'Maintenance', 'Supplies', 'Insurance', 'Phone/Data', 'Taxes/Fees'];
+        const defaultCategoriesBike = ['Bike Maintenance', 'Supplies', 'Phone/Data', 'Taxes/Fees'];
+
         let currentStep = 0;
-        const totalSteps = 5;
-        let wizardCategories = [...defaultCategories];
+        const totalSteps = 8;
+        let wizardCategories = [...defaultCategoriesGas];
+        let selectedPlatforms = ['DoorDash'];
+        let selectedCurrency = '$';
 
         area.innerHTML = `
             <div class="wizard-container">
@@ -350,36 +367,165 @@
                         <div class="wizard-step-title">Welcome to Macadam</div>
                         <div class="wizard-step-desc">
                             Track your delivery earnings, manage expenses, and monitor your
-                            performance — all stored securely on your device. Let's get you set up in under a minute.
+                            performance — all stored securely on your device. Your data <strong style="color:#10b981;">never leaves this device</strong>.
+                        </div>
+                        <div class="wizard-form-group">
+                            <label for="wizName">What should we call you? <span class="required-star">*</span></label>
+                            <input type="text" id="wizName" placeholder="Your name or nickname" required>
+                            <div class="error-msg">Please enter a name.</div>
+                        </div>
+                        <div class="wizard-form-group">
+                            <label>Pick an Avatar (optional)</label>
+                            <div class="avatar-grid" id="wizAvatars">
+                                <span class="avatar-option selected" data-avatar="😎">😎</span>
+                                <span class="avatar-option" data-avatar="🚗">🚗</span>
+                                <span class="avatar-option" data-avatar="🛵">🛵</span>
+                                <span class="avatar-option" data-avatar="🚴">🚴</span>
+                                <span class="avatar-option" data-avatar="⚡">⚡</span>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Step 1: Preferences -->
                     <div class="wizard-step" data-step="1">
                         <div class="wizard-step-icon">⚙️</div>
-                        <div class="wizard-step-title">Your Preferences</div>
-                        <div class="wizard-step-desc">
-                            Customize a few basics. You can change these later in Settings.
-                        </div>
+                        <div class="wizard-step-title">Preferences</div>
                         <div class="wizard-form-group">
-                            <label for="wizCurrency">Currency Symbol</label>
-                            <input type="text" id="wizCurrency" value="$" maxlength="4" placeholder="$">
+                            <label for="wizCurrency">Currency Symbol <span class="required-star">*</span></label>
+                            <input type="text" id="wizCurrency" value="$" maxlength="3" required>
                         </div>
                         <div class="wizard-form-group">
                             <label for="wizTheme">Preferred Theme</label>
                             <select id="wizTheme">
+                                <option value="auto">Auto (System)</option>
                                 <option value="light">Light</option>
                                 <option value="dark" selected>Dark</option>
                             </select>
                         </div>
+                        <div class="wizard-form-group">
+                            <label>Accent Color</label>
+                            <div class="color-picker" id="wizColors">
+                                <div class="color-swatch selected" style="background:#f43f5e;" data-color="rose"></div>
+                                <div class="color-swatch" style="background:#3b82f6;" data-color="blue"></div>
+                                <div class="color-swatch" style="background:#10b981;" data-color="green"></div>
+                                <div class="color-swatch" style="background:#8b5cf6;" data-color="purple"></div>
+                            </div>
+                        </div>
+                        <div class="wizard-form-group">
+                            <label>Reminders</label>
+                            <div class="wizard-checkbox-group">
+                                <label class="wizard-checkbox-label">
+                                    <input type="checkbox" id="wizNotifications" style="display:none;">
+                                    <span>Enable Weekly Logging Reminder</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="wizard-form-group">
+                            <label for="wizWeekStartDay">Week Starts On</label>
+                            <select id="wizWeekStartDay">
+                                <option value="1">Monday (Default)</option>
+                                <option value="0">Sunday</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <!-- Step 2: Categories -->
+                    <!-- Step 2: Work Profile -->
                     <div class="wizard-step" data-step="2">
+                        <div class="wizard-step-icon">🛵</div>
+                        <div class="wizard-step-title">Work Profile</div>
+                        <div class="wizard-form-group">
+                            <label>Primary Platforms</label>
+                            <div class="wizard-checkbox-group" id="wizPlatforms">
+                                <label class="wizard-checkbox-label selected">
+                                    <input type="checkbox" value="DoorDash" checked style="display:none;">
+                                    <span>DoorDash</span>
+                                </label>
+                                <label class="wizard-checkbox-label">
+                                    <input type="checkbox" value="UberEats" style="display:none;">
+                                    <span>UberEats</span>
+                                </label>
+                                <label class="wizard-checkbox-label">
+                                    <input type="checkbox" value="Grubhub" style="display:none;">
+                                    <span>Grubhub</span>
+                                </label>
+                                <label class="wizard-checkbox-label">
+                                    <input type="checkbox" value="Instacart" style="display:none;">
+                                    <span>Instacart</span>
+                                </label>
+                                <label class="wizard-checkbox-label">
+                                    <input type="checkbox" value="Other" style="display:none;">
+                                    <span>Other</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="wizard-form-group">
+                            <label for="wizVehicle">Vehicle Type</label>
+                            <select id="wizVehicle">
+                                <option value="gas">Gas Car</option>
+                                <option value="ev">Electric Vehicle (EV)</option>
+                                <option value="bike">Bicycle / E-Bike</option>
+                                <option value="scooter">Scooter / Motorcycle</option>
+                            </select>
+                        </div>
+                        <div class="wizard-form-group" id="wizMpgGroup">
+                            <label for="wizMpg">Vehicle Efficiency (MPG)</label>
+                            <input type="number" id="wizMpg" min="0" step="1" placeholder="e.g. 25">
+                        </div>
+                        <div class="wizard-form-group">
+                            <label for="wizMileageMethod">Mileage Tracking Method</label>
+                            <select id="wizMileageMethod">
+                                <option value="odometer">Manual (Odometer)</option>
+                                <option value="app">App Estimate</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Goals -->
+                    <div class="wizard-step" data-step="3">
+                        <div class="wizard-step-icon">🎯</div>
+                        <div class="wizard-step-title">Set Your Goals</div>
+                        <div class="wizard-form-group">
+                            <label for="wizGoal">Weekly Earnings Target (optional)</label>
+                            <div class="input-group">
+                                <span class="cur-sym">$</span>
+                                <input type="number" id="wizGoal" min="0" step="10" placeholder="e.g. 500" inputmode="decimal">
+                            </div>
+                        </div>
+                        <div class="wizard-form-group">
+                            <label for="wizTax">Tax Withholding Goal % <span class="help-tooltip" data-tooltip="Percentage of earnings to set aside for taxes">ⓘ</span></label>
+                            <input type="number" id="wizTax" min="0" max="100" placeholder="e.g. 20" value="20" inputmode="decimal">
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Recurring Expenses -->
+                    <div class="wizard-step" data-step="5">
+                        <div class="wizard-step-icon">📅</div>
+                        <div class="wizard-step-title">Fixed Monthly Costs</div>
+                        <div class="wizard-step-desc">
+                            Do you have recurring monthly business expenses? (We'll remind you to log these).
+                        </div>
+                        <div class="wizard-form-group">
+                            <label for="wizInsCost">Auto Insurance</label>
+                            <div class="input-group">
+                                <span class="cur-sym">$</span>
+                                <input type="number" id="wizInsCost" min="0" step="1" placeholder="e.g. 150">
+                            </div>
+                        </div>
+                        <div class="wizard-form-group">
+                            <label for="wizPhoneCost">Phone/Data Bill</label>
+                            <div class="input-group">
+                                <span class="cur-sym">$</span>
+                                <input type="number" id="wizPhoneCost" min="0" step="1" placeholder="e.g. 60">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Categories -->
+                    <div class="wizard-step" data-step="4">
                         <div class="wizard-step-icon">🏷️</div>
                         <div class="wizard-step-title">Expense Categories</div>
                         <div class="wizard-step-desc">
-                            These are the default categories. Remove any you don't need, or add your own.
+                            We've pre-filled some based on your vehicle. Add or remove as needed. Click to edit.
                         </div>
                         <div class="category-chips" id="wizCategoryChips"></div>
                         <div class="add-category-input">
@@ -387,12 +533,12 @@
                         </div>
                     </div>
 
-                    <!-- Step 3: First Week (optional) -->
-                    <div class="wizard-step" data-step="3">
+                    <!-- Step 6: Initial Data -->
+                    <div class="wizard-step" data-step="6">
                         <div class="wizard-step-icon">📊</div>
                         <div class="wizard-step-title">Log Your First Week</div>
                         <div class="wizard-step-desc">
-                            Got your latest delivery stats? Enter them now, or skip and add them later.
+                            Got your latest delivery stats? Enter them now (Optional).
                         </div>
                         <div class="wizard-form-group">
                             <label for="wizWeekStart">Week Start</label>
@@ -403,32 +549,53 @@
                             <input type="date" id="wizWeekEnd">
                         </div>
                         <div class="wizard-form-group">
-                            <label for="wizHours">Hours Worked</label>
-                            <input type="number" id="wizHours" min="0" step="0.5" placeholder="e.g. 32">
+                            <label for="wizHours">Total Hours <span class="help-tooltip" data-tooltip="Total Dash Time (including waiting)">ⓘ</span></label>
+                            <div class="quick-fill-group">
+                                <button class="quick-fill-btn" data-target="wizHours" data-val="10">10h</button>
+                                <button class="quick-fill-btn" data-target="wizHours" data-val="20">20h</button>
+                                <button class="quick-fill-btn" data-target="wizHours" data-val="40">40h</button>
+                            </div>
+                            <input type="number" id="wizHours" min="0" step="0.5" placeholder="e.g. 32" inputmode="decimal">
+                        </div>
+                        <div class="wizard-form-group">
+                            <label for="wizActiveHours">Active Hours <span class="help-tooltip" data-tooltip="Time actively on delivery">ⓘ</span></label>
+                            <input type="number" id="wizActiveHours" min="0" step="0.5" placeholder="e.g. 25" inputmode="decimal">
                         </div>
                         <div class="wizard-form-group">
                             <label for="wizDeliveries">Deliveries</label>
-                            <input type="number" id="wizDeliveries" min="0" placeholder="e.g. 45">
+                            <input type="number" id="wizDeliveries" min="0" placeholder="e.g. 45" inputmode="numeric">
                         </div>
+
+                        <!-- Dynamic Pay Fields Area -->
+                        <div id="wizDynamicPayFields"></div>
+
                         <div class="wizard-form-group">
-                            <label for="wizDDPay">DoorDash Pay ($)</label>
-                            <input type="number" id="wizDDPay" min="0" step="0.01" placeholder="e.g. 350.00">
+                            <label for="wizTips">Tips</label>
+                            <div class="input-group">
+                                <span class="cur-sym">$</span>
+                                <input type="number" id="wizTips" class="wiz-pay-input" min="0" step="0.01" placeholder="e.g. 120.50" inputmode="decimal">
+                            </div>
                         </div>
-                        <div class="wizard-form-group">
-                            <label for="wizTips">Tips ($)</label>
-                            <input type="number" id="wizTips" min="0" step="0.01" placeholder="e.g. 120.50">
+
+                        <div style="margin-top:1rem; font-weight:bold; color:#10b981;">
+                            Total Calc: <span id="wizTotalCalc">$0.00</span>
                         </div>
                     </div>
 
-                    <!-- Step 4: Done! -->
-                    <div class="wizard-step" data-step="4">
-                        <div class="wizard-success-icon"><i class="bi bi-check-lg"></i></div>
-                        <div class="wizard-step-title">You're All Set!</div>
-                        <div class="wizard-step-desc">
-                            Macadam is ready to track your hustle. Start logging your weekly earnings
-                            and keep an eye on your performance.
+                    <!-- Step 7: Done! -->
+                    <div class="wizard-step" data-step="7" style="position:relative; overflow:hidden;">
+                        <canvas id="confettiCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1;"></canvas>
+                        <div class="wizard-success-icon" style="position:relative; z-index:2;"><i class="bi bi-check-lg"></i></div>
+                        <div class="wizard-step-title" style="position:relative; z-index:2;">You're All Set, <span id="wizFinalName"></span>!</div>
+                        <div class="wizard-step-desc" style="position:relative; z-index:2;">
+                            Macadam is ready to track your hustle.
                         </div>
-                        <div class="wizard-quicklinks">
+
+                        <div class="dashboard-preview" style="position:relative; z-index:2;">
+                            [ Dashboard Preview Generating... ]
+                        </div>
+
+                        <div class="wizard-quicklinks" style="position:relative; z-index:2;">
                             <a href="index.html" class="wizard-quicklink"><i class="bi bi-speedometer2"></i> Dashboard</a>
                             <a href="weekly.html" class="wizard-quicklink"><i class="bi bi-calendar-week"></i> Weekly Log</a>
                             <a href="expenses.html" class="wizard-quicklink"><i class="bi bi-receipt"></i> Expenses</a>
@@ -442,7 +609,7 @@
                         <i class="bi bi-arrow-left"></i> Back
                     </button>
                     <button class="wizard-btn wizard-btn-skip" id="wizSkip" style="visibility:hidden;">
-                        Skip
+                        Skip this step
                     </button>
                     <button class="wizard-btn wizard-btn-next" id="wizNext">
                         Next <i class="bi bi-arrow-right"></i>
@@ -453,6 +620,7 @@
 
         renderCategoryChips();
         bindWizardEvents();
+        updateDynamicPayFields();
 
         // ── Wizard internals ────────────────────────────────────
 
@@ -460,7 +628,7 @@
             const container = area.querySelector('#wizCategoryChips');
             container.innerHTML = wizardCategories.map((cat, i) => `
                 <div class="category-chip">
-                    ${cat}
+                    <input type="text" value="${cat}" data-idx="${i}" class="chip-edit">
                     <span class="chip-remove" data-idx="${i}"><i class="bi bi-x"></i></span>
                 </div>
             `).join('');
@@ -471,6 +639,88 @@
                     renderCategoryChips();
                 });
             });
+
+            container.querySelectorAll('.chip-edit').forEach(inp => {
+                inp.addEventListener('change', (e) => {
+                    const idx = parseInt(e.target.dataset.idx);
+                    const val = e.target.value.trim();
+                    if(val && !wizardCategories.includes(val)) {
+                        wizardCategories[idx] = val;
+                    } else {
+                        e.target.value = wizardCategories[idx]; // revert
+                    }
+                });
+            });
+        }
+
+        function updateDynamicPayFields() {
+            const container = area.querySelector('#wizDynamicPayFields');
+            if(!container) return;
+            container.innerHTML = selectedPlatforms.map(plat => `
+                <div class="wizard-form-group">
+                    <label for="wizPay_${plat}">${plat} Pay</label>
+                    <div class="input-group">
+                        <span class="cur-sym">${selectedCurrency}</span>
+                        <input type="number" id="wizPay_${plat}" class="wiz-pay-input" data-platform="${plat}" min="0" step="0.01" placeholder="e.g. 150.00" inputmode="decimal">
+                    </div>
+                </div>
+            `).join('');
+
+            // Rebind total calc
+            area.querySelectorAll('.wiz-pay-input').forEach(inp => {
+                inp.addEventListener('input', calculateTotal);
+                inp.addEventListener('blur', formatCurrencyInput);
+            });
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            area.querySelectorAll('.wiz-pay-input').forEach(inp => {
+                total += parseFloat(inp.value || 0);
+            });
+            area.querySelector('#wizTotalCalc').innerText = selectedCurrency + total.toFixed(2);
+        }
+
+        function formatCurrencyInput(e) {
+            if(e.target.value) {
+                e.target.value = parseFloat(e.target.value).toFixed(2);
+            }
+        }
+
+        function triggerConfetti() {
+            const canvas = document.getElementById('confettiCanvas');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            const particles = [];
+            for(let i=0; i<50; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10 - 5,
+                    color: ['#f43f5e', '#10b981', '#3b82f6', '#f59e0b'][Math.floor(Math.random()*4)],
+                    size: Math.random() * 5 + 5
+                });
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let active = false;
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.2; // gravity
+                    if(p.y < canvas.height) active = true;
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                });
+                if(active) requestAnimationFrame(animate);
+            }
+            animate();
         }
 
         function bindWizardEvents() {
@@ -479,9 +729,112 @@
             const btnSkip = area.querySelector('#wizSkip');
             const newCatInput = area.querySelector('#wizNewCategory');
 
-            btnNext.addEventListener('click', () => goToStep(currentStep + 1));
+            btnNext.addEventListener('click', () => {
+                // Validation before next
+                if (currentStep === 0) {
+                    const name = area.querySelector('#wizName').value.trim();
+                    if(!name) {
+                        area.querySelector('#wizName').closest('.wizard-form-group').classList.add('error');
+                        return;
+                    }
+                    area.querySelector('#wizName').closest('.wizard-form-group').classList.remove('error');
+                }
+
+                if (currentStep === 1) {
+                     const cur = area.querySelector('#wizCurrency').value.trim();
+                     if(cur) {
+                         selectedCurrency = cur;
+                         area.querySelectorAll('.cur-sym').forEach(el => el.innerText = cur);
+                     }
+                }
+
+                if (currentStep === totalSteps - 1) { // They clicked finish
+                    window.onbeforeunload = null;
+                    finishWizard();
+                    return;
+                }
+
+                goToStep(currentStep + 1);
+            });
+
             btnBack.addEventListener('click', () => goToStep(currentStep - 1));
             btnSkip.addEventListener('click', () => goToStep(currentStep + 1));
+
+            // Prevent exit
+            window.onbeforeunload = function() {
+                if (currentStep > 0 && currentStep < totalSteps -1) {
+                    return "Are you sure you want to leave setup?";
+                }
+            };
+
+
+            // Notifications toggle
+            const notifCheck = area.querySelector('#wizNotifications');
+            if(notifCheck) {
+                notifCheck.addEventListener('change', (e) => {
+                    if(e.target.checked) {
+                        e.target.parentElement.classList.add('selected');
+                        if (Notification.permission !== 'granted') {
+                            Notification.requestPermission();
+                        }
+                    } else {
+                        e.target.parentElement.classList.remove('selected');
+                    }
+                });
+            }
+
+            // MPG Visibility
+            area.querySelector('#wizVehicle').addEventListener('change', (e) => {
+                const mpgGroup = area.querySelector('#wizMpgGroup');
+                if(e.target.value === 'bike') {
+                    mpgGroup.style.display = 'none';
+                } else {
+                    mpgGroup.style.display = 'block';
+                }
+            });
+
+            // Avatar selection
+            area.querySelectorAll('.avatar-option').forEach(av => {
+                av.addEventListener('click', () => {
+                    area.querySelectorAll('.avatar-option').forEach(a => a.classList.remove('selected'));
+                    av.classList.add('selected');
+                });
+            });
+
+            // Color selection
+            area.querySelectorAll('.color-swatch').forEach(sw => {
+                sw.addEventListener('click', () => {
+                    area.querySelectorAll('.color-swatch').forEach(a => a.classList.remove('selected'));
+                    sw.classList.add('selected');
+                });
+            });
+
+            // Platform selection
+            area.querySelectorAll('#wizPlatforms .wizard-checkbox-label input').forEach(chk => {
+                chk.addEventListener('change', (e) => {
+                    if(e.target.checked) {
+                        e.target.parentElement.classList.add('selected');
+                        if(!selectedPlatforms.includes(e.target.value)) selectedPlatforms.push(e.target.value);
+                    } else {
+                        // Keep at least one
+                        if(selectedPlatforms.length === 1) {
+                            e.target.checked = true;
+                            return;
+                        }
+                        e.target.parentElement.classList.remove('selected');
+                        selectedPlatforms = selectedPlatforms.filter(p => p !== e.target.value);
+                    }
+                    updateDynamicPayFields();
+                });
+            });
+
+            // Vehicle type change -> update categories
+            area.querySelector('#wizVehicle').addEventListener('change', (e) => {
+                if(e.target.value === 'ev') wizardCategories = [...defaultCategoriesEV];
+                else if(e.target.value === 'bike') wizardCategories = [...defaultCategoriesBike];
+                else wizardCategories = [...defaultCategoriesGas];
+                renderCategoryChips();
+            });
 
             // Add category on Enter
             newCatInput.addEventListener('keydown', (e) => {
@@ -496,27 +849,55 @@
                 }
             });
 
-            // Set default dates for the first week form
-            const today = new Date();
-            const day = today.getDay() || 7;
-            const startOfWeek = new Date(today);
-            startOfWeek.setDate(today.getDate() - (day - 1));
-            const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(startOfWeek.getDate() + 6);
-
+            // Date sync
             const wizStart = area.querySelector('#wizWeekStart');
             const wizEnd = area.querySelector('#wizWeekEnd');
-            if (wizStart) wizStart.value = fmt(startOfWeek);
-            if (wizEnd) wizEnd.value = fmt(endOfWeek);
+            wizStart.addEventListener('change', (e) => {
+                if(e.target.value) {
+                    const d = new Date(e.target.value + "T12:00:00Z");
+                    d.setDate(d.getDate() + 6);
+                    wizEnd.value = d.toISOString().split('T')[0];
+                }
+            });
+
+            // Validate end date
+            wizEnd.addEventListener('change', (e) => {
+                 if(wizStart.value && e.target.value < wizStart.value) {
+                     e.target.value = wizStart.value;
+                 }
+            });
+
+            // Quick fill hours
+            area.querySelectorAll('.quick-fill-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const target = area.querySelector('#' + btn.dataset.target);
+                    target.value = btn.dataset.val;
+                });
+            });
+
+            // Set default dates for the first week form based on preference
+            const updateDefaultDates = () => {
+                const today = new Date();
+                const startDayPref = parseInt(area.querySelector('#wizWeekStartDay').value || '1'); // 1=Mon, 0=Sun
+                const day = today.getDay();
+
+                const diff = (day < startDayPref ? 7 : 0) + day - startDayPref;
+
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() - diff);
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+                wizStart.value = startOfWeek.toISOString().split('T')[0];
+                wizEnd.value = endOfWeek.toISOString().split('T')[0];
+            };
+            updateDefaultDates();
+            area.querySelector('#wizWeekStartDay').addEventListener('change', updateDefaultDates);
         }
 
         function goToStep(step) {
             if (step < 0 || step >= totalSteps) return;
-
-            // If advancing past the final step → finish
-            if (step === totalSteps - 1) {
-                finishWizard();
-            }
 
             currentStep = step;
 
@@ -539,29 +920,76 @@
 
             btnBack.style.visibility = currentStep === 0 ? 'hidden' : 'visible';
 
-            // Show skip only on step 3 (first week)
-            btnSkip.style.visibility = currentStep === 3 ? 'visible' : 'hidden';
+            // Show skip only on step 5 (first week data)
+            btnSkip.style.visibility = currentStep === 6 ? 'visible' : 'hidden';
 
             if (currentStep === totalSteps - 1) {
-                // Last step — hide nav
-                area.querySelector('#wizardNav').style.display = 'none';
+                // Last step — hide nav initially, show finish
+                area.querySelector('#wizardNav').style.display = 'flex';
+                btnSkip.style.visibility = 'hidden';
+                btnBack.style.visibility = 'hidden';
+                btnNext.innerHTML = 'Go to Dashboard <i class="bi bi-rocket-takeoff"></i>';
+
+                const name = area.querySelector('#wizName').value.trim();
+                area.querySelector('#wizFinalName').innerText = name;
+                triggerConfetti();
+
+                // Gen preview
+                const goal = area.querySelector('#wizGoal').value || '500';
+                area.querySelector('.dashboard-preview').innerHTML = `
+                   <div style="text-align:center;">
+                      <div style="font-size:1.2rem; color:#fff;">Welcome, ${name}!</div>
+                      <div style="color:#10b981; font-weight:bold; margin-top:0.5rem;">Target: ${selectedCurrency}${goal}/week</div>
+                      <div>${selectedPlatforms.join(', ')} Driver</div>
+                   </div>
+                `;
             } else {
                 area.querySelector('#wizardNav').style.display = 'flex';
-                btnNext.innerHTML = currentStep === totalSteps - 2
-                    ? 'Finish <i class="bi bi-check-lg"></i>'
-                    : 'Next <i class="bi bi-arrow-right"></i>';
+                btnNext.innerHTML = 'Next <i class="bi bi-arrow-right"></i>';
             }
         }
-
-        async function finishWizard() {
+async function finishWizard() {
             try {
                 // Save preferences
                 const currency = area.querySelector('#wizCurrency').value.trim() || '$';
                 const theme = area.querySelector('#wizTheme').value;
+                const name = area.querySelector('#wizName').value.trim();
+                const avatarEl = area.querySelector('.avatar-option.selected');
+                const avatar = avatarEl ? avatarEl.dataset.avatar : '😎';
+                const colorEl = area.querySelector('.color-swatch.selected');
+                const accentColor = colorEl ? colorEl.dataset.color : 'rose';
+                const weekStartDay = area.querySelector('#wizWeekStartDay').value;
 
-                await window.db.settings.put({ key: 'currency_symbol', value: currency });
+                const vehicle = area.querySelector('#wizVehicle').value;
+                const goal = parseFloat(area.querySelector('#wizGoal').value) || 0;
+                const tax = parseFloat(area.querySelector('#wizTax').value) || 20;
+
+                const notifsEnabled = area.querySelector('#wizNotifications')?.checked || false;
+                const mpg = parseFloat(area.querySelector('#wizMpg')?.value) || 0;
+                const mileageMethod = area.querySelector('#wizMileageMethod')?.value || 'odometer';
+
+                const insCost = parseFloat(area.querySelector('#wizInsCost')?.value) || 0;
+                const phoneCost = parseFloat(area.querySelector('#wizPhoneCost')?.value) || 0;
+
+                await window.db.settings.bulkPut([
+                    { key: 'currency_symbol', value: currency },
+                    { key: 'driver_name', value: name },
+                    { key: 'driver_avatar', value: avatar },
+                    { key: 'accent_color', value: accentColor },
+                    { key: 'week_start_day', value: weekStartDay },
+                    { key: 'vehicle_type', value: vehicle },
+                    { key: 'weekly_goal', value: goal },
+                    { key: 'tax_rate', value: tax },
+                    { key: 'notifications_enabled', value: notifsEnabled },
+                    { key: 'vehicle_mpg', value: mpg },
+                    { key: 'mileage_tracking_method', value: mileageMethod },
+                    { key: 'recurring_insurance', value: insCost },
+                    { key: 'recurring_phone', value: phoneCost },
+                    { key: 'badge_first_setup', value: true },
+                    { key: 'primary_platforms', value: selectedPlatforms }
+                ]);
+
                 window.currencySymbol = currency;
-
                 document.documentElement.setAttribute('data-bs-theme', theme);
                 localStorage.setItem('theme', theme);
 
@@ -569,33 +997,39 @@
                 await window.db.expense_categories.clear();
                 if (wizardCategories.length > 0) {
                     await window.db.expense_categories.bulkAdd(
-                        wizardCategories.map(name => ({ name }))
+                        wizardCategories.map(c => ({ name: c }))
                     );
                 }
 
                 // Save first week if filled out
                 const wizHours = area.querySelector('#wizHours');
-                const wizDDPay = area.querySelector('#wizDDPay');
                 const startDate = area.querySelector('#wizWeekStart').value;
                 const endDate = area.querySelector('#wizWeekEnd').value;
 
                 if (wizHours.value && parseFloat(wizHours.value) > 0 && startDate && endDate) {
+                    // Sum up platforms
+                    let totalPlatformPay = 0;
+                    area.querySelectorAll('.wiz-pay-input').forEach(inp => {
+                        if(inp.id !== 'wizTips') totalPlatformPay += parseFloat(inp.value || 0);
+                    });
+
                     await window.db.weekly_earnings.add({
                         week_no: 1,
                         start_date: startDate,
                         end_date: endDate,
                         hours_worked: parseFloat(wizHours.value) || 0,
-                        active_hours: 0,
+                        active_hours: parseFloat(area.querySelector('#wizActiveHours').value) || 0,
                         deliveries: parseInt(area.querySelector('#wizDeliveries').value) || 0,
-                        doordash_pay: parseFloat(wizDDPay.value) || 0,
+                        doordash_pay: totalPlatformPay, // Store total base pay here for backwards compat
                         tips: parseFloat(area.querySelector('#wizTips').value) || 0,
                         other_pay: 0,
                         paid_out_of_pocket: 0,
-                        notes: ''
+                        notes: `Platforms: ${selectedPlatforms.join(', ')}`
                     });
                 }
 
                 localStorage.setItem(ONBOARDED_KEY, 'true');
+                dismissGate(gate);
             } catch (err) {
                 console.error('Wizard finish error:', err);
             }
