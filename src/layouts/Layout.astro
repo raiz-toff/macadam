@@ -1,0 +1,173 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import Onboarding from '../components/Onboarding.astro';
+import Modals from '../components/Modals.astro';
+import Toast from '../components/Toast.astro';
+import '../styles/global.css';
+
+interface Props {
+	title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="description" content="Macadam - Independent Delivery Earnings" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+
+		<!-- Bootstrap 5 -->
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+		
+		<ClientRouter />
+	</head>
+	<body>
+		<nav class="navbar navbar-expand-lg border-bottom py-3" style="background: var(--bs-body-bg);">
+			<!-- Demo Banner -->
+			<div id="demo-banner" class="bg-warning text-dark text-center py-1 fw-bold small w-100 d-none" style="position: absolute; top: 0; z-index: 1050;">
+				<i class="bi bi-info-circle-fill me-2"></i> DEMO MODE: Data will be wiped on close. 
+				<button id="btn-exit-demo" class="btn btn-sm btn-dark ms-3 rounded-pill px-3 py-0 fw-bold" style="font-size: 0.7rem;">EXIT DEMO</button>
+			</div>
+			<div class="container-fluid mt-2">
+				<a class="navbar-brand fw-800 d-flex align-items-center gap-2" href="/">
+					<div class="bg-primary p-2 rounded-3 text-white shadow-sm" style="line-height: 1;">
+						<i class="bi bi-safe-fill"></i>
+					</div>
+					<span class="gradient-text">MACADAM</span>
+				</a>
+				<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+					<span class="navbar-toggler-icon"></span>
+				</button>
+				<div class="collapse navbar-collapse" id="navbarNav">
+					<ul class="navbar-nav me-auto ms-lg-4">
+						<li class="nav-item">
+							<a class="nav-link fw-semibold px-3" href="/">Dashboard</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link fw-semibold px-3" href="/weekly">Weekly Log</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link fw-semibold px-3" href="/expenses">Expenses</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link fw-semibold px-3" href="/settings">Settings</a>
+						</li>
+					</ul>
+					<div class="d-flex align-items-center gap-3">
+						<button id="themeToggle" type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-flex align-items-center gap-2 transition-all">
+							<i id="themeIcon" class="bi bi-circle-half"></i>
+							<span id="themeLabel">Mode</span>
+						</button>
+					</div>
+				</div>
+			</div>
+		</nav>
+
+		<main class="container mt-4">
+			<slot />
+		</main>
+
+		<Onboarding />
+		<Modals />
+		<Toast />
+
+		<footer class="container mt-5 py-4 border-top text-center text-muted small">
+			&copy; {new Date().getFullYear()} Macadam. All rights reserved.
+		</footer>
+
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+		<script is:inline>
+			const getTheme = () => {
+				if (typeof localStorage !== 'undefined') {
+					const v2 = localStorage.getItem('macadam_v2_theme');
+					if (v2 && v2 !== 'auto') return v2;
+					const legacy = localStorage.getItem('theme');
+					if (legacy) return legacy;
+				}
+				return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			};
+
+			const setTheme = (theme) => {
+				document.documentElement.setAttribute('data-bs-theme', theme);
+				localStorage.setItem('theme', theme);
+				
+				const icon = document.getElementById('themeIcon');
+				const label = document.getElementById('themeLabel');
+				if (icon) {
+					icon.className = theme === 'dark' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
+				}
+				if (label) {
+					label.textContent = theme === 'dark' ? 'Dark' : 'Light';
+				}
+			};
+
+			// Set initial theme
+			setTheme(getTheme());
+
+			const initThemeToggle = () => {
+				const toggle = document.getElementById('themeToggle');
+				if (toggle) {
+					// Remove old listeners to be safe, although astro:page-load handles it
+					const newToggle = toggle.cloneNode(true);
+					toggle.parentNode.replaceChild(newToggle, toggle);
+					
+					newToggle.addEventListener('click', () => {
+						const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+						const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+						setTheme(newTheme);
+					});
+				}
+			};
+
+			const initDemoLock = () => {
+				const isDemo = sessionStorage.getItem('macadam_demo_mode') === 'true';
+				const banner = document.getElementById('demo-banner');
+				const btnExit = document.getElementById('btn-exit-demo');
+
+				if (isDemo) {
+					banner?.classList.remove('d-none');
+					
+					// Disable all "Add", "Save", "Delete", "Restore", "Wipe" buttons
+					// We find them by text or by being buttons that aren't nav links or the exit button
+					const allButtons = document.querySelectorAll('button:not(#btn-exit-demo):not(#themeToggle):not(.navbar-toggler)');
+					allButtons.forEach(btn => {
+						btn.disabled = true;
+						btn.title = "Not available in Demo Mode";
+						btn.style.opacity = '0.5';
+						btn.style.cursor = 'not-allowed';
+					});
+
+					// Disable inputs
+					const allInputs = document.querySelectorAll('input, select');
+					allInputs.forEach(input => {
+						input.disabled = true;
+						input.style.opacity = '0.5';
+					});
+
+					btnExit?.addEventListener('click', () => {
+						sessionStorage.clear();
+						window.location.href = '/';
+					});
+				}
+			};
+
+			// Set initial theme immediately
+			setTheme(getTheme());
+
+			document.addEventListener('astro:page-load', () => {
+				// Re-set theme on page load just in case
+				setTheme(getTheme());
+				initThemeToggle();
+				initDemoLock();
+			});
+		</script>
+	</body>
+</html>

@@ -1,0 +1,441 @@
+---
+/**
+ * Modals component containing the "Add Week", "Add Expense", and "Custom Confirm" forms.
+ */
+---
+
+<!-- Add Week Modal -->
+<div class="modal fade" id="weekModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-primary text-white border-0 py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus me-2"></i>Log Weekly Earnings</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-body-tertiary">
+                <form id="weekForm">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Platform</label>
+                            <select id="weekPlatformSelect" name="platform_id" class="form-select border-0 shadow-sm" required>
+                                <!-- Populated by script -->
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Week No.</label>
+                            <input type="number" name="week_no" class="form-control border-0 shadow-sm" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Start Date</label>
+                            <input type="date" name="start_date" class="form-control border-0 shadow-sm" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">End Date</label>
+                            <input type="date" name="end_date" class="form-control border-0 shadow-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Total Earnings</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-white shadow-sm">$</span>
+                                <input type="number" step="0.01" name="total_earnings" class="form-control border-0 shadow-sm" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Total Hours</label>
+                            <input type="number" step="0.1" name="total_hours" class="form-control border-0 shadow-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label id="lbl-deliveries" class="form-label small fw-bold text-muted text-uppercase">Deliveries</label>
+                            <input type="number" name="deliveries" class="form-control border-0 shadow-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Active Days</label>
+                            <input type="number" name="active_days" class="form-control border-0 shadow-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Total Miles</label>
+                            <input type="number" step="0.1" name="miles" class="form-control border-0 shadow-sm">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0 bg-body-tertiary">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="btnSaveWeek" class="btn btn-primary rounded-pill px-5 fw-bold">Save Record</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Expense Modal -->
+<div class="modal fade" id="expenseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-danger text-white border-0 py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-receipt-cutoff me-2"></i>New Expense</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-body-tertiary">
+                <form id="expenseForm">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Category</label>
+                            <select id="expenseCategorySelect" name="category_id" class="form-select border-0 shadow-sm" required>
+                                <!-- Categories loaded via JS -->
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-white shadow-sm">$</span>
+                                <input type="number" step="0.01" name="amount" class="form-control border-0 shadow-sm" required>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Date</label>
+                            <input type="date" name="date" class="form-control border-0 shadow-sm" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Platform (Optional)</label>
+                            <select id="expensePlatformSelect" name="platform_id" class="form-select border-0 shadow-sm">
+                                <option value="">Global / All Platforms</option>
+                                <!-- Platforms loaded via JS -->
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Business Use (%)</label>
+                            <input type="number" name="businessPercentage" class="form-control border-0 shadow-sm" value="100">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Receipt Image</label>
+                            <input type="file" id="receiptInput" class="form-control border-0 shadow-sm" accept="image/*">
+                            <input type="hidden" name="receiptImage" id="receiptData">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Description (Optional)</label>
+                            <input type="text" name="description" class="form-control border-0 shadow-sm" placeholder="e.g. Fuel for Monday shift">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0 bg-body-tertiary">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="btnSaveExpense" class="btn btn-danger rounded-pill px-5 fw-bold">Add Expense</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Shift Modal (Phase 3) -->
+<div class="modal fade" id="shiftModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-indigo text-white border-0 py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-stopwatch me-2"></i>Log Work Shift</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-body-tertiary">
+                <form id="shiftForm">
+                    <div class="row g-3">
+                        <!-- Basic Info -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Platform</label>
+                            <select id="shiftPlatformSelect" name="platform_id" class="form-select border-0 shadow-sm" required></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Date</label>
+                            <input type="date" name="date" class="form-control border-0 shadow-sm" required>
+                        </div>
+                        
+                        <!-- Timing -->
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Start Time</label>
+                            <input type="time" name="start_time" class="form-control border-0 shadow-sm" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">End Time</label>
+                            <input type="time" name="end_time" class="form-control border-0 shadow-sm" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Vehicle</label>
+                            <select id="shiftVehicleSelect" name="vehicle_id" class="form-select border-0 shadow-sm"></select>
+                        </div>
+
+                        <hr class="my-3 opacity-10">
+
+                        <!-- Earnings -->
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Gross Earnings</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-white shadow-sm">$</span>
+                                <input type="number" step="0.01" name="gross_earnings" class="form-control border-0 shadow-sm" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Tips</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-white shadow-sm">$</span>
+                                <input type="number" step="0.01" name="tips" class="form-control border-0 shadow-sm">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Bonuses</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-white shadow-sm">$</span>
+                                <input type="number" step="0.01" name="bonus" class="form-control border-0 shadow-sm">
+                            </div>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Total Orders</label>
+                            <input type="number" name="deliveries" class="form-control border-0 shadow-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Distance</label>
+                            <div class="input-group">
+                                <input type="number" step="0.1" name="distance" class="form-control border-0 shadow-sm">
+                                <span class="input-group-text border-0 bg-white shadow-sm unit-label">km</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Active Time (hrs)</label>
+                            <input type="number" step="0.1" name="active_hrs" class="form-control border-0 shadow-sm">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Shift Notes</label>
+                            <textarea name="notes" class="form-control border-0 shadow-sm" rows="2" placeholder="Traffic, cancellations, or specific delivery areas..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0 bg-body-tertiary">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="btnSaveShift" class="btn btn-indigo rounded-pill px-5 fw-bold">Save Shift</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-warning text-dark border-0 py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmation Required</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-body-tertiary">
+                <p id="confirmModalMessage" class="mb-4 fw-medium text-muted">Are you sure you want to proceed?</p>
+                <div id="confirmPromptGroup" class="d-none">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-2">Type "<span id="confirmTargetWord"></span>" to confirm</label>
+                    <input type="text" id="confirmModalInput" class="form-control border-0 shadow-sm" placeholder="">
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0 bg-body-tertiary">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="btnConfirmModalAction" class="btn btn-warning rounded-pill px-5 fw-bold">Proceed</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resume Onboarding Modal -->
+<div class="modal fade" id="resumeModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-primary text-white border-0 py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-arrow-repeat me-2"></i>Welcome Back</h5>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="mb-4 lead">It looks like you were in the middle of setting up your vault.</p>
+                <div class="d-grid gap-3">
+                    <button id="btn-resume-continue" class="btn btn-primary btn-lg py-3 rounded-pill fw-bold">
+                        Continue where I left off <i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                    <button id="btn-resume-reset" class="btn btn-outline-secondary py-2 rounded-pill">
+                        No, start from the beginning
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    import { db } from '../lib/db';
+    // @ts-ignore
+    import { Modal } from 'bootstrap';
+
+    let confirmCallback: (() => void) | null = null;
+    let targetWord = '';
+
+    async function initModals() {
+        // Confirm Dialog Helper
+        (window as any).MacadamConfirm = (options: { message: string, target?: string, onConfirm: () => void }) => {
+            const modalEl = document.getElementById('confirmModal');
+            if (!modalEl) return;
+            const modal = new Modal(modalEl);
+            
+            const msgEl = document.getElementById('confirmModalMessage');
+            const promptGroup = document.getElementById('confirmPromptGroup');
+            const targetEl = document.getElementById('confirmTargetWord');
+            const inputEl = document.getElementById('confirmModalInput') as HTMLInputElement;
+            
+            if (msgEl) msgEl.textContent = options.message;
+            if (options.target) {
+                targetWord = options.target;
+                if (promptGroup) promptGroup.classList.remove('d-none');
+                if (targetEl) targetEl.textContent = targetWord;
+                if (inputEl) {
+                    inputEl.value = '';
+                    inputEl.classList.remove('is-invalid');
+                }
+            } else {
+                targetWord = '';
+                if (promptGroup) promptGroup.classList.add('d-none');
+            }
+            
+            confirmCallback = options.onConfirm;
+            modal.show();
+        };
+
+        document.getElementById('btnConfirmModalAction')?.addEventListener('click', () => {
+            const inputEl = document.getElementById('confirmModalInput') as HTMLInputElement;
+            if (targetWord && inputEl.value !== targetWord) {
+                inputEl.classList.add('is-invalid');
+                return;
+            }
+            
+            if (confirmCallback) confirmCallback();
+            const modalEl = document.getElementById('confirmModal');
+            if (modalEl) {
+                const modal = Modal.getInstance(modalEl);
+                modal?.hide();
+            }
+        });
+
+        // Load Categories
+        const categories = await db.expense_categories.toArray();
+        const catSelect = document.getElementById('expenseCategorySelect');
+        if (catSelect) {
+            catSelect.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        }
+
+        // Terminology (Item 2)
+        const terms = await db.getTerminology();
+        const lblDel = document.getElementById('lbl-deliveries');
+        if (lblDel) lblDel.textContent = (terms.task || 'Delivery') + 's';
+
+        // Platforms (Phase 2)
+        const platforms = await db.platforms.where('active').equals(1).toArray();
+        const weekPlatSelect = document.getElementById('weekPlatformSelect') as HTMLSelectElement;
+        if (weekPlatSelect) {
+            weekPlatSelect.innerHTML = platforms.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        }
+        
+        const shiftPlatSelect = document.getElementById('shiftPlatformSelect') as HTMLSelectElement;
+        if (shiftPlatSelect) {
+            shiftPlatSelect.innerHTML = platforms.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        }
+
+        // Vehicles
+        const vehicles = await db.vehicles.toArray();
+        const shiftVehSelect = document.getElementById('shiftVehicleSelect') as HTMLSelectElement;
+        if (shiftVehSelect) {
+            shiftVehSelect.innerHTML = vehicles.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+        }
+
+        // Save Week
+        document.getElementById('btnSaveWeek')?.addEventListener('click', async () => {
+            const form = document.getElementById('weekForm') as HTMLFormElement;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            try {
+                await db.weekly_earnings.add({
+                    week_no: parseInt(data.week_no as string),
+                    start_date: data.start_date as string,
+                    end_date: data.end_date as string,
+                    total_earnings: parseFloat(data.total_earnings as string),
+                    total_hours: parseFloat(data.total_hours as string),
+                    deliveries: parseInt(data.deliveries as string) || 0,
+                    active_days: parseInt(data.active_days as string) || 0,
+                    miles: parseFloat(data.miles as string) || 0,
+                    tips: 0,
+                    platform_id: data.platform_id as string
+                });
+                window.location.reload();
+            } catch (err) {
+                console.error('Error saving record:', err);
+                if ((window as any).MacadamNotify) (window as any).MacadamNotify.show('Error saving record', 'danger');
+            }
+        });
+
+        // Save Shift (Phase 3)
+        document.getElementById('btnSaveShift')?.addEventListener('click', async () => {
+            const form = document.getElementById('shiftForm') as HTMLFormElement;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            // Calc duration
+            const start = data.start_time as string;
+            const end = data.end_time as string;
+            let duration = 0;
+            if (start && end) {
+                const [sh, sm] = start.split(':').map(Number);
+                const [eh, em] = end.split(':').map(Number);
+                let diff = (eh * 60 + em) - (sh * 60 + sm);
+                if (diff < 0) diff += 1440; // overnight
+                duration = diff / 60;
+            }
+
+            try {
+                await db.shifts.add({
+                    date: data.date as string,
+                    start_time: start,
+                    end_time: end,
+                    duration_hrs: duration,
+                    platform_id: data.platform_id as string,
+                    vehicle_id: parseInt(data.vehicle_id as string) || undefined,
+                    gross_earnings: parseFloat(data.gross_earnings as string) || 0,
+                    tips: parseFloat(data.tips as string) || 0,
+                    bonus: parseFloat(data.bonus as string) || 0,
+                    deliveries: parseInt(data.deliveries as string) || 0,
+                    distance: parseFloat(data.distance as string) || 0,
+                    active_hrs: parseFloat(data.active_hrs as string) || undefined,
+                    notes: data.notes as string,
+                    is_deleted: 0
+                });
+                window.location.reload();
+            } catch (err) {
+                console.error('Error saving shift:', err);
+                if ((window as any).MacadamNotify) (window as any).MacadamNotify.show('Error saving shift', 'danger');
+            }
+        });
+
+        // Save Expense
+        document.getElementById('btnSaveExpense')?.addEventListener('click', async () => {
+            const form = document.getElementById('expenseForm') as HTMLFormElement;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            try {
+                await db.expenses.add({
+                    category_id: parseInt(data.category_id as string),
+                    amount: parseFloat(data.amount as string),
+                    date: data.date as string,
+                    description: data.description as string,
+                    businessPercentage: 100
+                });
+                window.location.reload();
+            } catch (err) {
+                console.error('Error saving expense:', err);
+                if ((window as any).MacadamNotify) (window as any).MacadamNotify.show('Error saving expense', 'danger');
+            }
+        });
+    }
+
+    document.addEventListener('astro:page-load', initModals);
+</script>

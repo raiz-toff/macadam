@@ -1,0 +1,146 @@
+---
+import Layout from '../layouts/Layout.astro';
+import StatsCard from '../components/StatsCard.astro';
+---
+
+<Layout title="Macadam - Expenses">
+    <div id="expenses-root" class="hidden-vault">
+        <div class="d-flex justify-content-between align-items-end pt-3 pb-2 mb-4 border-bottom">
+        <div>
+            <h1 class="h2 fw-800 mb-1"><i class="bi bi-receipt text-danger me-2"></i>Expense Vault</h1>
+            <p class="text-muted mb-0">Track and categorize your business-related costs.</p>
+        </div>
+        <button type="button" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#expenseModal">
+            <i class="bi bi-plus-circle me-2"></i>Add Expense
+        </button>
+    </div>
+
+    <div class="row mb-5 g-3">
+        <div class="col-6 col-md-4">
+            <StatsCard title="Total Burn" valueId="totalExpenses" color="danger" icon="bi-fire" />
+        </div>
+        <div class="col-6 col-md-4">
+            <StatsCard title="Avg / Expense" valueId="avgExpense" color="warning" icon="bi-calculator" />
+        </div>
+        <div class="col-12 col-md-4">
+            <StatsCard title="Total Records" valueId="totalCount" color="info" icon="bi-tag" />
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden mb-5">
+        <div class="card-header bg-body-tertiary py-3 border-bottom">
+            <h5 class="mb-0 fw-bold d-flex align-items-center">
+                <i class="bi bi-table me-2 text-danger"></i>
+                Cost Ledger
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-body-secondary small text-uppercase fw-bold text-muted">
+                    <tr>
+                        <th class="ps-4 py-3">Date</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="expensesTableBody" class="border-top-0">
+                    <tr><td colspan="5" class="text-center py-5 text-muted">
+                        <div class="spinner-border spinner-border-sm text-danger me-2" role="status"></div>
+                        Accessing vault...
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <style>
+        .fw-800 { font-weight: 800; }
+        .bg-body-secondary { background-color: var(--bs-secondary-bg) !important; }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(244, 63, 94, 0.04);
+        }
+
+        .cat-badge {
+            background: var(--bs-secondary-bg);
+            color: var(--bs-body-color);
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .btn-action {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .hidden-vault { opacity: 0; pointer-events: none; }
+    </style>
+
+    <script>
+        import { db } from '../lib/db';
+        
+        async function loadData() {
+            // Check Onboarding
+            const isOnboarded = localStorage.getItem('macadam_onboarded') === 'true' || 
+                               sessionStorage.getItem('macadam_onboarded') === 'true';
+            if (!isOnboarded) return;
+
+            const root = document.getElementById('expenses-root');
+            if (root) root.classList.remove('hidden-vault');
+
+            const expenses = await db.expenses.orderBy('date').reverse().toArray();
+            const categories = await db.expense_categories.toArray();
+            const catMap = new Map(categories.map(c => [c.id, c.name]));
+            
+            const tbody = document.getElementById('expensesTableBody')!;
+            
+            if (expenses.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <i class="bi bi-receipt-cutoff display-4 text-muted d-block mb-3"></i>
+                            <span class="text-muted">No expenses found in your vault.</span>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            expenses.forEach(exp => {
+                const tr = document.createElement('tr');
+                const catName = catMap.get(exp.category_id) || 'Uncategorized';
+                
+                tr.innerHTML = `
+                    <td class="ps-4 text-muted">${exp.date}</td>
+                    <td><span class="cat-badge">${catName}</span></td>
+                    <td class="fw-medium">${exp.description || '<span class="text-muted italic small">No description</span>'}</td>
+                    <td class="fw-bold text-danger">$${exp.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-action btn-outline-danger"><i class="bi bi-trash3"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+            document.getElementById('totalExpenses')!.textContent = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('avgExpense')!.textContent = `$${(total / (expenses.length || 1)).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('totalCount')!.textContent = expenses.length.toString();
+        }
+
+        document.addEventListener('astro:page-load', loadData);
+        loadData();
+    </script>
+    </div>
+</Layout>

@@ -1,0 +1,473 @@
+---
+import Layout from '../layouts/Layout.astro';
+import StatsCard from '../components/StatsCard.astro';
+import PlatformSwitcher from '../components/PlatformSwitcher.astro';
+---
+
+<Layout title="Macadam - Dashboard">
+    <div id="dashboard-content" class="container-fluid pt-4 pb-5 hidden-vault">
+        <!-- Page Header -->
+        <header class="d-flex justify-content-between align-items-center mb-4">
+            <div id="user-greeting-box" class="d-flex align-items-center gap-3">
+                <span id="user-avatar" class="avatar-large">🚗</span>
+                <div>
+                    <h1 class="h4 fw-800 mb-0">Hello, <span id="user-name-display" class="gradient-text">Driver</span></h1>
+                    <p class="text-muted small mb-0" id="driver-status">Your local vault is ready.</p>
+                </div>
+            </div>
+            
+            <div class="d-flex align-items-center gap-3">
+                <!-- Shift Timer (Item 32) -->
+                <div id="shift-timer-display" class="d-none animate__animated animate__fadeIn">
+                    <div class="timer-card d-flex align-items-center gap-3 bg-indigo text-white px-4 py-2 rounded-pill shadow-sm">
+                        <div class="pulse-dot"></div>
+                        <div class="timer-text fw-800" id="active-timer">00:00:00</div>
+                        <button class="btn btn-sm btn-link text-white p-0 fw-bold border-0 text-decoration-none ms-2" id="btnEndShift">END</button>
+                    </div>
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-white btn-sm rounded-circle p-2 shadow-sm border" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4">
+                        <li><a class="dropdown-item py-2 px-4" href="/weekly"><i class="bi bi-calendar-range me-2"></i>History</a></li>
+                        <li><a class="dropdown-item py-2 px-4" href="/expenses"><i class="bi bi-receipt me-2"></i>Expenses</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item py-2 px-4" href="/settings"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <!-- Quick Add FAB (Item 31) -->
+        <div class="fab-container">
+            <button class="btn btn-primary btn-lg rounded-circle shadow-lg fab-btn" id="btnQuickAddShift" title="Start/Log Shift">
+                <i class="bi bi-plus-lg"></i>
+            </button>
+        </div>
+
+        <PlatformSwitcher />
+
+        <!-- Bento Grid -->
+        <div class="bento-grid">
+            <!-- Main Chart Bento -->
+            <div class="bento-item main-chart">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-graph-up text-primary me-2"></i>Earnings Velocity</h5>
+                    <select class="form-select form-select-sm w-auto border-0 bg-body-tertiary rounded-pill px-3">
+                        <option>Last 8 Weeks</option>
+                    </select>
+                </div>
+                <div style="height: 320px;">
+                    <canvas id="mainChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Weekly Goal Bento -->
+            <div class="bento-item goal-tracker">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="icon-mini bg-primary-subtle text-primary">
+                        <i class="bi bi-target"></i>
+                    </div>
+                    <h6 class="text-muted small fw-bold text-uppercase mb-0">Weekly Goal</h6>
+                </div>
+                <div class="d-flex justify-content-between align-items-end mb-2">
+                    <h2 class="fw-800 mb-0" id="currentWeekEarnings">$0</h2>
+                    <span class="text-muted small fw-medium">Target: <span id="weeklyGoalTarget">$0</span></span>
+                </div>
+                <div class="progress rounded-pill mb-3" style="height: 10px; background: var(--bs-secondary-bg);">
+                    <div id="goalProgress" class="progress-bar bg-primary progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+                </div>
+                <p id="goalMessage" class="small text-muted mb-0">Hustling towards your target...</p>
+            </div>
+
+            <!-- Tax Reserve Bento -->
+            <div class="bento-item tax-reserve border-start border-warning border-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-circle bg-warning-subtle text-warning">
+                        <i class="bi bi-piggy-bank-fill"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small fw-bold text-uppercase mb-0">Tax Reserve</h6>
+                        <h3 class="fw-800 mb-0 text-warning" id="taxEstimate">$0.00</h3>
+                    </div>
+                </div>
+                <hr class="my-3 opacity-10">
+                <p class="small text-muted mb-0">Based on <span id="taxRateDisplay" class="fw-bold">0</span>% withholding.</p>
+            </div>
+
+            <!-- Net Estimation Bento -->
+            <div class="bento-item net-estimate border-start border-success border-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-circle bg-success-subtle text-success">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted small fw-bold text-uppercase mb-0">True Net (Est)</h6>
+                        <h3 class="fw-800 mb-0 text-success" id="netEstimate">$0.00</h3>
+                    </div>
+                </div>
+                <hr class="my-3 opacity-10">
+                <p class="small text-muted mb-0">Factoring fuel & maintenance.</p>
+            </div>
+
+            <!-- Stats Bento 1 -->
+            <StatsCard title="Efficiency" valueId="avgRate" color="primary" icon="bi-lightning-charge" unit="/hr" />
+
+            <!-- Stats Bento 2 -->
+            <StatsCard title="Volume" valueId="totalDeliveries" color="indigo" icon="bi-box-seam" unit="del" />
+            <div id="volume-label-container" class="d-none">deliveries</div>
+        </div>
+    </div>
+
+    <style>
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: auto auto;
+            gap: 1.5rem;
+        }
+
+        #dashboard-content.hidden-vault {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .avatar-large {
+            width: 54px;
+            height: 54px;
+            background: var(--bs-secondary-bg);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .main-chart { grid-column: span 3; grid-row: span 1; padding: 2rem; }
+        .goal-tracker { grid-column: span 1; grid-row: span 1; padding: 2rem; }
+        .tax-reserve, .net-estimate { grid-column: span 1; padding: 1.75rem; }
+
+        .icon-circle {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .icon-mini {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .bg-primary-subtle { background: rgba(99, 102, 241, 0.1); }
+        .bg-success-subtle { background: rgba(16, 185, 129, 0.1); }
+        .bg-warning-subtle { background: rgba(245, 158, 11, 0.1); }
+        .text-indigo { color: #6366f1; }
+
+        .btn-white { background: var(--bs-tertiary-bg); color: var(--bs-body-color); }
+        .btn-white:hover { background: var(--bs-secondary-bg); }
+
+        @media (max-width: 1200px) {
+            .bento-grid { grid-template-columns: repeat(2, 1fr); }
+            .main-chart { grid-column: span 2; }
+            .goal-tracker { grid-column: span 1; }
+        }
+
+        @media (max-width: 768px) {
+            .bento-grid { grid-template-columns: 1fr; }
+            .main-chart, .goal-tracker, .tax-reserve, .net-estimate, .mini-stat { grid-column: span 1; }
+        .fab-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1050;
+        }
+
+        .fab-btn {
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .fab-btn:hover {
+            transform: scale(1.15) rotate(90deg);
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #ff4d4d;
+            border-radius: 50%;
+            box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
+        }
+
+        .bg-indigo { background-color: #6366f1; }
+    </style>
+
+    <script>
+        import { generateVaultSummary } from '../lib/aggregation';
+        import { db } from '../lib/db';
+        import Chart from 'chart.js/auto';
+
+        let currentPlatform = 'all';
+
+        async function init() {
+            // Check Onboarding (Local or Session)
+            const isOnboarded = localStorage.getItem('macadam_onboarded') === 'true' || 
+                               sessionStorage.getItem('macadam_onboarded') === 'true';
+            
+            if (!isOnboarded) return;
+            
+            const dashboard = document.getElementById('dashboard-content');
+            if (dashboard) dashboard.classList.remove('hidden-vault');
+
+            // Terminology Engine (Feature 2)
+            const terms = currentPlatform === 'all' 
+                ? await db.getTerminology() 
+                : (await db.platforms.get(currentPlatform))?.terminology || { driver: 'Driver', task: 'Delivery' };
+
+            const summary = await generateVaultSummary(currentPlatform === 'all' ? undefined : currentPlatform);
+            
+            // User Preferences
+            const name = await db.getSetting('macadam_v2_user_name', 'Driver');
+            const avatar = await db.getSetting('macadam_v2_avatar', '🚗');
+            
+            // Per-Platform Goals (Feature 27)
+            let goalKey = 'macadam_v2_goal_weekly';
+            if (currentPlatform !== 'all') {
+                goalKey = `macadam_v2_goal_weekly_${currentPlatform}`;
+            }
+            const goal = parseFloat(await db.getSetting(goalKey, await db.getSetting('macadam_v2_goal_weekly', '0')));
+            
+            // Tax Override (Feature 28)
+            const globalTax = parseFloat(await db.getSetting('macadam_v2_tax_percent', '0'));
+            let taxRate = globalTax;
+            if (currentPlatform !== 'all') {
+                const pTax = await db.getSetting(`macadam_v2_tax_percent_${currentPlatform}`);
+                if (pTax && pTax !== "") taxRate = parseFloat(pTax);
+            }
+            
+            const cur = await db.getSetting('macadam_v2_currency', '$');
+
+            const elName = document.getElementById('user-name-display');
+            const elRole = document.getElementById('user-role-display');
+            const elAvatar = document.getElementById('user-avatar');
+            const elGoalTarget = document.getElementById('weeklyGoalTarget');
+            const elTaxRate = document.getElementById('taxRateDisplay');
+
+            if (elRole) elRole.textContent = terms.driver;
+            
+            // Update Stats Card units (Item 2)
+            const statsTitles = document.querySelectorAll('.mini-stat h6');
+            statsTitles.forEach(t => {
+                const titleText = t.textContent?.trim().toUpperCase();
+                if (titleText === 'VOLUME') {
+                    const unitSpan = t.parentElement?.parentElement?.querySelector('.text-muted.small');
+                    if (unitSpan) unitSpan.textContent = (terms.task || 'delivery') + 's';
+                }
+            });
+
+            if (elName) elName.textContent = name;
+            if (elAvatar) elAvatar.textContent = avatar.length > 5 ? '' : avatar;
+            if (avatar.length > 5 && elAvatar) {
+                elAvatar.innerHTML = `<img src="${avatar}" style="width:100%; height:100%; border-radius:12px; object-fit:cover;">`;
+            }
+            if (elGoalTarget) elGoalTarget.textContent = `${cur}${goal}`;
+            if (elTaxRate) elTaxRate.textContent = taxRate.toString();
+
+            // Calcs
+            const totalEarnings = summary.total_earnings;
+            const taxReserve = totalEarnings * (taxRate / 100);
+            const netEstimate = totalEarnings - (summary.total_expenses + taxReserve);
+
+            const elCurrEarnings = document.getElementById('currentWeekEarnings');
+            const elTaxEst = document.getElementById('taxEstimate');
+            const elNetEst = document.getElementById('netEstimate');
+            const elAvgRate = document.getElementById('avgRate');
+            const elTotalDel = document.getElementById('totalDeliveries');
+
+            if (elCurrEarnings) elCurrEarnings.textContent = `${cur}${totalEarnings.toFixed(0)}`;
+            if (elTaxEst) elTaxEst.textContent = `${cur}${taxReserve.toFixed(2)}`;
+            if (elNetEst) elNetEst.textContent = `${cur}${netEstimate.toFixed(2)}`;
+            if (elAvgRate) elAvgRate.textContent = `${cur}${summary.average_rate.toFixed(2)}`;
+            if (elTotalDel) elTotalDel.textContent = summary.total_deliveries.toString();
+
+            // Progress
+            const elGoalProg = document.getElementById('goalProgress');
+            const elGoalMsg = document.getElementById('goalMessage');
+            if (goal > 0 && elGoalProg) {
+                const progress = Math.min((totalEarnings / goal) * 100, 100);
+                elGoalProg.style.width = `${progress}%`;
+                if (progress >= 100 && elGoalMsg) elGoalMsg.textContent = 'Target reached! Incredible work.';
+            }
+
+            renderChart(summary);
+            handleShiftTimer();
+        }
+
+        function handleShiftTimer() {
+            const timerDisplay = document.getElementById('shift-timer-display');
+            const timerText = document.getElementById('active-timer');
+            const fabBtn = document.getElementById('btnQuickAddShift');
+            const endBtn = document.getElementById('btnEndShift');
+
+            const startTs = localStorage.getItem('macadam_active_shift_start');
+            
+            if (startTs) {
+                // Shift is active
+                timerDisplay?.classList.remove('d-none');
+                if (fabBtn) fabBtn.innerHTML = '<i class="bi bi-stop-fill text-danger"></i>';
+                
+                const update = () => {
+                    const now = Date.now();
+                    const diff = now - parseInt(startTs);
+                    const h = Math.floor(diff / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    const s = Math.floor((diff % 60000) / 1000);
+                    if (timerText) timerText.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                };
+                update();
+                const interval = setInterval(update, 1000);
+                (window as any)._shiftTimerInterval = interval;
+            } else {
+                timerDisplay?.classList.add('d-none');
+                if (fabBtn) fabBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+                if ((window as any)._shiftTimerInterval) clearInterval((window as any)._shiftTimerInterval);
+            }
+
+            fabBtn?.addEventListener('click', () => {
+                const active = localStorage.getItem('macadam_active_shift_start');
+                if (active) {
+                    // Stop it
+                    endShift();
+                } else {
+                    // Start it
+                    localStorage.setItem('macadam_active_shift_start', Date.now().toString());
+                    handleShiftTimer();
+                    if ((window as any).MacadamNotify) (window as any).MacadamNotify.show('Shift started. Hustle on!', 'success');
+                }
+            });
+
+            endBtn?.addEventListener('click', endShift);
+        }
+
+        async function endShift() {
+            const startTs = localStorage.getItem('macadam_active_shift_start');
+            if (!startTs) return;
+
+            const startTime = new Date(parseInt(startTs));
+            const endTime = new Date();
+            
+            // Format for HTML time input (HH:mm)
+            const fmtTime = (d: Date) => d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+            const fmtDate = (d: Date) => d.toISOString().split('T')[0];
+
+            // Clear timer
+            localStorage.removeItem('macadam_active_shift_start');
+            handleShiftTimer();
+
+            // Open Modal
+            // @ts-ignore
+            const modalEl = document.getElementById('shiftModal');
+            if (modalEl) {
+                const form = document.getElementById('shiftForm') as HTMLFormElement;
+                if (form) {
+                    (form.querySelector('[name="date"]') as HTMLInputElement).value = fmtDate(startTime);
+                    (form.querySelector('[name="start_time"]') as HTMLInputElement).value = fmtTime(startTime);
+                    (form.querySelector('[name="end_time"]') as HTMLInputElement).value = fmtTime(endTime);
+                    (form.querySelector('[name="platform_id"]') as HTMLSelectElement).value = currentPlatform === 'all' ? '' : currentPlatform;
+                }
+                // @ts-ignore
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+
+        function renderChart(summary: any) {
+            const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+
+            const canvas = document.getElementById('mainChart') as HTMLCanvasElement;
+            if (canvas) {
+                const existing = Chart.getChart(canvas);
+                if (existing) existing.destroy();
+
+                new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: summary.weekly_data.length > 0 ? summary.weekly_data.map((d: any) => d.date) : ['W1', 'W2', 'W3', 'W4'],
+                        datasets: [{
+                            label: 'Earnings',
+                            data: summary.weekly_data.length > 0 ? summary.weekly_data.map((d: any) => d.earnings) : [0, 0, 0, 0],
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 4,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#6366f1',
+                            pointBorderColor: isDark ? '#1e293b' : '#fff',
+                            pointBorderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { 
+                                grid: { color: gridColor }, 
+                                border: { display: false },
+                                ticks: { color: textColor, font: { family: 'Inter' } }
+                            },
+                            x: { 
+                                grid: { display: false }, 
+                                border: { display: false },
+                                ticks: { color: textColor, font: { family: 'Inter' } }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        document.addEventListener('astro:page-load', init);
+        
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'data-bs-theme') init();
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+
+        window.addEventListener('platformChanged', (e: any) => {
+            currentPlatform = e.detail.platformId;
+            init();
+        });
+
+        init();
+    </script>
+</Layout>

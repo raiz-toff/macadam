@@ -1,0 +1,169 @@
+---
+import Layout from '../layouts/Layout.astro';
+import StatsCard from '../components/StatsCard.astro';
+---
+
+<Layout title="Macadam - Weekly Log">
+    <div id="weekly-root" class="hidden-vault">
+        <div class="d-flex justify-content-between align-items-end pt-3 pb-2 mb-4 border-bottom">
+        <div>
+            <h1 class="h2 fw-800 mb-1"><i class="bi bi-calendar-week text-primary me-2"></i>Weekly Vault</h1>
+            <p class="text-muted mb-0">Review and manage your historical earnings records.</p>
+        </div>
+        <button type="button" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#weekModal">
+            <i class="bi bi-plus-circle me-2"></i>Add Week
+        </button>
+    </div>
+
+    <div class="row mb-5 g-3">
+        <div class="col-6 col-md-3">
+            <StatsCard title="Total Weeks" valueId="totalWeeks" color="primary" icon="bi-collection" />
+        </div>
+        <div class="col-6 col-md-3">
+            <StatsCard title="Total Hours" valueId="totalHours" color="success" icon="bi-clock-history" />
+        </div>
+        <div class="col-6 col-md-3">
+            <StatsCard title="Total Earnings" valueId="totalEarnings" color="indigo" icon="bi-currency-dollar" />
+        </div>
+        <div class="col-6 col-md-3">
+            <StatsCard title="Volume" valueId="totalDeliveries" color="warning" icon="bi-box-seam" unit="del" />
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden mb-5">
+        <div class="card-header bg-body-tertiary py-3 border-bottom">
+            <h5 class="mb-0 fw-bold d-flex align-items-center">
+                <i class="bi bi-table me-2 text-primary"></i>
+                Ledger Data
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-body-secondary small text-uppercase fw-bold text-muted">
+                    <tr>
+                        <th class="ps-4 py-3">Week</th>
+                        <th>Period</th>
+                        <th>Hours</th>
+                        <th>Earnings</th>
+                        <th>Efficiency</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="weeklyTableBody" class="border-top-0">
+                    <tr><td colspan="6" class="text-center py-5 text-muted">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                        Accessing vault...
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <style>
+        .fw-800 { font-weight: 800; }
+        .bg-body-secondary { background-color: var(--bs-secondary-bg) !important; }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(99, 102, 241, 0.04);
+        }
+
+        .date-badge {
+            background: var(--bs-secondary-bg);
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .btn-action {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .hidden-vault { opacity: 0; pointer-events: none; }
+</style>
+
+    <script>
+        import { db } from '../lib/db';
+        
+        async function loadData() {
+            // Check Onboarding
+            const isOnboarded = localStorage.getItem('macadam_onboarded') === 'true' || 
+                               sessionStorage.getItem('macadam_onboarded') === 'true';
+            if (!isOnboarded) return;
+
+            const root = document.getElementById('weekly-root');
+            if (root) root.classList.remove('hidden-vault');
+
+            const weeks = await db.weekly_earnings.orderBy('week_no').reverse().toArray();
+            const tbody = document.getElementById('weeklyTableBody')!;
+            
+            if (weeks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <i class="bi bi-folder-x display-4 text-muted d-block mb-3"></i>
+                            <span class="text-muted">No records found in this vault.</span>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            weeks.forEach(week => {
+                const tr = document.createElement('tr');
+                const earnings = week.total_earnings || 0;
+                const hours = week.total_hours || 1;
+                const efficiency = earnings / hours;
+                
+                tr.innerHTML = `
+                    <td class="ps-4"><strong>#${week.week_no}</strong></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="date-badge">${week.start_date}</span>
+                            <i class="bi bi-arrow-right text-muted small"></i>
+                            <span class="date-badge">${week.end_date}</span>
+                        </div>
+                    </td>
+                    <td><span class="fw-medium">${week.total_hours}</span> <small class="text-muted">hrs</small></td>
+                    <td class="fw-bold text-success">$${earnings.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                    <td>
+                        <span class="text-primary fw-bold">$${efficiency.toFixed(2)}</span>
+                        <small class="text-muted">/hr</small>
+                    </td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-action btn-outline-warning me-1"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-action btn-outline-danger"><i class="bi bi-trash3"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update terminology (Item 2)
+            const terms = await db.getTerminology();
+            const statsTitles = document.querySelectorAll('.mini-stat h6');
+            statsTitles.forEach(t => {
+                const titleText = t.textContent?.trim().toUpperCase();
+                if (titleText === 'VOLUME') {
+                    const unitSpan = t.parentElement?.parentElement?.querySelector('.text-muted.small');
+                    if (unitSpan) unitSpan.textContent = (terms.task || 'delivery') + 's';
+                }
+            });
+
+            // Update stats
+            document.getElementById('totalWeeks')!.textContent = weeks.length.toString();
+            document.getElementById('totalHours')!.textContent = weeks.reduce((s, w) => s + (w.total_hours || 0), 0).toFixed(1);
+            document.getElementById('totalEarnings')!.textContent = `$${weeks.reduce((s, w) => s + (w.total_earnings || 0), 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('totalDeliveries')!.textContent = weeks.reduce((s, w) => s + (w.deliveries || 0), 0).toString();
+        }
+
+        document.addEventListener('astro:page-load', loadData);
+        loadData();
+    </script>
+    </div>
+</Layout>

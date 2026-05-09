@@ -1,0 +1,78 @@
+/* Import Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --bs-body-bg: #f8fafc;
+    --bs-body-color: #0f172a;
+    --bs-tertiary-bg: #ffffff;
+    --bs-border-color: #e2e8f0;
+    --primary-color: #6366f1;
+    --secondary-color: #94a3b8;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #f43f5e;
+}
+
+[data-bs-theme="dark"] {
+    --bs-body-bg: #0f172a;
+    --bs-body-color: #f1f5f9;
+    --bs-tertiary-bg: #1e293b;
+    --bs-border-color: #334155;
+}
+
+/* Smooth Theme Transitions */
+html, body, .card, .bento-item, .navbar, .btn, .custom-input {
+    transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bs-body-bg);
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(244, 63, 94, 0.08) 0px, transparent 50%);
+    color: var(--bs-body-color);
+    min-height: 100vh;
+    letter-spacing: -0.011em;
+}
+
+/* Typography & Visibility */
+.text-muted {
+    color: var(--secondary-color) !important;
+}
+
+[data-bs-theme="dark"] .text-muted {
+    color: #94a3b8 !important; /* Lighter muted text for dark mode */
+}
+
+.fw-800 { font-weight: 800; }
+
+/* Clean Card Style */
+.card, .bento-item {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 1.5rem;
+    background: var(--bs-tertiary-bg);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.card:hover, .bento-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom Utilities */
+.gradient-text {
+    background: linear-gradient(135deg, var(--primary-color), var(--danger-color));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+[data-bs-theme="dark"] .gradient-text {
+    background: linear-gradient(135deg, #a5b4fc, #fb7185);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}

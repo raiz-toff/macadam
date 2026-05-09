@@ -1,0 +1,1212 @@
+<div id="onboarding-root" class="onboarding-overlay d-none">
+    <div class="onboarding-glass-container">
+        <!-- Step 1: The Gate -->
+        <div id="step-gate" class="wizard-step active">
+            <div class="text-center mb-5">
+                <div class="brand-badge mb-3">MACADAM VAULT</div>
+                <h1 class="display-5 fw-800 mb-3 gradient-text">Welcome to the Vault.</h1>
+                <p class="lead text-muted px-4">Your data, your privacy, your hustle. Choose how you'd like to begin.</p>
+            </div>
+
+            <div class="gate-grid">
+                <button class="gate-card group" id="btn-fresh">
+                    <div class="gate-icon-box bg-rose-soft">
+                        <i class="bi bi-rocket-takeoff"></i>
+                    </div>
+                    <div class="gate-card-body">
+                        <h3 class="h5 fw-bold mb-1">New Workspace</h3>
+                        <p class="small text-muted">Guided setup for your delivery business.</p>
+                    </div>
+                    <i class="bi bi-arrow-right ms-auto opacity-50 group-hover:opacity-100"></i>
+                </button>
+
+                <button class="gate-card group" id="btn-restore">
+                    <div class="gate-icon-box bg-emerald-soft">
+                        <i class="bi bi-cloud-upload"></i>
+                    </div>
+                    <div class="gate-card-body">
+                        <h3 class="h5 fw-bold mb-1">Restore Vault</h3>
+                        <p class="small text-muted">Import a .json backup from another device.</p>
+                    </div>
+                    <i class="bi bi-arrow-right ms-auto opacity-50 group-hover:opacity-100"></i>
+                    <input type="file" id="restore-file" class="d-none" accept=".json">
+                </button>
+
+                <button class="gate-card group" id="btn-demo">
+                    <div class="gate-icon-box bg-blue-soft">
+                        <i class="bi bi-play-circle"></i>
+                    </div>
+                    <div class="gate-card-body">
+                        <h3 class="h5 fw-bold mb-1">Explore Demo</h3>
+                        <p class="small text-muted">See sample data for 8 historical weeks.</p>
+                    </div>
+                    <i class="bi bi-arrow-right ms-auto opacity-50 group-hover:opacity-100"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 1.5: Platform Selection -->
+        <div id="step-platforms" class="wizard-step">
+            <div class="wizard-header mb-4">
+                <h2 class="h3 fw-bold">Which platforms do you use?</h2>
+                <p class="text-muted">Select all that apply. We'll tailor the app to your specific terminology.</p>
+            </div>
+            <div class="platform-grid mb-5">
+                <button class="platform-card" data-platform="doordash">
+                    <div class="platform-logo-box bg-doordash">
+                        <i class="bi bi-dash-circle-fill"></i>
+                    </div>
+                    <span>DoorDash</span>
+                    <div class="selection-check"><i class="bi bi-check-circle-fill"></i></div>
+                </button>
+                <button class="platform-card" data-platform="ubereats">
+                    <div class="platform-logo-box bg-ubereats">
+                        <i class="bi bi-u-circle-fill"></i>
+                    </div>
+                    <span>Uber Eats</span>
+                    <div class="selection-check"><i class="bi bi-check-circle-fill"></i></div>
+                </button>
+                <button class="platform-card" data-platform="foodora">
+                    <div class="platform-logo-box bg-foodora">
+                        <i class="bi bi-f-circle-fill"></i>
+                    </div>
+                    <span>Foodora</span>
+                    <div class="selection-check"><i class="bi bi-check-circle-fill"></i></div>
+                </button>
+                <button class="platform-card" data-platform="skip">
+                    <div class="platform-logo-box bg-skip">
+                        <i class="bi bi-s-circle-fill"></i>
+                    </div>
+                    <span>SkipTheDishes</span>
+                    <div class="selection-check"><i class="bi bi-check-circle-fill"></i></div>
+                </button>
+                <button class="platform-card" data-platform="instacart">
+                    <div class="platform-logo-box bg-instacart">
+                        <i class="bi bi-basket-fill"></i>
+                    </div>
+                    <span>Instacart</span>
+                    <div class="selection-check"><i class="bi bi-check-circle-fill"></i></div>
+                </button>
+                <button class="platform-card" data-platform="amazon">
+                    <div class="platform-logo-box bg-amazon">
+                        <i class="bi bi-box-fill"></i>
+                    </div>
+                    <span>Amazon Flex</span>
+                    <div class="selection-check"><i class="bi bi-check-circle-fill"></i></div>
+                </button>
+                <button class="platform-card" data-platform="other">
+                    <div class="platform-logo-box bg-other">
+                        <i class="bi bi-plus-circle-fill"></i>
+                    </div>
+                    <span>Other</span>
+                    <div class="selection-check"><i class="bi bi-check-circle-fill"></i></div>
+                </button>
+            </div>
+            <div class="d-flex gap-3">
+                <button class="btn btn-outline-secondary btn-lg px-4" data-back="gate">Back</button>
+                <button class="btn btn-primary btn-lg flex-grow-1 py-3" id="btn-next-to-identity" disabled>Continue <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 2: Identity & Preferences -->
+        <div id="step-identity" class="wizard-step">
+            <div class="wizard-header mb-4">
+                <h2 class="h3 fw-bold">Who's driving today?</h2>
+                <p class="text-muted">Personalize your workspace and regional settings.</p>
+            </div>
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold text-muted small uppercase">Your Name</label>
+                    <input type="text" id="user-name" class="form-control form-control-lg custom-input" placeholder="e.g. Alex">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-muted small uppercase">Region</label>
+                    <select id="user-region" class="form-select form-control-lg custom-input">
+                        <option value="CA">Canada</option>
+                        <option value="US">USA</option>
+                        <option value="UK">UK</option>
+                        <option value="AU">Australia</option>
+                        <option value="EU">Europe</option>
+                    </select>
+                    <p id="region-note" class="small text-warning mt-1 fw-bold"><i class="bi bi-info-circle me-1"></i> Note: In Canada, all tips are taxable income.</p>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-muted small uppercase">Currency</label>
+                    <input type="text" id="user-currency" class="form-control form-control-lg custom-input" value="$" maxlength="3">
+                </div>
+            </div>
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-muted small uppercase">Decimal Separator</label>
+                    <select id="user-decimal" class="form-select form-control-lg custom-input">
+                        <option value=".">Dot (.)</option>
+                        <option value=",">Comma (,)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-muted small uppercase">Number Format</label>
+                    <select id="user-numformat" class="form-select form-control-lg custom-input">
+                        <option value="1,234.56">1,234.56</option>
+                        <option value="1.234,56">1.234,56</option>
+                        <option value="1 234,56">1 234,56</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold text-muted small uppercase">Distance Unit</label>
+                    <div class="btn-group w-100 shadow-sm" role="group">
+                        <input type="radio" class="btn-check" name="dist-unit" id="unit-km" value="km" checked>
+                        <label class="btn btn-outline-secondary py-2" for="unit-km">Kilometers (km)</label>
+                        <input type="radio" class="btn-check" name="dist-unit" id="unit-mi" value="mi">
+                        <label class="btn btn-outline-secondary py-2" for="unit-mi">Miles (mi)</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold text-muted small uppercase">Choose an Avatar</label>
+                    <div class="avatar-grid mb-3">
+                        <button class="avatar-btn active" data-avatar="😎">😎</button>
+                        <button class="avatar-btn" data-avatar="🚗">🚗</button>
+                        <button class="avatar-btn" data-avatar="🛵">🛵</button>
+                        <button class="avatar-btn" data-avatar="🚴">🚴</button>
+                        <button class="avatar-btn" data-avatar="📦">📦</button>
+                        <button class="avatar-btn" data-avatar="⚡">⚡</button>
+                        <button class="avatar-btn" data-avatar="💼">💼</button>
+                        <button class="avatar-btn" data-avatar="🍕">🍕</button>
+                        <button class="avatar-btn" data-avatar="🍔">🍔</button>
+                        <button class="avatar-btn" data-avatar="🚛">🚛</button>
+                        <button class="avatar-btn" data-avatar="🚲">🚲</button>
+                        <button class="avatar-btn" data-avatar="🏎️">🏎️</button>
+                    </div>
+                    <div class="text-center">
+                        <label for="avatar-upload" class="btn btn-sm btn-outline-secondary rounded-pill px-4">
+                            <i class="bi bi-cloud-upload me-2"></i> Custom Upload
+                        </label>
+                        <input type="file" id="avatar-upload" class="d-none" accept="image/*">
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-3">
+                <button class="btn btn-outline-secondary btn-lg px-4" data-back="platforms">Back</button>
+                <button class="btn btn-primary btn-lg flex-grow-1 py-3" data-next="vehicle">Next Step <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 3: Vehicle Setup Wizard -->
+        <div id="step-vehicle" class="wizard-step">
+            <div class="wizard-header mb-4">
+                <h2 class="h3 fw-bold">Setup your fleet</h2>
+                <p class="text-muted">You can add multiple vehicles. We'll use these for expense calculations.</p>
+            </div>
+            
+            <div id="vehicle-form-container" class="mb-4 p-4 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-10">
+                <div class="row g-3 mb-4">
+                    <div class="col-4 col-md-2">
+                        <button class="select-btn active py-2" data-vehicle="gas">
+                            <i class="bi bi-car-front d-block mb-1 fs-4"></i>
+                            <span class="small">Gas</span>
+                        </button>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <button class="select-btn py-2" data-vehicle="hybrid">
+                            <i class="bi bi-ev-front d-block mb-1 fs-4"></i>
+                            <span class="small">Hybrid</span>
+                        </button>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <button class="select-btn py-2" data-vehicle="ev">
+                            <i class="bi bi-lightning-charge d-block mb-1 fs-4"></i>
+                            <span class="small">EV</span>
+                        </button>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <button class="select-btn py-2" data-vehicle="bike">
+                            <i class="bi bi-bicycle d-block mb-1 fs-4"></i>
+                            <span class="small">Bike</span>
+                        </button>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <button class="select-btn py-2" data-vehicle="scooter">
+                            <i class="bi bi-scooter d-block mb-1 fs-4"></i>
+                            <span class="small">Scooter</span>
+                        </button>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <button class="select-btn py-2" data-vehicle="foot">
+                            <i class="bi bi-person-walking d-block mb-1 fs-4"></i>
+                            <span class="small">Foot</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-muted small uppercase">Vehicle Nickname</label>
+                        <input type="text" id="v-name" class="form-control custom-input" placeholder="e.g. My Civic">
+                    </div>
+                    <div class="col-md-6" id="group-efficiency">
+                        <label class="form-label fw-bold text-muted small uppercase" id="lbl-efficiency">Efficiency</label>
+                        <div class="input-group-custom">
+                            <input type="number" id="v-efficiency" class="form-control custom-input" placeholder="0.0">
+                            <span class="input-unit" id="unit-efficiency">L/100km</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 group-fuel">
+                        <label class="form-label fw-bold text-muted small uppercase">Fuel Price (per L/Gal)</label>
+                        <div class="input-group-custom">
+                            <span class="input-prefix">$</span>
+                            <input type="number" id="v-fuel-price" class="form-control custom-input" placeholder="1.50">
+                        </div>
+                    </div>
+                    <div class="col-md-6 group-fuel">
+                        <label class="form-label fw-bold text-muted small uppercase">Engine Displacement (cc/L)</label>
+                        <input type="text" id="v-engine" class="form-control custom-input" placeholder="2.0L">
+                    </div>
+                    <div class="col-md-6 d-none" id="group-ev">
+                        <label class="form-label fw-bold text-muted small uppercase">Electricity Rate (per kWh)</label>
+                        <div class="input-group-custom">
+                            <span class="input-prefix">$</span>
+                            <input type="number" id="v-elec-rate" class="form-control custom-input" placeholder="0.12">
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-none" id="group-bike">
+                        <label class="form-label fw-bold text-muted small uppercase">Maint. Cost per km/mi</label>
+                        <div class="input-group-custom">
+                            <span class="input-prefix">$</span>
+                            <input type="number" id="v-maint-cost" class="form-control custom-input" placeholder="0.05">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button class="btn btn-outline-primary w-100 fw-bold" id="btn-add-vehicle">
+                        <i class="bi bi-plus-circle me-2"></i> Add Vehicle to Profile
+                    </button>
+                </div>
+            </div>
+
+            <div id="vehicle-list" class="mb-5 d-flex flex-wrap gap-2">
+                <!-- Added vehicles appear here -->
+            </div>
+
+            <div class="d-flex gap-3">
+                <button class="btn btn-outline-secondary btn-lg px-4" data-back="identity">Back</button>
+                <button class="btn btn-primary btn-lg flex-grow-1 py-3" id="btn-next-to-categories" disabled>Continue <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 4: Expense Categories -->
+        <div id="step-categories" class="wizard-step">
+            <div class="wizard-header mb-4">
+                <h2 class="h3 fw-bold">Expense Categories</h2>
+                <p class="text-muted">We've pre-filled some common categories. Tap to remove any you don't need.</p>
+            </div>
+            <div id="category-chips" class="category-grid mb-5">
+                <!-- Dynamically filled -->
+            </div>
+            <div class="d-flex gap-3">
+                <button class="btn btn-outline-secondary btn-lg px-4" data-back="vehicle">Back</button>
+                <button class="btn btn-primary btn-lg flex-grow-1 py-3" data-next="preferences">Next Step <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 5: Work Schedule & Tax Config -->
+        <div id="step-preferences" class="wizard-step">
+            <div class="wizard-header mb-4">
+                <h2 class="h3 fw-bold">Work Preferences</h2>
+                <p class="text-muted">Tailor the dashboard to your routine.</p>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-bold text-muted small uppercase">Schedule Intensity</label>
+                <div class="row g-3">
+                    <div class="col-6 col-md-3">
+                        <button class="select-btn active" data-intensity="full">
+                            <span>Full-Time</span>
+                        </button>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <button class="select-btn" data-intensity="part">
+                            <span>Part-Time</span>
+                        </button>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <button class="select-btn" data-intensity="side">
+                            <span>Side Hustle</span>
+                        </button>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <button class="select-btn" data-intensity="seasonal">
+                            <span>Seasonal</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-bold text-muted small uppercase">Starting Zone / Home Base</label>
+                <input type="text" id="user-zone" class="form-control form-control-lg custom-input" placeholder="e.g. Downtown, North End">
+                <p class="small text-muted mt-2">Used for zone-based analytics and estimating dead miles.</p>
+            </div>
+            <div class="mb-5">
+                <div class="form-check form-switch custom-switch">
+                    <input class="form-check-input" type="checkbox" id="tax-registered">
+                    <label class="form-check-label fw-bold" for="tax-registered">I am HST/GST Registered (Canada)</label>
+                </div>
+                <p class="small text-muted mt-2">Required if you earn >$30,000/year. This unlocks HST/ITC tracking.</p>
+            </div>
+            <div class="d-flex gap-3">
+                <button class="btn btn-outline-secondary btn-lg px-4" data-back="categories">Back</button>
+                <button class="btn btn-primary btn-lg flex-grow-1 py-3" data-next="goals">Next Step <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 5: Financial Targets -->
+        <div id="step-goals" class="wizard-step">
+            <div class="wizard-header mb-4">
+                <h2 class="h3 fw-bold">Financial Targets</h2>
+                <p class="text-muted">Set goals to track your progress automatically.</p>
+            </div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-muted small uppercase">Weekly Goal</label>
+                    <div class="input-group-custom">
+                        <span class="input-prefix">$</span>
+                        <input type="number" id="user-goal-weekly" class="form-control form-control-lg custom-input" placeholder="e.g. 800">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-muted small uppercase">Monthly Goal</label>
+                    <div class="input-group-custom">
+                        <span class="input-prefix">$</span>
+                        <input type="number" id="user-goal-monthly" class="form-control form-control-lg custom-input" placeholder="e.g. 3500">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-muted small uppercase">Annual Goal</label>
+                    <div class="input-group-custom">
+                        <span class="input-prefix">$</span>
+                        <input type="number" id="user-goal-annual" class="form-control form-control-lg custom-input" placeholder="e.g. 40000">
+                    </div>
+                </div>
+            </div>
+            <div class="mb-5">
+                <label class="form-label fw-bold text-muted small uppercase">Tax Withholding Goal (%)</label>
+                <div class="input-group-custom">
+                    <input type="number" id="user-tax" class="form-control form-control-lg custom-input" value="25">
+                    <span class="input-unit">%</span>
+                </div>
+                <p class="small text-muted mt-2">Recommended: 20-30% for independent delivery partners.</p>
+            </div>
+            <div class="d-flex gap-3">
+                <button class="btn btn-outline-secondary btn-lg px-4" data-back="preferences">Back</button>
+                <button class="btn btn-primary btn-lg flex-grow-1 py-3" data-next="theme">Next Step <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 7: Appearance & Notifications -->
+        <div id="step-theme" class="wizard-step">
+            <div class="wizard-header mb-4">
+                <h2 class="h3 fw-bold">Final Touches</h2>
+                <p class="text-muted">Choose your theme and notification settings.</p>
+            </div>
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold text-muted small uppercase">Visual Theme</label>
+                    <div class="btn-group w-100 shadow-sm" role="group">
+                        <input type="radio" class="btn-check" name="theme-pref" id="theme-light" value="light">
+                        <label class="btn btn-outline-secondary py-3" for="theme-light"><i class="bi bi-sun"></i> Light</label>
+                        <input type="radio" class="btn-check" name="theme-pref" id="theme-dark" value="dark" checked>
+                        <label class="btn btn-outline-secondary py-3" for="theme-dark"><i class="bi bi-moon"></i> Dark</label>
+                        <input type="radio" class="btn-check" name="theme-pref" id="theme-auto" value="auto">
+                        <label class="btn btn-outline-secondary py-3" for="theme-auto"><i class="bi bi-display"></i> Auto</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold text-muted small uppercase">Notifications</label>
+                    <div class="form-check form-switch custom-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="notif-daily" checked>
+                        <label class="form-check-label" for="notif-daily">Daily Summaries</label>
+                    </div>
+                    <div class="form-check form-switch custom-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="notif-goals" checked>
+                        <label class="form-check-label" for="notif-goals">Goal Nudges</label>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-3">
+                <button class="btn btn-outline-secondary btn-lg px-4" data-back="goals">Back</button>
+                <button class="btn btn-success btn-lg flex-grow-1 py-3 shadow-lg fw-bold" id="btn-finish">Initialize Vault <i class="bi bi-safe-fill ms-2"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 6: Success -->
+        <div id="step-success" class="wizard-step text-center">
+            <div class="success-icon-container mb-4">
+                <div class="success-circle">
+                    <i class="bi bi-check-lg"></i>
+                </div>
+                <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
+            </div>
+            <h2 class="h1 fw-800 mb-3 gradient-text" id="success-message">You're all set!</h2>
+            <p class="lead text-muted mb-5">Your local vault is encrypted and ready for action. Let's start tracking your hustle.</p>
+            <button class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold" id="btn-enter-vault">Enter the Vault <i class="bi bi-door-open-fill ms-2"></i></button>
+        </div>
+
+        <!-- Loader -->
+        <div id="wizard-loader" class="wizard-loader d-none">
+            <div class="loader-content">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p id="loader-text" class="mt-3 fw-medium text-white">Initializing your local vault...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .onboarding-overlay { 
+        position: fixed; 
+        inset: 0; 
+        background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); 
+        z-index: 10000; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        padding: 2rem; 
+        overflow-y: auto; 
+    }
+    
+    .onboarding-glass-container { 
+        max-width: 720px; 
+        width: 100%; 
+        background: rgba(30, 41, 59, 0.75); 
+        backdrop-filter: blur(40px); 
+        border: 1px solid rgba(255, 255, 255, 0.1); 
+        border-radius: 3rem; 
+        padding: 3.5rem; 
+        box-shadow: 0 40px 100px -20px rgba(0,0,0,0.8); 
+        position: relative; 
+    }
+
+    .gradient-text { 
+        background: linear-gradient(135deg, #fff, #94a3b8); 
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent; 
+        font-weight: 800; 
+    }
+
+    .brand-badge { 
+        display: inline-block; 
+        padding: 0.5rem 1.25rem; 
+        background: rgba(99, 102, 241, 0.2); 
+        color: #a5b4fc; 
+        border-radius: 100px; 
+        font-size: 0.7rem; 
+        font-weight: 900; 
+        letter-spacing: 0.2em; 
+        border: 1px solid rgba(129, 140, 248, 0.3); 
+    }
+    
+    .wizard-step { display: none; }
+    .wizard-step.active { display: block; animation: stepEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+    
+    @keyframes stepEnter { 
+        from { opacity: 0; transform: scale(0.98) translateY(20px); } 
+        to { opacity: 1; transform: scale(1) translateY(0); } 
+    }
+
+    .custom-input { 
+        background: rgba(15, 23, 42, 0.6); 
+        border: 1px solid rgba(255, 255, 255, 0.1); 
+        color: #fff !important; 
+        padding: 1.25rem; 
+        border-radius: 1.25rem; 
+        font-size: 1.1rem; 
+    }
+    .custom-input:focus { 
+        border-color: #6366f1; 
+        background: rgba(15, 23, 42, 0.8); 
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2); 
+    }
+
+    .input-group-custom { position: relative; display: flex; align-items: center; }
+    .input-prefix, .input-unit { 
+        position: absolute; 
+        color: #94a3b8; 
+        font-weight: 700; 
+        pointer-events: none; 
+        z-index: 5;
+    }
+    .input-prefix { left: 1.5rem; }
+    .input-unit { right: 1.5rem; }
+    
+    .input-prefix + .custom-input { padding-left: 2.75rem; }
+    .custom-input:has(+ .input-unit) { padding-right: 4.5rem; }
+
+    .avatar-btn, .select-btn {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        width: 100%;
+        color: #94a3b8;
+        font-size: 1.75rem;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .select-btn { 
+        font-size: 0.95rem; 
+        font-weight: 700; 
+        padding: 1.25rem 0.5rem; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center;
+    }
+    .avatar-btn.active, .select-btn.active { 
+        background: #6366f1; 
+        color: #fff; 
+        border-color: #6366f1; 
+        box-shadow: 0 12px 24px rgba(99, 102, 241, 0.4); 
+        transform: translateY(-4px); 
+    }
+
+    .avatar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; }
+    
+    .category-grid { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
+    .category-chip { 
+        background: rgba(255,255,255,0.05); 
+        border: 1px solid rgba(255,255,255,0.1); 
+        padding: 0.75rem 1.25rem; 
+        border-radius: 100px; 
+        color: #fff; 
+        font-weight: 600; 
+        cursor: pointer; 
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .category-chip:hover { background: rgba(244, 63, 94, 0.2); border-color: #f43f5e; color: #fb7185; }
+    .category-chip i { font-size: 0.8rem; opacity: 0.5; }
+
+    .success-icon-container { position: relative; display: inline-block; }
+    .success-circle { 
+        width: 100px; 
+        height: 100px; 
+        background: #10b981; 
+        color: #fff; 
+        border-radius: 50%; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 3rem; 
+        box-shadow: 0 20px 40px rgba(16, 185, 129, 0.4); 
+        animation: successPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    .confetti-canvas { position: absolute; inset: -100px; pointer-events: none; }
+
+    @keyframes successPop {
+        from { transform: scale(0); }
+        to { transform: scale(1); }
+    }
+    .gate-grid { display: grid; gap: 1.25rem; }
+    
+    .platform-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    
+    .platform-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 2px solid transparent;
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+        color: #fff;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .platform-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        transform: translateY(-4px);
+    }
+    
+    .platform-card.selected {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: #6366f1;
+    }
+    
+    .platform-logo-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    .bg-doordash { background: #FF3008; }
+    .bg-ubereats { background: #142328; color: #06C167; }
+    .bg-foodora { background: #E2006A; }
+    .bg-skip { background: #F96302; }
+    .bg-instacart { background: #43B02A; }
+    .bg-amazon { background: #FF9900; color: #000; }
+    .bg-other { background: #64748b; }
+    
+    .selection-check {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        color: #6366f1;
+        font-size: 1.25rem;
+        opacity: 0;
+        transform: scale(0);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .platform-card.selected .selection-check {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .custom-switch .form-check-input { width: 3rem; height: 1.5rem; background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
+    .custom-switch .form-check-input:checked { background-color: #6366f1; border-color: #6366f1; }
+    .custom-switch .form-check-label { padding-top: 0.2rem; padding-left: 0.5rem; color: #94a3b8; }
+
+    .gate-card { 
+        display: flex; 
+        align-items: center; 
+        width: 100%; 
+        background: rgba(255, 255, 255, 0.03); 
+        border: 1px solid rgba(255, 255, 255, 0.08); 
+        padding: 1.75rem; 
+        border-radius: 2rem; 
+        color: #fff; 
+        text-align: left; 
+        transition: all 0.4s; 
+    }
+    .gate-card:hover { 
+        transform: translateY(-4px); 
+        background: rgba(255, 255, 255, 0.06); 
+        border-color: rgba(255, 255, 255, 0.15); 
+    }
+    .gate-icon-box { 
+        width: 60px; 
+        height: 60px; 
+        border-radius: 1.25rem; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        margin-right: 1.5rem; 
+        font-size: 1.5rem; 
+        flex-shrink: 0; 
+    }
+    
+    .bg-rose-soft { background: rgba(244, 63, 94, 0.2); color: #fb7185; }
+    .bg-blue-soft { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .bg-emerald-soft { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+
+    .wizard-loader { 
+        position: absolute; 
+        inset: 0; 
+        background: rgba(15, 23, 42, 0.95); 
+        border-radius: 3rem; 
+        z-index: 100; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        backdrop-filter: blur(10px); 
+    }
+    .loader-content { text-align: center; }
+
+    @media (max-width: 576px) {
+        .onboarding-glass-container { padding: 2rem; border-radius: 2rem; }
+        .avatar-grid { grid-template-columns: repeat(4, 1fr); }
+        .gate-card { padding: 1.25rem; }
+    }
+</style>
+
+<script>
+    import { db } from '../lib/db';
+    import { seedDemoData } from '../lib/demo';
+
+    function init() {
+        const root = document.getElementById('onboarding-root');
+        const isOnboarded = localStorage.getItem('macadam_onboarded') || sessionStorage.getItem('macadam_onboarded');
+        if (!isOnboarded) {
+            root?.classList.remove('d-none');
+        }
+
+        // Nav Logic
+        document.querySelectorAll('[data-next]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const stepId = (btn as HTMLElement).dataset.next;
+                showStep(stepId!);
+            });
+        });
+
+        document.querySelectorAll('[data-back]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const stepId = (btn as HTMLElement).dataset.back;
+                showStep(stepId!);
+            });
+        });
+
+        // Selection Logic
+        bindSelection('.avatar-btn');
+        bindSelection('.select-btn[data-vehicle]', (val) => {
+            const grpEfficiency = document.getElementById('group-efficiency');
+            const grpFuel = document.querySelectorAll('.group-fuel');
+            const grpEv = document.getElementById('group-ev');
+            const grpBike = document.getElementById('group-bike');
+            const lblEfficiency = document.getElementById('lbl-efficiency');
+            const unitEfficiency = document.getElementById('unit-efficiency');
+            const distUnit = (document.querySelector('input[name="dist-unit"]:checked') as HTMLInputElement).value;
+
+            // Reset
+            grpEfficiency?.classList.remove('d-none');
+            grpFuel.forEach(g => g.classList.remove('d-none'));
+            grpEv?.classList.add('d-none');
+            grpBike?.classList.add('d-none');
+
+            if (val === 'gas' || val === 'hybrid') {
+                if (lblEfficiency) lblEfficiency.textContent = 'Fuel Efficiency';
+                if (unitEfficiency) unitEfficiency.textContent = distUnit === 'km' ? 'L/100km' : 'MPG';
+            } else if (val === 'ev') {
+                if (lblEfficiency) lblEfficiency.textContent = 'Electricity Usage';
+                if (unitEfficiency) unitEfficiency.textContent = 'kWh/100km';
+                grpFuel.forEach(g => g.classList.add('d-none'));
+                grpEv?.classList.remove('d-none');
+            } else if (val === 'bike' || val === 'scooter') {
+                grpEfficiency?.classList.add('d-none');
+                grpFuel.forEach(g => g.classList.add('d-none'));
+                grpBike?.classList.remove('d-none');
+            } else if (val === 'foot') {
+                grpEfficiency?.classList.add('d-none');
+                grpFuel.forEach(g => g.classList.add('d-none'));
+            }
+            updateCategoryChips(val);
+        });
+        bindSelection('.select-btn[data-intensity]');
+
+        // Multiple Vehicle Logic
+        const addedVehicles: any[] = [];
+        const btnAddVehicle = document.getElementById('btn-add-vehicle');
+        const vehicleList = document.getElementById('vehicle-list');
+        const nextToCategoriesBtn = document.getElementById('btn-next-to-categories') as HTMLButtonElement;
+
+        btnAddVehicle?.addEventListener('click', () => {
+            const type = (document.querySelector('.select-btn.active[data-vehicle]') as HTMLElement).dataset.vehicle;
+            const name = (document.getElementById('v-name') as HTMLInputElement).value || `My ${type}`;
+            const efficiency = parseFloat((document.getElementById('v-efficiency') as HTMLInputElement).value || '0');
+            const fuelPrice = parseFloat((document.getElementById('v-fuel-price') as HTMLInputElement).value || '0');
+            const engine = (document.getElementById('v-engine') as HTMLInputElement).value;
+            const elecRate = parseFloat((document.getElementById('v-elec-rate') as HTMLInputElement).value || '0');
+            const maintCost = parseFloat((document.getElementById('v-maint-cost') as HTMLInputElement).value || '0');
+            
+            const v = {
+                name,
+                type,
+                efficiency,
+                fuelPrice,
+                engine,
+                elecRate,
+                maintCost,
+                isDefault: addedVehicles.length === 0
+            };
+
+            addedVehicles.push(v);
+            renderVehicleList();
+            
+            // Clear inputs
+            (document.getElementById('v-name') as HTMLInputElement).value = '';
+            (document.getElementById('v-efficiency') as HTMLInputElement).value = '';
+            
+            nextToCategoriesBtn.disabled = addedVehicles.length === 0;
+            saveProgress('vehicle', { vehicles: addedVehicles });
+        });
+
+        function renderVehicleList() {
+            if (!vehicleList) return;
+            vehicleList.innerHTML = addedVehicles.map((v, i) => `
+                <div class="category-chip" style="background: rgba(99, 102, 241, 0.2); border-color: #6366f1;">
+                    <span>${v.name} (${v.type})</span>
+                    <i class="bi bi-x-circle-fill" onclick="window.removeVehicle(${i})"></i>
+                </div>
+            `).join('');
+        }
+
+        (window as any).removeVehicle = (index: number) => {
+            addedVehicles.splice(index, 1);
+            renderVehicleList();
+            nextToCategoriesBtn.disabled = addedVehicles.length === 0;
+        };
+
+        nextToCategoriesBtn?.addEventListener('click', () => {
+            showStep('categories');
+            saveProgress('categories');
+        });
+
+        // Avatar Upload Logic
+        const avatarUpload = document.getElementById('avatar-upload') as HTMLInputElement;
+        avatarUpload?.addEventListener('change', (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const base64 = event.target?.result as string;
+                // Add to avatar grid temporarily or just select it
+                const customBtn = document.createElement('button');
+                customBtn.className = 'avatar-btn active';
+                customBtn.dataset.avatar = base64;
+                customBtn.innerHTML = `<img src="${base64}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+                
+                document.querySelectorAll('.avatar-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('.avatar-grid')?.appendChild(customBtn);
+                
+                customBtn.addEventListener('click', () => {
+                    document.querySelectorAll('.avatar-btn').forEach(b => b.classList.remove('active'));
+                    customBtn.classList.add('active');
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Region Logic (CAD Tips Note)
+        const regionSelect = document.getElementById('user-region') as HTMLSelectElement;
+        regionSelect?.addEventListener('change', () => {
+            const note = document.getElementById('region-note');
+            if (regionSelect.value === 'CA') {
+                if (note) note.classList.remove('d-none');
+            } else {
+                if (note) note.classList.add('d-none');
+            }
+        });
+
+        // Initialize categories for default 'gas'
+        updateCategoryChips('gas');
+
+        // Actions
+        document.getElementById('btn-fresh')?.addEventListener('click', () => {
+            saveProgress('platforms');
+            showStep('platforms');
+        });
+
+        // Platform Selection Logic
+        const platformCards = document.querySelectorAll('.platform-card');
+        const nextToIdentityBtn = document.getElementById('btn-next-to-identity') as HTMLButtonElement;
+        const selectedPlatforms = new Set<string>();
+
+        platformCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const platform = (card as HTMLElement).dataset.platform!;
+                if (selectedPlatforms.has(platform)) {
+                    selectedPlatforms.delete(platform);
+                    card.classList.remove('selected');
+                } else {
+                    selectedPlatforms.add(platform);
+                    card.classList.add('selected');
+                }
+                nextToIdentityBtn.disabled = selectedPlatforms.size === 0;
+                saveProgress('platforms', { platforms: Array.from(selectedPlatforms) });
+            });
+        });
+
+        nextToIdentityBtn?.addEventListener('click', () => {
+            showStep('identity');
+            saveProgress('identity');
+        });
+        
+        document.getElementById('btn-demo')?.addEventListener('click', async () => {
+            showLoader('Generating sample data...');
+            await seedDemoData();
+            // Using sessionStorage makes this session transient
+            sessionStorage.setItem('macadam_onboarded', 'true');
+            sessionStorage.setItem('macadam_demo_mode', 'true');
+            window.location.reload();
+        });
+
+        document.getElementById('btn-restore')?.addEventListener('click', () => {
+            document.getElementById('restore-file')?.click();
+        });
+
+        document.getElementById('restore-file')?.addEventListener('change', async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
+            
+            showLoader('Restoring your vault...');
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const parsed = JSON.parse(event.target?.result as string);
+                    if (parsed.app !== 'Macadam' || !parsed.data) throw new Error('Invalid backup file.');
+
+                    // Clear and restore
+                    await db.weekly_earnings.clear();
+                    await db.expenses.clear();
+                    await db.expense_categories.clear();
+                    await db.settings.clear();
+
+                    if (parsed.data.weekly_earnings) await db.weekly_earnings.bulkAdd(parsed.data.weekly_earnings);
+                    if (parsed.data.expenses) await db.expenses.bulkAdd(parsed.data.expenses);
+                    if (parsed.data.expense_categories) await db.expense_categories.bulkAdd(parsed.data.expense_categories);
+                    if (parsed.data.settings) await db.settings.bulkAdd(parsed.data.settings);
+
+                    localStorage.setItem('macadam_onboarded', 'true');
+                    window.location.reload();
+                } catch (err) {
+                    window.MacadamNotify.show('Restore failed: ' + (err as Error).message, 'danger');
+                    hideLoader();
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('btn-finish')?.addEventListener('click', async () => {
+            const name = (document.getElementById('user-name') as HTMLInputElement).value;
+            if (!name) return window.MacadamNotify.show('Please enter your name.', 'warning');
+            
+            showLoader('Initializing your vault...');
+
+            const vehicle = (document.querySelector('.select-btn.active[data-vehicle]') as HTMLElement)?.dataset.vehicle;
+            const intensity = (document.querySelector('.select-btn.active[data-intensity]') as HTMLElement)?.dataset.intensity;
+            const distUnit = (document.querySelector('input[name="dist-unit"]:checked') as HTMLInputElement).value;
+            const theme = (document.querySelector('input[name="theme-pref"]:checked') as HTMLInputElement).value;
+
+            const settings = {
+                user_name: name,
+                avatar: (document.querySelector('.avatar-btn.active') as HTMLElement)?.dataset.avatar || '😎',
+                region: (document.getElementById('user-region') as HTMLSelectElement).value,
+                currency: (document.getElementById('user-currency') as HTMLInputElement).value || '$',
+                decimal_separator: (document.getElementById('user-decimal') as HTMLSelectElement).value,
+                number_format: (document.getElementById('user-numformat') as HTMLSelectElement).value,
+                distance_unit: distUnit,
+                vehicle_type: vehicle,
+                work_intensity: intensity,
+                starting_zone: (document.getElementById('user-zone') as HTMLInputElement).value,
+                hst_registered: (document.getElementById('tax-registered') as HTMLInputElement).checked,
+                goal_weekly: (document.getElementById('user-goal-weekly') as HTMLInputElement).value,
+                goal_monthly: (document.getElementById('user-goal-monthly') as HTMLInputElement).value,
+                goal_annual: (document.getElementById('user-goal-annual') as HTMLInputElement).value,
+                tax_percent: (document.getElementById('user-tax') as HTMLInputElement).value,
+                theme: theme,
+                notif_daily: (document.getElementById('notif-daily') as HTMLInputElement).checked,
+                notif_goals: (document.getElementById('notif-goals') as HTMLInputElement).checked,
+                platforms: Array.from(selectedPlatforms)
+            };
+
+            // Save platforms to DB
+            const platformConfigs: any = {
+                doordash: { name: 'DoorDash', color: '#FF3008', terminology: { driver: 'Dasher', task: 'order' } },
+                ubereats: { name: 'Uber Eats', color: '#142328', terminology: { driver: 'Courier', task: 'trip' } },
+                foodora: { name: 'Foodora', color: '#E2006A', terminology: { driver: 'Rider', task: 'delivery' } },
+                skip: { name: 'SkipTheDishes', color: '#F96302', terminology: { driver: 'Courier', task: 'order' } },
+                instacart: { name: 'Instacart', color: '#43B02A', terminology: { driver: 'Shopper', task: 'batch' } },
+                amazon: { name: 'Amazon Flex', color: '#FF9900', terminology: { driver: 'Driver', task: 'block' } },
+                other: { name: 'Other', color: '#64748b', terminology: { driver: 'Driver', task: 'delivery' } }
+            };
+
+            for (const pid of selectedPlatforms) {
+                const config = platformConfigs[pid] || platformConfigs.other;
+                await db.platforms.put({
+                    id: pid,
+                    name: config.name,
+                    color: config.color,
+                    logo: pid,
+                    terminology: config.terminology,
+                    active: 1
+                });
+            }
+
+            // Save vehicles to DB
+            for (const v of addedVehicles) {
+                await db.vehicles.put({
+                    name: v.name,
+                    type: v.type,
+                    efficiency: v.efficiency,
+                    efficiencyUnit: v.type === 'ev' ? 'kWh/100km' : (distUnit === 'km' ? 'L/100km' : 'MPG'),
+                    fuelPrice: v.fuelPrice,
+                    engineDisplacement: v.engine,
+                    electricityRate: v.elecRate,
+                    maintenanceCostPerKm: v.maintCost,
+                    isDefault: v.isDefault
+                });
+            }
+
+            // Save to DB and LocalStorage using helper
+            for (const [key, value] of Object.entries(settings)) {
+                await db.setSetting(`macadam_v2_${key}`, value);
+            }
+
+            // Apply theme immediately
+            if (theme !== 'auto') {
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            }
+
+            // Save categories
+            const chips = document.querySelectorAll('.category-chip span');
+            const categories = Array.from(chips).map(c => ({ name: c.textContent! }));
+            await db.expense_categories.clear();
+            await db.expense_categories.bulkAdd(categories);
+
+            localStorage.setItem('macadam_onboarded', 'true');
+            sessionStorage.removeItem('macadam_onboarding_temp');
+            
+            // Item 18: Success animation and personalized message
+            const successMsg = document.getElementById('success-message');
+            if (successMsg) successMsg.textContent = `Your Vault is Ready, ${name}.`;
+
+            // Show Success Step
+            hideLoader();
+            showStep('success');
+            triggerConfetti();
+        });
+
+        document.getElementById('btn-enter-vault')?.addEventListener('click', () => {
+            window.location.reload();
+        });
+    }
+
+    let currentCategories = ['Fuel', 'Maintenance', 'Supplies', 'Insurance', 'Phone/Data', 'Taxes/Fees'];
+
+    function updateCategoryChips(vehicle: string) {
+        if (vehicle === 'bike') {
+            currentCategories = ['Maintenance', 'Supplies', 'Safety Gear', 'Phone/Data'];
+        } else if (vehicle === 'ev') {
+            currentCategories = ['Charging', 'Maintenance', 'Supplies', 'Insurance', 'Phone/Data'];
+        } else {
+            currentCategories = ['Fuel', 'Maintenance', 'Supplies', 'Insurance', 'Phone/Data', 'Taxes/Fees'];
+        }
+        renderCategories();
+    }
+
+    function renderCategories() {
+        const container = document.getElementById('category-chips');
+        if (!container) return;
+        container.innerHTML = currentCategories.map(cat => `
+            <div class="category-chip" onclick="this.remove()">
+                <span>${cat}</span>
+                <i class="bi bi-x-circle-fill"></i>
+            </div>
+        `).join('');
+    }
+
+    function showStep(id: string) {
+        document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+        document.getElementById(`step-${id}`)?.classList.add('active');
+    }
+
+    function bindSelection(selector: string, callback?: (val: string) => void) {
+        document.querySelectorAll(selector).forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll(selector).forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                if (callback) callback((btn as HTMLElement).dataset.avatar || (btn as HTMLElement).dataset.vehicle || '');
+            });
+        });
+    }
+
+    function triggerConfetti() {
+        const canvas = document.getElementById('confetti-canvas') as HTMLCanvasElement;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d')!;
+        canvas.width = 300;
+        canvas.height = 300;
+
+        const particles: any[] = [];
+        for (let i = 0; i < 50; i++) {
+            particles.push({
+                x: 150,
+                y: 150,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10 - 5,
+                color: ['#6366f1', '#f43f5e', '#10b981', '#f59e0b'][Math.floor(Math.random() * 4)],
+                size: Math.random() * 5 + 5
+            });
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+            });
+            if (particles.some(p => p.y < canvas.height)) {
+                requestAnimationFrame(animate);
+            }
+        }
+        animate();
+    }
+
+    function showLoader(text: string) {
+        const loader = document.getElementById('wizard-loader');
+        const loaderText = document.getElementById('loader-text');
+        if (loader && loaderText) {
+            loaderText.textContent = text;
+            loader.classList.remove('d-none');
+        }
+    }
+
+    function hideLoader() {
+        document.getElementById('wizard-loader')?.classList.add('d-none');
+    }
+
+    function saveProgress(step: string, data: any = {}) {
+        const current = JSON.parse(sessionStorage.getItem('macadam_onboarding_temp') || '{}');
+        sessionStorage.setItem('macadam_onboarding_temp', JSON.stringify({
+            ...current,
+            last_step: step,
+            ...data
+        }));
+    }
+
+    function loadProgress() {
+        const temp = sessionStorage.getItem('macadam_onboarding_temp');
+        if (!temp) return;
+
+        const data = JSON.parse(temp);
+        if (data.last_step) {
+            // @ts-ignore
+            const resumeModal = new bootstrap.Modal(document.getElementById('resumeModal'));
+            resumeModal.show();
+
+            document.getElementById('btn-resume-continue')?.addEventListener('click', () => {
+                // Pre-fill fields
+                if (data.platforms) {
+                    data.platforms.forEach((p: string) => {
+                        const card = document.querySelector(`[data-platform="${p}"]`);
+                        card?.classList.add('selected');
+                        selectedPlatforms.add(p);
+                    });
+                    const nextBtn = document.getElementById('btn-next-to-identity') as HTMLButtonElement;
+                    if (nextBtn) nextBtn.disabled = false;
+                }
+                showStep(data.last_step);
+                resumeModal.hide();
+            });
+
+            document.getElementById('btn-resume-reset')?.addEventListener('click', () => {
+                sessionStorage.removeItem('macadam_onboarding_temp');
+                resumeModal.hide();
+                window.location.reload();
+            });
+        }
+    }
+
+    const selectedPlatforms = new Set<string>();
+
+    document.addEventListener('astro:page-load', () => {
+        init();
+        loadProgress();
+    });
+</script>
+

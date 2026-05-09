@@ -1,51 +1,43 @@
-# Macadam
+# Astro Starter Kit: Minimal
 
-**The Private Vault for Independent Drivers.**
+```sh
+npm create astro@latest -- --template minimal
+```
 
-Named after John Loudon McAdam, the engineer who revolutionized road construction, Macadam is a robust, serious financial tracker for dashers and delivery drivers. It is designed to be **local-first, offline-ready, and privacy-respecting**.
+> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
 
-Unlike corporate tools, Macadam stores 100% of your sensitive financial data directly in your browser's encrypted vault (IndexedDB). No cloud, no tracking, no subscription. Just you and your data.
+## 🚀 Project Structure
 
-## Key Features
+Inside of your Astro project, you'll see the following folders and files:
 
-- **Privacy First**: Your data never leaves your device. All logs are stored locally using IndexedDB via Dexie.js.
-- **Offline-First PWA**: Fully functional without an internet connection. Install it on your mobile device as a standalone app.
-- **Visual Analytics**: Dynamic, interactive charts powered by Chart.js to visualize your earnings and expenses over time.
-- **Precision Tracking**: Log daily/weekly earnings across multiple platforms and manage business expenses (fuel, maintenance, etc.).
-- **Data Portability**: Built-in backup and restore system. Export your entire vault to a JSON file at any time for safe keeping.
+```text
+/
+├── public/
+├── src/
+│   └── pages/
+│       └── index.astro
+└── package.json
+```
 
-## Tech Stack
+Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
 
-- **Frontend**: Vanilla JavaScript (ES6+), HTML5, CSS3
-- **Styling**: Bootstrap 5 + Custom Modern UI
-- **Database**: IndexedDB (managed by [Dexie.js](https://dexie.org/))
-- **Charts**: [Chart.js](https://www.chartjs.org/)
-- **PWA**: Service Workers & Web App Manifest
+There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
 
-## Getting Started
+Any static assets, like images, can be placed in the `public/` directory.
 
-Since Macadam is now fully serverless, you don't need to install Python or run a complex backend.
+## 🧞 Commands
 
-### Option 1: Local Development
-1. Clone the repository.
-2. Open `index.html` in any modern web browser.
+All commands are run from the root of the project, from a terminal:
 
-### Option 2: Static Hosting
-Deploy to any static hosting provider (GitHub Pages, Netlify, Vercel, etc.) by simply uploading the files in this directory.
+| Command                   | Action                                           |
+| :------------------------ | :----------------------------------------------- |
+| `npm install`             | Installs dependencies                            |
+| `npm run dev`             | Starts local dev server at `localhost:4321`      |
+| `npm run build`           | Build your production site to `./dist/`          |
+| `npm run preview`         | Preview your build locally, before deploying     |
+| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
+| `npm run astro -- --help` | Get help using the Astro CLI                     |
 
-## Documentation
+## 👀 Want to learn more?
 
-See the [`docs/`](docs/) folder:
-
-- [Getting Started](docs/getting-started.md) -- setup, installation, first steps
-- [Architecture](docs/architecture.md) -- runtime model, data flow, theming
-- [Data Model](docs/data-model.md) -- IndexedDB schema, stores, field reference
-- [Backup and Restore](docs/backup-and-restore.md) -- export format, import behavior, merge semantics
-- [Offline](docs/offline.md) -- service worker, caching strategy, cache updates
-- [Contributing](docs/contributing.md) -- project layout, conventions, how to extend
-
-## The Roadmap
-Macadam has recently transitioned from a Flask/SQLite backend to a serverless PWA. We are currently in the final phases of polishing the offline-first experience and data portability features.
-
----
-*Dashers live and die by the asphalt; Macadam ensures you keep track of every mile.*
+Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).

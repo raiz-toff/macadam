@@ -1,0 +1,679 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Macadam - Settings">
+    <div class="d-flex justify-content-between align-items-end pt-3 pb-2 mb-5 border-bottom">
+        <div>
+            <h1 class="h2 fw-800 mb-1"><i class="bi bi-gear-wide-connected text-primary me-2"></i>Vault Controls</h1>
+            <p class="text-muted mb-0">Manage your local data, profile, and tracking preferences.</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <!-- Identity Section -->
+        <div class="col-12 col-xl-8">
+            <div class="card border-0 shadow-sm h-100 bento-item">
+                <div class="card-header bg-body-tertiary py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-circle me-2 text-primary"></i>Profile Identity</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-3 text-center border-end">
+                            <label class="form-label fw-bold small text-uppercase text-muted d-block">Your Avatar</label>
+                            <div id="settings-avatar-display" class="avatar-preview mx-auto mb-3">🚗</div>
+                            <div class="avatar-selector d-flex flex-wrap gap-2 justify-content-center">
+                                {['🚗', '🚲', '⚡', '🛵', '📦'].map(a => (
+                                    <button class="btn btn-sm btn-avatar-select" data-avatar={a}>{a}</button>
+                                ))}
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <form id="profileForm">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small text-uppercase text-muted">Display Name</label>
+                                        <input type="text" id="pref-name" class="form-control bg-body-tertiary border-0" placeholder="Driver Name">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small text-uppercase text-muted">Currency Symbol</label>
+                                        <input type="text" id="pref-currency" class="form-control bg-body-tertiary border-0" placeholder="$">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small text-uppercase text-muted">Region</label>
+                                        <select id="pref-region" class="form-select bg-body-tertiary border-0">
+                                            <option value="CA">Canada</option>
+                                            <option value="US">USA</option>
+                                            <option value="UK">UK</option>
+                                            <option value="AU">Australia</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small text-uppercase text-muted">Distance Unit</label>
+                                        <select id="pref-dist-unit" class="form-select bg-body-tertiary border-0">
+                                            <option value="km">Kilometers (km)</option>
+                                            <option value="mi">Miles (mi)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 text-end">
+                                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">Save Identity</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Section -->
+        <div class="col-12 col-xl-4">
+            <div class="card border-0 shadow-sm h-100 bento-item">
+                <div class="card-header bg-body-tertiary py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-car-front-fill me-2 text-indigo"></i>Vehicle Profile</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form id="vehicleForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Vehicle Type</label>
+                            <select id="pref-vehicle" class="form-select bg-body-tertiary border-0">
+                                <option value="gas">Internal Combustion (Gas)</option>
+                                <option value="ev">Electric Vehicle (EV)</option>
+                                <option value="bike">Bicycle / E-Bike</option>
+                            </select>
+                        </div>
+                        <div id="mpg-group" class="mb-4">
+                            <label id="efficiency-label" class="form-label fw-bold small text-uppercase text-muted">Avg. Efficiency</label>
+                            <div class="input-group">
+                                <input type="number" id="pref-mpg" class="form-control bg-body-tertiary border-0" placeholder="e.g. 25">
+                                <span id="efficiency-unit" class="input-group-text border-0 bg-body-secondary small">L/100km</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-indigo w-100 rounded-pill fw-bold shadow-sm">Update Vehicle</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preferences Section -->
+        <div class="col-12 col-xl-4">
+            <div class="card border-0 shadow-sm h-100 bento-item">
+                <div class="card-header bg-body-tertiary py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-sliders me-2 text-primary"></i>Work Routine</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form id="preferencesForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Schedule Intensity</label>
+                            <select id="pref-intensity" class="form-select bg-body-tertiary border-0">
+                                <option value="full">Full-Time</option>
+                                <option value="part">Part-Time</option>
+                                <option value="side">Side Hustle</option>
+                                <option value="seasonal">Seasonal</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-uppercase text-muted">Starting Zone</label>
+                            <input type="text" id="pref-zone" class="form-control bg-body-tertiary border-0" placeholder="Home Base">
+                        </div>
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox" id="pref-hst">
+                            <label class="form-check-label fw-bold small text-uppercase text-muted" for="pref-hst">HST/GST Registered</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold shadow-sm">Save Routine</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories Section -->
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm h-100 bento-item">
+                <div class="card-header bg-body-tertiary py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-tags-fill me-2 text-warning"></i>Expense Categories</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div id="category-management-list" class="d-flex flex-wrap gap-2 mb-4">
+                        <!-- Loaded via JS -->
+                    </div>
+                    <form id="addCategoryForm" class="input-group">
+                        <input type="text" id="new-cat-name" class="form-control bg-body-tertiary border-0" placeholder="New Category Name">
+                        <button class="btn btn-warning px-4 fw-bold" type="submit">Add <i class="bi bi-plus-lg"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Platforms Management Section (Phase 2, Items 25-29) -->
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm h-100 bento-item">
+                <div class="card-header bg-body-tertiary py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-stack me-2 text-primary"></i>Active Platforms</h5>
+                    <button id="btnAddPlatform" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+                        <i class="bi bi-plus-lg me-1"></i> Add Platform
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div id="platform-settings-list" class="list-group list-group-flush">
+                        <!-- Loaded via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="col-12 col-md-6 col-xl-6">
+            <div class="card border-0 shadow-sm bento-item">
+                <div class="card-header bg-body-tertiary py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-info"></i>Vault Safety</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="small text-muted mb-4">Your financial data is encrypted and lives only on this browser. Keep backups regularly.</p>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button id="btnExport" class="btn btn-outline-primary w-100 py-2 fw-bold">
+                                <i class="bi bi-download me-1"></i> Export
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <input type="file" id="importFile" class="d-none" accept=".json">
+                            <button id="btnImportTrigger" class="btn btn-outline-secondary w-100 py-2 fw-bold">
+                                <i class="bi bi-upload me-1"></i> Restore
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="col-12 col-md-6 col-xl-6">
+            <div class="card border-0 shadow-sm border-start border-danger border-4 bento-item">
+                <div class="card-header bg-danger-subtle py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Irreversible Actions</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-1">Re-Run Onboarding</h6>
+                            <p class="small text-muted mb-0">Return to step 1 without deleting data.</p>
+                        </div>
+                        <button id="btnReOnboard" class="btn btn-outline-danger px-3 py-2 fw-bold">
+                            Restart
+                        </button>
+                    </div>
+                    <hr class="opacity-10">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="fw-bold mb-1">Erase Vault</h6>
+                            <p class="small text-muted mb-0">Permanently wipe all records on this device.</p>
+                        </div>
+                        <button id="btnClear" class="btn btn-danger px-4 py-2 fw-bold shadow-sm">
+                            <i class="bi bi-trash3-fill me-1"></i> Wipe
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .fw-800 { font-weight: 800; }
+        .text-indigo { color: #6366f1; }
+        .btn-indigo { background: #6366f1; color: white; }
+        .btn-indigo:hover { background: #4f46e5; color: white; }
+        
+        .avatar-preview {
+            width: 80px;
+            height: 80px;
+            background: var(--bs-secondary-bg);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .btn-avatar-select {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: var(--bs-secondary-bg);
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        .btn-avatar-select.active {
+            border-color: var(--primary-color);
+            background: var(--bs-tertiary-bg);
+            transform: scale(1.1);
+        }
+
+        .cat-tag {
+            background: var(--bs-secondary-bg);
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .cat-tag .btn-close { font-size: 0.6rem; }
+
+        .bg-danger-subtle { background: rgba(244, 63, 94, 0.1); }
+    </style>
+
+    <script>
+        import { db } from '../lib/db';
+
+        // Types
+        interface Notify {
+            show: (msg: string, type?: string) => void;
+        }
+        interface Confirm {
+            (options: { message: string, target?: string, onConfirm: () => void }): void;
+        }
+
+        declare global {
+            interface Window {
+                MacadamNotify: Notify;
+                MacadamConfirm: Confirm;
+            }
+        }
+
+        // State
+        let currentAvatar = '🚗';
+
+        function updateAvatarDisplay(avatar: string) {
+            currentAvatar = avatar;
+            const display = document.getElementById('settings-avatar-display');
+            if (display) display.textContent = avatar;
+            
+            document.querySelectorAll('.btn-avatar-select').forEach(btn => {
+                btn.classList.toggle('active', (btn as HTMLElement).dataset.avatar === avatar);
+            });
+        }
+
+        async function loadCategories() {
+            const categories = await db.expense_categories.toArray();
+            const list = document.getElementById('category-management-list');
+            if (list) {
+                list.innerHTML = categories.map(c => `
+                    <div class="cat-tag">
+                        <span>${c.name}</span>
+                        <button type="button" class="btn-close" data-id="${c.id}" aria-label="Delete"></button>
+                    </div>
+                `).join('');
+
+                list.querySelectorAll('.btn-close').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const id = parseInt((btn as HTMLElement).dataset.id!);
+                        await db.expense_categories.delete(id);
+                        loadCategories();
+                    });
+                });
+            }
+        }
+
+        async function loadPlatforms() {
+            const activePlatforms = await db.platforms.where('active').equals(1).toArray();
+            const list = document.getElementById('platform-settings-list');
+            if (!list) return;
+
+            if (activePlatforms.length === 0) {
+                list.innerHTML = `<div class="p-4 text-center text-muted small">No active platforms. Add one to start tracking.</div>`;
+                return;
+            }
+
+            const cur = await db.getSetting('macadam_v2_currency', '$');
+
+            list.innerHTML = '';
+            for (const p of activePlatforms) {
+                const goal = await db.getSetting(`macadam_v2_goal_weekly_${p.id}`, '');
+                const tax = await db.getSetting(`macadam_v2_tax_percent_${p.id}`, '');
+                const notes = await db.getSetting(`macadam_v2_notes_${p.id}`, '');
+
+                const item = document.createElement('div');
+                item.className = 'list-group-item p-4';
+                item.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="platform-icon" style="background: ${p.color}; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                ${p.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-0">${p.name}</h6>
+                                <span class="badge bg-light text-primary border">${p.terminology.driver} / ${p.terminology.task}</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger border-0 btn-deactivate" data-id="${p.id}" title="Deactivate">
+                            <i class="bi bi-pause-circle"></i>
+                        </button>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Weekly Goal (${cur})</label>
+                            <input type="number" class="form-control form-control-sm bg-body-tertiary border-0 plat-goal" data-id="${p.id}" value="${goal}" placeholder="Default">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Tax Rate (%)</label>
+                            <input type="number" class="form-control form-control-sm bg-body-tertiary border-0 plat-tax" data-id="${p.id}" value="${tax}" placeholder="Default">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Platform Bio / Notes</label>
+                            <textarea class="form-control form-control-sm bg-body-tertiary border-0 plat-notes" data-id="${p.id}" rows="2" placeholder="Account info, referral codes, or specific instructions...">${notes}</textarea>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(item);
+            }
+
+            // Bind inline saves
+            list.querySelectorAll('.plat-goal, .plat-tax, .plat-notes').forEach(input => {
+                input.addEventListener('change', async (e) => {
+                    const el = e.target as HTMLInputElement | HTMLTextAreaElement;
+                    const id = el.dataset.id!;
+                    let key = '';
+                    if (el.classList.contains('plat-goal')) key = `macadam_v2_goal_weekly_${id}`;
+                    else if (el.classList.contains('plat-tax')) key = `macadam_v2_tax_percent_${id}`;
+                    else if (el.classList.contains('plat-notes')) key = `macadam_v2_notes_${id}`;
+                    
+                    if (key) {
+                        await db.setSetting(key, el.value);
+                        window.MacadamNotify.show('Platform settings saved.', 'info');
+                    }
+                });
+            });
+
+            // Bind deactivation
+            list.querySelectorAll('.btn-deactivate').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = (btn as HTMLElement).dataset.id!;
+                    window.MacadamConfirm({
+                        message: `Deactivate ${id}? Historical data will be preserved, but it will no longer appear in the dashboard.`,
+                        onConfirm: async () => {
+                            await db.platforms.update(id, { active: 0 });
+                            loadPlatforms();
+                            window.MacadamNotify.show('Platform deactivated.');
+                        }
+                    });
+                });
+            });
+        }
+        
+        async function initSettings() {
+            // Load from DB
+            const name = await db.getSetting('macadam_v2_user_name', '');
+            const cur = await db.getSetting('macadam_v2_currency', '$');
+            const region = await db.getSetting('macadam_v2_region', 'CA');
+            const distUnit = await db.getSetting('macadam_v2_distance_unit', 'km');
+            
+            const intensity = await db.getSetting('macadam_v2_work_intensity', 'full');
+            const zone = await db.getSetting('macadam_v2_starting_zone', '');
+            const hst = await db.getSetting('macadam_v2_hst_registered', false);
+
+            const goal = await db.getSetting('macadam_v2_goal_weekly', '0');
+            const tax = await db.getSetting('macadam_v2_tax_percent', '25');
+            
+            const vehicle = await db.getSetting('macadam_v2_vehicle_type', 'gas');
+            const mpg = await db.getSetting('macadam_v2_mpg', '0');
+            currentAvatar = await db.getSetting('macadam_v2_avatar', '🚗');
+
+            (document.getElementById('pref-name') as HTMLInputElement).value = name;
+            (document.getElementById('pref-currency') as HTMLInputElement).value = cur;
+            (document.getElementById('pref-region') as HTMLSelectElement).value = region;
+            (document.getElementById('pref-dist-unit') as HTMLSelectElement).value = distUnit;
+            
+            (document.getElementById('pref-intensity') as HTMLSelectElement).value = intensity;
+            (document.getElementById('pref-zone') as HTMLInputElement).value = zone;
+            (document.getElementById('pref-hst') as HTMLInputElement).checked = hst;
+
+            const goalEl = document.getElementById('pref-goal') as HTMLInputElement;
+            if (goalEl) goalEl.value = goal;
+            
+            (document.getElementById('pref-tax') as HTMLInputElement).value = tax;
+            (document.getElementById('pref-vehicle') as HTMLSelectElement).value = vehicle;
+            (document.getElementById('pref-mpg') as HTMLInputElement).value = mpg;
+            
+            updateAvatarDisplay(currentAvatar);
+            loadCategories();
+            loadPlatforms();
+
+            const vehicleSelect = document.getElementById('pref-vehicle') as HTMLSelectElement;
+            const efficiencyUnit = document.getElementById('efficiency-unit');
+            const toggleEfficiency = () => {
+                if (efficiencyUnit) {
+                    const unit = vehicleSelect.value === 'ev' ? 'kWh/100km' : (distUnit === 'km' ? 'L/100km' : 'MPG');
+                    efficiencyUnit.textContent = unit;
+                }
+            };
+            vehicleSelect?.addEventListener('change', toggleEfficiency);
+            toggleEfficiency();
+        }
+
+        document.addEventListener('astro:page-load', initSettings);
+        initSettings();
+
+        function bindEvents() {
+            // Platforms
+            document.getElementById('btnAddPlatform')?.addEventListener('click', async () => {
+                const allPlatforms = [
+                    { id: 'ubereats', name: 'Uber Eats', color: '#06C167', logo: '🥡', terms: { driver: 'Courier', task: 'Order' } },
+                    { id: 'doordash', name: 'DoorDash', color: '#FF3008', logo: '🚗', terms: { driver: 'Dasher', task: 'Delivery' } },
+                    { id: 'skip', name: 'SkipTheDishes', color: '#FF8200', logo: '🍔', terms: { driver: 'Courier', task: 'Order' } },
+                    { id: 'instacart', name: 'Instacart', color: '#43B02A', logo: '🛒', terms: { driver: 'Shopper', task: 'Batch' } },
+                    { id: 'grubhub', name: 'Grubhub', color: '#F63440', logo: '🍕', terms: { driver: 'Driver', task: 'Delivery' } },
+                    { id: 'lyft', name: 'Lyft', color: '#FF00BF', logo: '🚘', terms: { driver: 'Driver', task: 'Ride' } },
+                    { id: 'uber', name: 'Uber', color: '#000000', logo: '🖤', terms: { driver: 'Driver', task: 'Ride' } },
+                    { id: 'amazonflex', name: 'Amazon Flex', color: '#FF9900', logo: '📦', terms: { driver: 'Driver', task: 'Block' } }
+                ];
+
+                const activeIds = (await db.platforms.where('active').equals(1).toArray()).map(p => p.id);
+                const inactive = allPlatforms.filter(p => !activeIds.includes(p.id));
+
+                if (inactive.length === 0) {
+                    return window.MacadamNotify.show('All supported platforms are already active.', 'info');
+                }
+
+                // Show a simple selection UI (reusing MacadamConfirm as a selector hack or just a prompt)
+                // Better: Create a small modal dynamically
+                const modalHtml = `
+                    <div class="modal fade" id="addPlatModal" tabindex="-1">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-0 shadow-lg">
+                                <div class="modal-header border-0 bg-body-tertiary">
+                                    <h5 class="modal-title fw-bold">Add Platform</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body p-4">
+                                    <div class="list-group list-group-flush">
+                                        ${inactive.map(p => `
+                                            <button class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 rounded-3 mb-2 plat-choice" data-id="${p.id}">
+                                                <div style="background: ${p.color}; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">${p.name.charAt(0)}</div>
+                                                <span class="fw-bold">${p.name}</span>
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                const old = document.getElementById('addPlatModal');
+                if (old) old.remove();
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+                // @ts-ignore
+                const modal = new bootstrap.Modal(document.getElementById('addPlatModal'));
+                modal.show();
+
+                document.querySelectorAll('.plat-choice').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const id = (btn as HTMLElement).dataset.id!;
+                        const plat = allPlatforms.find(p => p.id === id);
+                        if (plat) {
+                            await db.platforms.put({
+                                id: plat.id,
+                                name: plat.name,
+                                color: plat.color,
+                                logo: plat.logo,
+                                terminology: plat.terms,
+                                active: 1
+                            });
+                            modal.hide();
+                            loadPlatforms();
+                            window.MacadamNotify.show(`${plat.name} added.`);
+                        }
+                    });
+                });
+            });
+
+            // Avatar select
+            document.querySelectorAll('.btn-avatar-select').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    updateAvatarDisplay((btn as HTMLElement).dataset.avatar!);
+                });
+            });
+
+            // Forms
+            document.getElementById('profileForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = (document.getElementById('pref-name') as HTMLInputElement).value.trim();
+                const cur = (document.getElementById('pref-currency') as HTMLInputElement).value.trim();
+                const region = (document.getElementById('pref-region') as HTMLSelectElement).value;
+                const distUnit = (document.getElementById('pref-dist-unit') as HTMLSelectElement).value;
+
+                if (!name) return window.MacadamNotify.show('Name cannot be empty', 'warning');
+                
+                await db.setSetting('macadam_v2_user_name', name);
+                await db.setSetting('macadam_v2_currency', cur || '$');
+                await db.setSetting('macadam_v2_region', region);
+                await db.setSetting('macadam_v2_distance_unit', distUnit);
+                await db.setSetting('macadam_v2_avatar', currentAvatar);
+                window.MacadamNotify.show('Profile updated successfully.');
+            });
+
+            document.getElementById('preferencesForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const intensity = (document.getElementById('pref-intensity') as HTMLSelectElement).value;
+                const zone = (document.getElementById('pref-zone') as HTMLInputElement).value;
+                const hst = (document.getElementById('pref-hst') as HTMLInputElement).checked;
+
+                await db.setSetting('macadam_v2_work_intensity', intensity);
+                await db.setSetting('macadam_v2_starting_zone', zone);
+                await db.setSetting('macadam_v2_hst_registered', hst);
+                window.MacadamNotify.show('Routine preferences updated.');
+            });
+
+            document.getElementById('vehicleForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const vehicle = (document.getElementById('pref-vehicle') as HTMLSelectElement).value;
+                const mpg = (document.getElementById('pref-mpg') as HTMLInputElement).value;
+                await db.setSetting('macadam_v2_vehicle_type', vehicle);
+                await db.setSetting('macadam_v2_mpg', mpg);
+                window.MacadamNotify.show('Vehicle profile updated.');
+            });
+
+            document.getElementById('goalsForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const goal = (document.getElementById('pref-goal') as HTMLInputElement).value;
+                const tax = (document.getElementById('pref-tax') as HTMLInputElement).value;
+                await db.setSetting('macadam_v2_goal_weekly', goal);
+                await db.setSetting('macadam_v2_tax_percent', tax);
+                window.MacadamNotify.show('Financial targets updated.');
+            });
+
+            document.getElementById('addCategoryForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const nameEl = document.getElementById('new-cat-name') as HTMLInputElement;
+                const name = nameEl.value.trim();
+                if (name) {
+                    await db.expense_categories.add({ name });
+                    nameEl.value = '';
+                    loadCategories();
+                    window.MacadamNotify.show('Category added.');
+                }
+            });
+
+            // Wipe logic
+            document.getElementById('btnClear')?.addEventListener('click', () => {
+                window.MacadamConfirm({
+                    message: 'Permanently erase all data? This cannot be undone.',
+                    target: 'RESET',
+                    onConfirm: async () => {
+                        await db.delete();
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        window.location.reload();
+                    }
+                });
+            });
+
+            document.getElementById('btnReOnboard')?.addEventListener('click', () => {
+                window.MacadamConfirm({
+                    message: 'Restart onboarding flow? Your existing data will be preserved.',
+                    onConfirm: () => {
+                        localStorage.removeItem('macadam_onboarded');
+                        window.location.href = '/';
+                    }
+                });
+            });
+
+            // Export/Import
+            document.getElementById('btnExport')?.addEventListener('click', async () => {
+                const data = {
+                    app: 'Macadam',
+                    version: '2.0',
+                    data: {
+                        weekly_earnings: await db.weekly_earnings.toArray(),
+                        expenses: await db.expenses.toArray(),
+                        expense_categories: await db.expense_categories.toArray(),
+                        settings: await db.settings.toArray()
+                    }
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `macadam-export.json`;
+                a.click();
+            });
+
+            const importFile = document.getElementById('importFile') as HTMLInputElement;
+            document.getElementById('btnImportTrigger')?.addEventListener('click', () => importFile.click());
+            importFile?.addEventListener('change', async () => {
+                const file = importFile.files?.[0];
+                if (!file) return;
+                window.MacadamConfirm({
+                    message: 'Restore data from backup? This will merge with existing records.',
+                    onConfirm: async () => {
+                        const reader = new FileReader();
+                        reader.onload = async (e) => {
+                            try {
+                                const parsed = JSON.parse(e.target?.result as string);
+                                const data = parsed.data || parsed;
+                                if (data.weekly_earnings) await db.weekly_earnings.bulkPut(data.weekly_earnings);
+                                if (data.expenses) await db.expenses.bulkPut(data.expenses);
+                                if (data.expense_categories) await db.expense_categories.bulkPut(data.expense_categories);
+                                if (data.settings) await db.settings.bulkPut(data.settings);
+                                window.location.reload();
+                            } catch (err) { window.MacadamNotify.show('Import failed', 'danger'); }
+                        };
+                        reader.readAsText(file);
+                    }
+                });
+            });
+        }
+
+        document.addEventListener('astro:page-load', () => {
+            initSettings();
+            bindEvents();
+        });
+    </script>
+</Layout>

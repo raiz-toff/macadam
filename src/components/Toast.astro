@@ -1,0 +1,64 @@
+---
+/**
+ * Toast notification system for Macadam.
+ */
+---
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 11000;">
+    <div id="macadamToast" class="toast align-items-center border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div id="toastIcon" class="toast-body fs-5 pe-0">
+                <i class="bi bi-check-circle-fill text-success"></i>
+            </div>
+            <div id="toastMessage" class="toast-body fw-bold">
+                Action completed successfully.
+            </div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // @ts-ignore
+    import { Toast } from 'bootstrap';
+
+    class MacadamNotify {
+        private toastEl: HTMLElement | null;
+        private toast: any;
+
+        constructor() {
+            this.toastEl = document.getElementById('macadamToast');
+            if (this.toastEl) {
+                this.toast = new Toast(this.toastEl, { delay: 3000 });
+            }
+        }
+
+        show(message: string, type: 'success' | 'danger' | 'warning' | 'info' = 'success') {
+            const msgEl = document.getElementById('toastMessage');
+            const iconEl = document.getElementById('toastIcon');
+            
+            if (msgEl) msgEl.textContent = message;
+            
+            if (this.toastEl) {
+                this.toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white');
+                if (type === 'success') this.toastEl.classList.add('bg-success', 'text-white');
+                if (type === 'danger') this.toastEl.classList.add('bg-danger', 'text-white');
+                if (type === 'warning') this.toastEl.classList.add('bg-warning', 'text-dark');
+                if (type === 'info') this.toastEl.classList.add('bg-info', 'text-white');
+            }
+
+            if (iconEl) {
+                let icon = 'bi-check-circle-fill';
+                if (type === 'danger') icon = 'bi-exclamation-octagon-fill';
+                if (type === 'warning') icon = 'bi-exclamation-triangle-fill';
+                if (type === 'info') icon = 'bi-info-circle-fill';
+                iconEl.innerHTML = `<i class="bi ${icon}"></i>`;
+            }
+
+            this.toast?.show();
+        }
+    }
+
+    // Expose to window
+    (window as any).MacadamNotify = new MacadamNotify();
+</script>
