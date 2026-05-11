@@ -28,6 +28,7 @@
 
 import { t } from '../../utils/strings.js';
 import { getLocaleConfig } from '../../utils/locale.js';
+import { CountryRegistry, getCountryTaxProfile } from '../../registry/countries/index.js';
 import { getPlatformColor, renderPlatformBadge } from '../../ui/components.js';
 
 export const TOTAL_STEPS = 15;
@@ -176,9 +177,13 @@ export function renderStepInner(step, draft, platformRows) {
         <div class="input-group">
           <label class="input-label" for="ob-country">${esc(t('onboarding.steps.country'))}</label>
           <select id="ob-country" class="input" data-field="country">
-            <option value="CA" ${draft.country === 'CA' ? 'selected' : ''}>${esc(t('onboarding.steps.countryCA'))}</option>
-            <option value="US" ${draft.country === 'US' ? 'selected' : ''}>${esc(t('onboarding.steps.countryUS'))}</option>
-            <option value="UK" ${draft.country === 'UK' ? 'selected' : ''}>${esc(t('onboarding.steps.countryUK'))}</option>
+            ${CountryRegistry.getAll()
+              .map((c) => {
+                const label = typeof c.labelKey === 'string' ? t(c.labelKey) : c.id;
+                const sel = draft.country === c.id ? 'selected' : '';
+                return `<option value="${esc(c.id)}" ${sel}>${esc(label)}</option>`;
+              })
+              .join('')}
           </select>
         </div>
         <p class="onboarding-hint">${esc(t('onboarding.steps.currencyHint'))}: <strong>${esc(cfg.currency)}</strong> (${esc(cfg.symbol)})</p>`;
@@ -296,19 +301,21 @@ export function renderStepInner(step, draft, platformRows) {
         </div>`;
 
     case 9: {
-      const isCA = draft.country === 'CA';
-      const isUS = draft.country === 'US';
+      const tax = getCountryTaxProfile(draft.country);
+      const isCA = tax.regionPresetType === 'CA';
+      const isUS = tax.regionPresetType === 'US';
       const regions = isCA
         ? Object.keys(TAX_PRESET_CA)
         : isUS
           ? [...new Set([...Object.keys(TAX_PRESET_US).filter((k) => k !== 'default'), 'WA', 'OR', 'OH', 'GA'])].sort()
           : ['—'];
+      const regionLabel = tax.regionLabel === 'province' ? t('onboarding.steps.province') : t('onboarding.steps.state');
       return `
         <h1 class="onboarding-step-title">${esc(t('onboarding.steps.taxTitle'))}</h1>
         <p class="onboarding-step-lead">${esc(t('onboarding.steps.taxLead'))}</p>
         ${whyBlock('onboarding.why.taxSummary', 'onboarding.why.taxBody')}
         <div class="input-group">
-          <label class="input-label" for="ob-tax-region">${esc(isCA ? t('onboarding.steps.province') : t('onboarding.steps.state'))}</label>
+          <label class="input-label" for="ob-tax-region">${esc(regionLabel)}</label>
           <select id="ob-tax-region" class="input" data-field="taxRegion">
             <option value="">${esc(t('onboarding.steps.taxRegionPlaceholder'))}</option>
             ${regions
@@ -324,7 +331,7 @@ export function renderStepInner(step, draft, platformRows) {
     }
 
     case 10:
-      if (draft.country !== 'CA') {
+      if (!getCountryTaxProfile(draft.country).hstOnboarding) {
         return `<p class="onboarding-step-lead">${esc(t('onboarding.steps.hstSkip'))}</p>`;
       }
       return `
@@ -426,7 +433,8 @@ export function validateStep(step, draft) {
 export function applyTaxPreset(draft) {
   const r = draft.taxRegion;
   if (!r || r === '—') return draft.taxWithholdingPct;
-  if (draft.country === 'CA' && TAX_PRESET_CA[r] != null) return TAX_PRESET_CA[r];
-  if (draft.country === 'US') return TAX_PRESET_US[r] ?? TAX_PRESET_US.default;
+  const tax = getCountryTaxProfile(draft.country);
+  if (tax.regionPresetType === 'CA' && TAX_PRESET_CA[r] != null) return TAX_PRESET_CA[r];
+  if (tax.regionPresetType === 'US') return TAX_PRESET_US[r] ?? TAX_PRESET_US.default;
   return draft.taxWithholdingPct;
 }

@@ -201,6 +201,11 @@
   display: none;
 }
 
+.shifts-form [data-ps-wrap].is-hidden,
+.shifts-form [data-ps-object-hint].is-hidden {
+  display: none;
+}
+
 .shifts-advanced-grid {
   grid-column: span 2;
   display: grid;

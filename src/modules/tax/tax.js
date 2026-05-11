@@ -9,7 +9,8 @@ import {
   calcTaxSetAside,
 } from '../../utils/calculations.js';
 import { formatCurrency, formatLargeNumber, formatPercent } from '../../utils/formatters.js';
-import { getAllTaxDeadlines } from '../../utils/locale.js';
+import { getAllTaxDeadlines, getLocaleConfig } from '../../utils/locale.js';
+import { getCountryTaxProfile } from '../../registry/countries/index.js';
 import { t } from '../../utils/strings.js';
 import { renderProgressRing, showToast } from '../../ui/components.js';
 
@@ -107,17 +108,6 @@ function toYmd(d) {
   return `${y}-${m}-${day}`;
 }
 
-function inferLocaleTag(country) {
-  if (country === 'CA') return 'en-CA';
-  if (country === 'US') return 'en-US';
-  if (country === 'UK') return 'en-GB';
-  return 'en-US';
-}
-
-function inferDistanceUnit(country) {
-  return country === 'US' || country === 'UK' ? 'mi' : 'km';
-}
-
 function csvEscape(value) {
   const s = String(value ?? '');
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -145,24 +135,42 @@ function downloadTextFile(filename, text, mime) {
   URL.revokeObjectURL(url);
 }
 
-function buildRegionOptions(country) {
-  const map = country === 'CA' ? TAX_RATE_PRESETS_CA : TAX_RATE_PRESETS_US;
+/**
+ * @param {ReturnType<typeof getCountryTaxProfile>} taxProfile
+ */
+function buildRegionOptions(taxProfile) {
+  const map =
+    taxProfile.regionPresetType === 'CA'
+      ? TAX_RATE_PRESETS_CA
+      : taxProfile.regionPresetType === 'US'
+        ? TAX_RATE_PRESETS_US
+        : null;
+  if (!map) return [];
   return Object.entries(map).map(([code, rate]) => ({ code, rate }));
 }
 
-function defaultRegionCode(country) {
-  return country === 'CA' ? DEFAULT_CA_REGION : DEFAULT_US_REGION;
+/**
+ * @param {ReturnType<typeof getCountryTaxProfile>} taxProfile
+ */
+function defaultRegionCode(taxProfile) {
+  return taxProfile.defaultRegionCode || (taxProfile.regionPresetType === 'CA' ? DEFAULT_CA_REGION : DEFAULT_US_REGION);
 }
 
-function getTaxRatePresets(country) {
-  return country === 'CA' ? TAX_RATE_PRESETS_CA : TAX_RATE_PRESETS_US;
+/**
+ * @param {ReturnType<typeof getCountryTaxProfile>} taxProfile
+ */
+function getTaxRatePresets(taxProfile) {
+  if (taxProfile.regionPresetType === 'CA') return TAX_RATE_PRESETS_CA;
+  if (taxProfile.regionPresetType === 'US') return TAX_RATE_PRESETS_US;
+  return /** @type {Record<string, number>} */ ({});
 }
 
 async function loadTaxSummary(year) {
   const user = (await db.users.get(1)) || null;
   const country = String(user?.locale?.country || 'US').toUpperCase();
-  const currency = user?.locale?.currency || (country === 'CA' ? 'CAD' : 'USD');
-  const localeTag = inferLocaleTag(country);
+  const taxProfile = getCountryTaxProfile(country);
+  const currency = user?.locale?.currency || taxProfile.fallbackCurrency;
+  const localeTag = taxProfile.intlLocaleTag;
   const shifts = await db.shifts
     .where('date')
     .between(`${year}-01-01`, `${year}-12-31`, true, true)
@@ -177,12 +185,12 @@ async function loadTaxSummary(year) {
   const gross = shifts.reduce((sum, s) => sum + num(s.grossEarnings ?? s.gross), 0);
   const businessExpenses = expenses.reduce((sum, e) => sum + num(e.amount) * (num(e.businessPct, 100) / 100), 0);
   const netIncome = Math.max(0, gross - businessExpenses);
-  const taxRatePct = num(user?.taxWithholdingPct, country === 'CA' ? 28 : 25);
+  const taxRatePct = num(user?.taxWithholdingPct, taxProfile.defaultWithholdingPct);
   const taxSetAside = calcTaxSetAside(gross, taxRatePct);
   const virtualJar = num(parseAppStateValue(await db.appState.get(TAX_VIRTUAL_JAR_KEY), 0), 0);
   const setAsideCoveragePct = taxSetAside > 0 ? Math.min(100, (virtualJar / Math.max(1, taxSetAside)) * 100) : 0;
 
-  const hstRate = country === 'CA' ? 0.13 : 0;
+  const hstRate = taxProfile.hstRateWhenRegistered || 0;
   const hstCollected = user?.hstRegistered ? gross * hstRate : 0;
   const itcTotal = expenses.reduce((sum, e) => sum + num(e.hstItcAmount), 0);
   const hstRemittable = calcHSTRemittable(hstCollected, itcTotal);
@@ -196,13 +204,14 @@ async function loadTaxSummary(year) {
     100,
   );
 
-  const cppEstimate = country === 'CA' ? calcCPPContribution(netIncome, year) : 0;
-  const seTaxEstimate = country === 'US' ? calcSEtax(netIncome) : 0;
+  const cppEstimate = taxProfile.calcCpp ? calcCPPContribution(netIncome, year) : 0;
+  const seTaxEstimate = taxProfile.calcSeTax ? calcSEtax(netIncome) : 0;
   const deadlines = getAllTaxDeadlines(country, year);
 
   return {
     year,
     country,
+    taxProfile,
     currency,
     localeTag,
     taxRatePct,
@@ -224,12 +233,15 @@ async function loadTaxSummary(year) {
     seTaxEstimate,
     user,
     deadlines,
-    distanceUnit: inferDistanceUnit(country),
+    distanceUnit: getLocaleConfig(country).distanceUnit === 'mi' ? 'mi' : 'km',
     generatedAt: new Date().toISOString(),
   };
 }
 
-function renderTaxHelpers(country) {
+/**
+ * @param {ReturnType<typeof getCountryTaxProfile>} taxProfile
+ */
+function renderTaxHelpers(taxProfile) {
   const t2125Rows = [
     t('tax.t2125.grossIncome'),
     t('tax.t2125.advertising'),
@@ -279,7 +291,13 @@ function renderTaxHelpers(country) {
           )}</a></li>
         </ul>
         <p style="margin-top: var(--space-3); color: var(--color-text-secondary);">
-          ${esc(country === 'CA' ? t('tax.footnoteCanada') : t('tax.footnoteUs'))}
+          ${esc(
+            taxProfile.footnote === 'canada'
+              ? t('tax.footnoteCanada')
+              : taxProfile.footnote === 'us'
+                ? t('tax.footnoteUs')
+                : t('tax.footnoteGeneric'),
+          )}
         </p>
       </article>
     </div>
@@ -367,17 +385,77 @@ async function exportTaxSummary(summary, format) {
   }
 }
 
+/**
+ * @param {Awaited<ReturnType<typeof loadTaxSummary>>} summary
+ */
+function renderSecondaryEstimatorArticle(summary) {
+  const tp = summary.taxProfile;
+  const loc = summary.localeTag;
+  const cur = summary.currency;
+  if (tp.secondaryEstimator === 'cpp') {
+    return `
+        <article class="card bento-cell-1x1">
+          <h2>${esc(t('tax.cppEstimator'))}</h2>
+          <p>${esc(t('tax.estimatedValue'))}: <strong>${esc(
+            formatCurrency(summary.cppEstimate, loc, { currency: cur }),
+          )}</strong></p>
+          <p style="color:var(--color-text-secondary);">${esc(t('tax.cppNote'))}</p>
+        </article>`;
+  }
+  if (tp.secondaryEstimator === 'se') {
+    return `
+        <article class="card bento-cell-1x1">
+          <h2>${esc(t('tax.seTaxEstimator'))}</h2>
+          <p>${esc(t('tax.estimatedValue'))}: <strong>${esc(
+            formatCurrency(summary.seTaxEstimate, loc, { currency: cur }),
+          )}</strong></p>
+          <p style="color:var(--color-text-secondary);">${esc(t('tax.seTaxNote'))}</p>
+        </article>`;
+  }
+  return `
+        <article class="card bento-cell-1x1">
+          <h2>${esc(t('tax.genericEstimatorTitle'))}</h2>
+          <p>${esc(t('tax.estimatedValue'))}: <strong>${esc(formatCurrency(0, loc, { currency: cur }))}</strong></p>
+          <p style="color:var(--color-text-secondary);">${esc(t('tax.genericEstimatorNote'))}</p>
+        </article>`;
+}
+
 export async function renderTaxDashboard(root, ctx = {}) {
   const selectedYear = Math.floor(num(ctx.taxYear, new Date().getFullYear()));
   const summary = await loadTaxSummary(selectedYear);
-  const regionOptions = buildRegionOptions(summary.country);
-  const rateMap = getTaxRatePresets(summary.country);
-  const storedRegion = String(summary.user?.taxRegion || defaultRegionCode(summary.country));
-  const selectedRegion = regionOptions.some((r) => r.code === storedRegion) ? storedRegion : defaultRegionCode(summary.country);
-  const selectedRegionRate = num(rateMap[selectedRegion], summary.taxRatePct);
+  const regionOptions = buildRegionOptions(summary.taxProfile);
+  const rateMap = getTaxRatePresets(summary.taxProfile);
+  const storedRegion = String(summary.user?.taxRegion || defaultRegionCode(summary.taxProfile));
+  const selectedRegion =
+    regionOptions.length > 0 && regionOptions.some((r) => r.code === storedRegion)
+      ? storedRegion
+      : regionOptions.length > 0
+        ? defaultRegionCode(summary.taxProfile)
+        : '';
+  const selectedRegionRate = selectedRegion ? num(rateMap[selectedRegion], summary.taxRatePct) : summary.taxRatePct;
   const netAfterSetAside = summary.netIncome - summary.taxSetAside;
-  const stdDeduction = summary.country === 'CA' ? summary.craMileage : summary.irsMileage;
+  const stdDeduction = summary.taxProfile.stdMileageChoice === 'CRA' ? summary.craMileage : summary.irsMileage;
   const mileageUnitLabel = summary.distanceUnit === 'mi' ? t('tax.miles') : t('tax.kilometres');
+  const regionLabel = summary.taxProfile.regionLabel === 'province' ? t('tax.province') : t('tax.state');
+  const regionPresetCard =
+    regionOptions.length > 0
+      ? `
+        <article class="card bento-cell-1x1">
+          <h2>${esc(t('tax.provinceStatePresets'))}</h2>
+          <label class="input-group">
+            <span class="input-label">${esc(regionLabel)}</span>
+            <select class="select" data-tax-region>
+              ${regionOptions.map((row) => `<option value="${row.code}" ${row.code === selectedRegion ? 'selected' : ''}>${row.code} (${row.rate}%)</option>`).join('')}
+            </select>
+          </label>
+          <button class="btn btn-secondary" type="button" data-apply-rate style="margin-top:var(--space-3);">${esc(
+            t('tax.applyPreset'),
+          )}</button>
+          <p style="margin-top:var(--space-2);color:var(--color-text-secondary);">${esc(t('tax.currentRate'))}: ${esc(
+            formatPercent(summary.taxRatePct),
+          )}</p>
+        </article>`
+      : '';
 
   root.innerHTML = `
     <section class="tax-view">
@@ -456,21 +534,7 @@ export async function renderTaxDashboard(root, ctx = {}) {
           )}</strong></p>
         </article>
 
-        <article class="card bento-cell-1x1">
-          <h2>${esc(t('tax.provinceStatePresets'))}</h2>
-          <label class="input-group">
-            <span class="input-label">${esc(summary.country === 'CA' ? t('tax.province') : t('tax.state'))}</span>
-            <select class="select" data-tax-region>
-              ${regionOptions.map((row) => `<option value="${row.code}" ${row.code === selectedRegion ? 'selected' : ''}>${row.code} (${row.rate}%)</option>`).join('')}
-            </select>
-          </label>
-          <button class="btn btn-secondary" type="button" data-apply-rate style="margin-top:var(--space-3);">${esc(
-            t('tax.applyPreset'),
-          )}</button>
-          <p style="margin-top:var(--space-2);color:var(--color-text-secondary);">${esc(t('tax.currentRate'))}: ${esc(
-            formatPercent(summary.taxRatePct),
-          )}</p>
-        </article>
+        ${regionPresetCard}
       </section>
 
       <section class="bento-grid" style="margin-top: var(--space-4);">
@@ -490,17 +554,7 @@ export async function renderTaxDashboard(root, ctx = {}) {
           )}</strong></p>
         </article>
 
-        <article class="card bento-cell-1x1">
-          <h2>${esc(summary.country === 'CA' ? t('tax.cppEstimator') : t('tax.seTaxEstimator'))}</h2>
-          <p>${esc(t('tax.estimatedValue'))}: <strong>${esc(
-            formatCurrency(summary.country === 'CA' ? summary.cppEstimate : summary.seTaxEstimate, summary.localeTag, {
-              currency: summary.currency,
-            }),
-          )}</strong></p>
-          <p style="color:var(--color-text-secondary);">${esc(
-            summary.country === 'CA' ? t('tax.cppNote') : t('tax.seTaxNote'),
-          )}</p>
-        </article>
+        ${renderSecondaryEstimatorArticle(summary)}
 
         <article class="card bento-cell-1x1">
           <h2>${esc(t('tax.installmentDeadlines'))}</h2>
@@ -517,7 +571,7 @@ export async function renderTaxDashboard(root, ctx = {}) {
         </article>
       </section>
 
-      ${renderTaxHelpers(summary.country)}
+      ${renderTaxHelpers(summary.taxProfile)}
 
       <section class="card" style="margin-top: var(--space-4);">
         <h3>${esc(t('tax.exportSummary'))}</h3>

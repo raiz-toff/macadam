@@ -7,6 +7,8 @@ import { db, initDatabase, getAppState, purgeOldDeleted } from './core/db.js';
 import { bus } from './core/events.js';
 import { store } from './core/store.js';
 import { Router, updateOnboardingFocusClass } from './core/router.js';
+import { assertPlatformRegistryValid, PlatformRegistry } from './registry/platforms/index.js';
+import { assertCountryRegistryValid, CountryRegistry } from './registry/countries/index.js';
 import { renderAppShell } from './core/shell.js';
 import { initPlatforms } from './modules/platforms/platforms.js';
 import { runOnOpenNotificationCheck } from './modules/notifications/notifications.js';
@@ -191,6 +193,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.__macadam.router = Router;
     Router.init();
+
+    try {
+      assertPlatformRegistryValid();
+      assertCountryRegistryValid();
+      console.log(
+        `[macadam] Registry ok: ${PlatformRegistry.getAll().length} platforms, ${CountryRegistry.getAll().length} countries`,
+      );
+    } catch (regErr) {
+      console.error('[macadam] registry validation failed', regErr);
+    }
 
     store.subscribe('user', () => {
       updateOnboardingFocusClass(!store.get('user')?.onboardingComplete);

@@ -11,6 +11,7 @@ import {
   projectWeekEarnings,
 } from '../../utils/calculations.js';
 import { getTotalExpensesForPeriod } from '../expenses/expenses.js';
+import { platformAnalyticsEnabled } from '../platforms/platform-config.js';
 
 function num(v, fallback = 0) {
   const n = Number(v);
@@ -289,7 +290,19 @@ export async function getPlatformComparison() {
   for (const [platformId, rows] of grouped.entries()) {
     const derived = await hydrateDerived(rows);
     const sum = aggregateSummary(derived);
-    out.push({ platformId, ...sum });
+    out.push({
+      platformId,
+      ...sum,
+      analyticsModules: {
+        bonusTracking: platformAnalyticsEnabled(platformId, 'bonusTracking'),
+        surgeAnalysis: platformAnalyticsEnabled(platformId, 'surgeAnalysis'),
+        blockEarnings: platformAnalyticsEnabled(platformId, 'blockEarnings'),
+        batchTracking: platformAnalyticsEnabled(platformId, 'batchTracking'),
+        orderTypeTracking: platformAnalyticsEnabled(platformId, 'orderTypeTracking'),
+        questTracking: platformAnalyticsEnabled(platformId, 'questTracking'),
+        promotionsTracking: platformAnalyticsEnabled(platformId, 'promotionsTracking'),
+      },
+    });
   }
   out.sort((a, b) => b.gross - a.gross);
   return out;

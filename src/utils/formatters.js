@@ -2,6 +2,7 @@ import dayjs from '../libs/dayjs.min.js';
 import relativeTime from '../libs/dayjs.relativeTime.min.js';
 import durationPlugin from '../libs/dayjs.duration.min.js';
 import { getLocaleConfig } from './locale.js';
+import { CountryRegistry } from '../registry/countries/index.js';
 import { getTerminology } from '../modules/platforms/platform-config.js';
 import { store } from '../core/store.js';
 
@@ -28,8 +29,7 @@ export function formatCurrency(amount, locale = 'en-US', opts = {}) {
   if (isCountryCode(locale)) {
     const cfg = getLocaleConfig(locale);
     currency = cfg.currency;
-    const u = String(locale).toUpperCase();
-    intlLocale = u === 'CA' ? 'en-CA' : u === 'UK' ? 'en-GB' : 'en-US';
+    intlLocale = CountryRegistry.getById(String(locale).toUpperCase()).tax.intlLocaleTag;
   }
   if (!currency) currency = 'USD';
   return new Intl.NumberFormat(intlLocale, {

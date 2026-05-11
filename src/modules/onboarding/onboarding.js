@@ -15,6 +15,7 @@ import {
 } from '../../core/events.js';
 import { t } from '../../utils/strings.js';
 import { getLocaleConfig } from '../../utils/locale.js';
+import { getCountryTaxProfile } from '../../registry/countries/index.js';
 import { showConfirm, showToast } from '../../ui/components.js';
 import {
   TOTAL_STEPS,
@@ -627,7 +628,7 @@ export async function mountOnboarding(root) {
       monthlyGoal: draft.monthlyGoal,
       annualGoal: draft.annualGoal,
       taxWithholdingPct: draft.taxWithholdingPct,
-      hstRegistered: draft.country === 'CA' ? draft.hstRegistered : false,
+      hstRegistered: getCountryTaxProfile(draft.country).hstOnboarding ? draft.hstRegistered : false,
       theme: draft.theme,
       notificationPrefs: { ...draft.notificationPrefs },
       onboardingComplete: true,

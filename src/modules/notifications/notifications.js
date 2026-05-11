@@ -7,6 +7,7 @@ import { db, getAppState, getUser } from '../../core/db.js';
 import { isUserVaultActive } from '../../core/vault-gate.js';
 import { showNotifyCard } from '../../ui/components.js';
 import { getNextTaxDeadline } from '../../utils/locale.js';
+import { getCountryTaxProfile } from '../../registry/countries/index.js';
 
 const NOTIFICATION_TYPES = {
   dailySummary: 'daily_summary',
@@ -306,7 +307,12 @@ async function checkMaintenanceAndInsurance() {
 async function checkTaxAndStreak(user, todayShifts) {
   const country = String(user?.locale?.country || 'US').toUpperCase();
   const nextTax = getNextTaxDeadline(country);
-  if (nextTax.daysUntil >= 0 && nextTax.daysUntil <= 10) {
+  const taxProfile = getCountryTaxProfile(country);
+  const reminderWindow =
+    typeof taxProfile.taxInstallmentReminderDays === 'number' && Number.isFinite(taxProfile.taxInstallmentReminderDays)
+      ? Math.max(0, Math.floor(taxProfile.taxInstallmentReminderDays))
+      : 10;
+  if (nextTax.daysUntil >= 0 && nextTax.daysUntil <= reminderWindow) {
     await createNotification(
       NOTIFICATION_TYPES.taxInstallment,
       'Tax installment due soon',

@@ -7,6 +7,7 @@ import { store } from '../../core/store.js';
 import { showNumericKeypad } from '../../ui/components.js';
 import { calcHourlyRate, calcCRAMileageDeduction, calcIRSMileageDeduction } from '../../utils/calculations.js';
 import { getPlatformConfig } from '../platforms/platform-config.js';
+import { getCountryTaxProfile } from '../../registry/countries/index.js';
 
 function escapeAttr(v) {
   return String(v ?? '')
@@ -17,6 +18,16 @@ function escapeAttr(v) {
 
 function escapeHtml(v) {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** @param {unknown} input */
+function cloneJsonObject(input) {
+  if (!input || typeof input !== 'object') return {};
+  try {
+    return JSON.parse(JSON.stringify(input));
+  } catch {
+    return { .../** @type {Record<string, unknown>} */ (input) };
+  }
 }
 
 function ymdToday() {
@@ -205,6 +216,12 @@ export function renderShiftForm(opts = {}) {
               <datalist id="macadam-zone-suggestions"></datalist>
             </label>
 
+            <div class="field field--span2 is-hidden" data-ps-wrap>
+              <span class="field-label">${escapeHtml(t('shifts.platformExtras'))}</span>
+              <div class="shifts-advanced-grid" data-ps-fields></div>
+              <p class="field-hint is-hidden" data-ps-object-hint>${escapeHtml(t('shifts.psObjectHint'))}</p>
+            </div>
+
             <div class="field">
               <span class="field-label">${escapeHtml(t('shifts.mood'))}</span>
               <div class="mood-row" role="group" aria-label="${escapeAttr(t('shifts.mood'))}">
@@ -263,6 +280,15 @@ export function renderShiftForm(opts = {}) {
   const moodHidden = /** @type {HTMLInputElement | null} */ (wrapper.querySelector('input[name="mood"]'));
   const bonusLabel = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-bonus-label]'));
   const distanceHint = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-distance-unit]'));
+  const psWrap = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-ps-wrap]'));
+  const psFields = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-ps-fields]'));
+  const psObjHint = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-ps-object-hint]'));
+
+  let psDraft = cloneJsonObject(
+    initial.platformSpecific && typeof initial.platformSpecific === 'object'
+      ? /** @type {Record<string, unknown>} */ (initial.platformSpecific)
+      : {},
+  );
 
   const liveDuration = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-live-duration]'));
   const liveHourly = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-live-hourly]'));
@@ -332,11 +358,13 @@ export function renderShiftForm(opts = {}) {
     }
 
     if (liveVehicle) {
-      const country = user && user.locale && typeof user.locale.country === 'string' ? user.locale.country : null;
+      const country = user && user.locale && typeof user.locale.country === 'string' ? user.locale.country : 'US';
+      const tax = getCountryTaxProfile(country);
       const distanceKm = parseDistanceToKm(distanceEl?.value || 0);
       if (!distanceKm) liveVehicle.textContent = '—';
-      else if (country === 'CA') liveVehicle.textContent = fmtMoney(calcCRAMileageDeduction(distanceKm, new Date().getFullYear()));
-      else if (country === 'US') {
+      else if (tax.stdMileageChoice === 'CRA') {
+        liveVehicle.textContent = fmtMoney(calcCRAMileageDeduction(distanceKm, new Date().getFullYear()));
+      } else if (tax.stdMileageChoice === 'IRS') {
         const miles = distanceKm / 1.60934;
         liveVehicle.textContent = fmtMoney(calcIRSMileageDeduction(miles, new Date().getFullYear()));
       } else {
@@ -365,6 +393,69 @@ export function renderShiftForm(opts = {}) {
   wireKeypad('tips', tipsEl);
   wireKeypad('bonus', bonusEl);
 
+  const onInput = () => recomputeLive();
+
+  function renderPlatformSpecificFields(pid) {
+    if (!psFields || !psWrap) return;
+    const cfg = getPlatformConfig(pid);
+    const schema = Array.isArray(cfg.specificSchema) ? cfg.specificSchema : [];
+    const hasObject = schema.some((r) => r && r.kind === 'object');
+    if (psObjHint) psObjHint.classList.toggle('is-hidden', !hasObject);
+    if (schema.length === 0) {
+      psFields.innerHTML = '';
+      psWrap.classList.add('is-hidden');
+      return;
+    }
+    psWrap.classList.remove('is-hidden');
+    const rowsHtml = schema
+      .map((row) => {
+        if (!row || typeof row.key !== 'string' || !row.kind) return '';
+        const lk = row.labelKey || `shifts.ps.${row.key}`;
+        const label = escapeHtml(t(lk));
+        const n = `ps_${row.key}`;
+        if (row.kind === 'number') {
+          const v = psDraft[row.key];
+          const sv = v != null && Number.isFinite(Number(v)) ? String(v) : '';
+          const maxAttr = typeof row.max === 'number' ? ` max="${row.max}"` : '';
+          const minAttr = typeof row.min === 'number' ? ` min="${row.min}"` : '';
+          return `<label class="field"><span class="field-label">${label}</span><input class="input" type="number" name="${escapeAttr(n)}" inputmode="decimal"${minAttr}${maxAttr} step="any" value="${escapeAttr(sv)}" /></label>`;
+        }
+        if (row.kind === 'string') {
+          const sv = psDraft[row.key] != null ? String(psDraft[row.key]) : '';
+          return `<label class="field"><span class="field-label">${label}</span><input class="input" type="text" name="${escapeAttr(n)}" value="${escapeAttr(sv)}" /></label>`;
+        }
+        if (row.kind === 'stringArray') {
+          const arr = Array.isArray(psDraft[row.key]) ? psDraft[row.key] : [];
+          const sv = /** @type {unknown[]} */ (arr)
+            .map((x) => String(x))
+            .join(', ');
+          return `<label class="field field--span2"><span class="field-label">${label}</span><input class="input" type="text" name="${escapeAttr(
+            n,
+          )}" value="${escapeAttr(sv)}" placeholder="${escapeAttr(t('shifts.psCommaPlaceholder'))}" /></label>`;
+        }
+        if (row.kind === 'object') {
+          let txt = '{}';
+          try {
+            txt = JSON.stringify(
+              psDraft[row.key] && typeof psDraft[row.key] === 'object' ? psDraft[row.key] : {},
+              null,
+              2,
+            );
+          } catch {
+            txt = '{}';
+          }
+          return `<label class="field field--span2"><span class="field-label">${label}</span><textarea class="input textarea" name="${escapeAttr(
+            n,
+          )}" rows="5">${escapeHtml(txt)}</textarea></label>`;
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join('');
+    psFields.innerHTML = rowsHtml;
+    psFields.querySelectorAll('input,textarea,select').forEach((el) => el.addEventListener('input', onInput));
+  }
+
   wrapper.addEventListener('click', (e) => {
     const target = /** @type {HTMLElement | null} */ (e.target && /** @type {HTMLElement} */ (e.target).closest('[data-action],[data-mood]'));
     if (!target) return;
@@ -387,9 +478,12 @@ export function renderShiftForm(opts = {}) {
     }
   });
 
-  const onInput = () => recomputeLive();
   wrapper.querySelectorAll('input,select,textarea').forEach((el) => el.addEventListener('input', onInput));
-  platformSel?.addEventListener('change', () => applyBonusLabel());
+  platformSel?.addEventListener('change', () => {
+    psDraft = {};
+    renderPlatformSpecificFields(String(platformSel?.value || 'other'));
+    applyBonusLabel();
+  });
   applyBonusLabel();
 
   // Seed initial values (beyond defaults)
@@ -400,7 +494,7 @@ export function renderShiftForm(opts = {}) {
     if (!el) return;
     if (typeof val === 'string' || typeof val === 'number') el.value = String(val);
   };
-  seed('gross', initial.gross ?? '');
+  seed('gross', initial.gross ?? initial.grossEarnings ?? '');
   seed('tips', initial.tips ?? '');
   seed('bonus', initial.bonus ?? '');
   seed('orders', initial.orders ?? '');
@@ -413,6 +507,8 @@ export function renderShiftForm(opts = {}) {
   if (typeof initial.mood === 'string') setMood(initial.mood);
 
   if (startEl && !startEl.value && mode === 'quick') startEl.value = hmNow();
+
+  renderPlatformSpecificFields(String(platformSel?.value || defaultPlatformId));
 
   recomputeLive();
 
@@ -437,6 +533,33 @@ export function renderShiftForm(opts = {}) {
     const mood = moodHidden?.value ? String(moodHidden.value) : null;
     const notes = notesEl?.value ? String(notesEl.value) : '';
 
+    /** @type {Record<string, unknown>} */
+    const platformSpecific = {};
+    const schema = getPlatformConfig(platformId).specificSchema || [];
+    for (const row of schema) {
+      if (!row || typeof row.key !== 'string') continue;
+      const el = psFields?.querySelector(`[name="ps_${row.key}"]`);
+      if (!el) continue;
+      if (row.kind === 'number') {
+        const raw = String(/** @type {HTMLInputElement} */ (el).value || '').trim();
+        platformSpecific[row.key] = raw === '' ? null : num(raw);
+      } else if (row.kind === 'string') {
+        platformSpecific[row.key] = String(/** @type {HTMLInputElement} */ (el).value || '').trim();
+      } else if (row.kind === 'stringArray') {
+        platformSpecific[row.key] = String(/** @type {HTMLInputElement} */ (el).value || '')
+          .split(',')
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+      } else if (row.kind === 'object' && el instanceof HTMLTextAreaElement) {
+        try {
+          platformSpecific[row.key] = JSON.parse(el.value || '{}');
+        } catch {
+          const prev = psDraft[row.key];
+          platformSpecific[row.key] = prev && typeof prev === 'object' ? prev : {};
+        }
+      }
+    }
+
     return {
       platformId,
       date,
@@ -454,12 +577,23 @@ export function renderShiftForm(opts = {}) {
       zoneTag,
       mood,
       notes,
+      platformSpecific,
     };
   };
 
   const setValue = (patch) => {
-    Object.entries(patch || {}).forEach(([k, v]) => seed(k, v));
+    if (patch?.platformSpecific && typeof patch.platformSpecific === 'object') {
+      psDraft = { ...psDraft, ...cloneJsonObject(patch.platformSpecific) };
+    }
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      if (k === 'platformSpecific' || k === 'mood') return;
+      seed(k, v);
+    });
     if (patch && typeof patch.mood === 'string') setMood(patch.mood);
+    if (patch && (patch.platformId != null || patch.platformSpecific)) {
+      renderPlatformSpecificFields(String(platformSel?.value || defaultPlatformId));
+    }
+    applyBonusLabel();
     recomputeLive();
   };
 

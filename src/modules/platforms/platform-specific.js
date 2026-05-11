@@ -1,47 +1,18 @@
 /**
  * P10 — platform-specific tracking helpers.
  * Pure utilities only: no UI coupling, safe to call from forms, shifts, and analytics.
+ * Normalization is registry-driven (`specificSchema` on each platform definition).
  */
 
-const SUPPORTED_PLATFORM_IDS = new Set(['doordash', 'ubereats', 'foodora', 'skip', 'instacart', 'amazonflex', 'other']);
+import { PlatformRegistry } from '../../registry/platforms/index.js';
+import { getPlatformConfig } from './platform-config.js';
+import {
+  normalizePlatformSpecificFromDef,
+  toNumberField as toNumber,
+  normalizeStringArrayField as normalizeStringArray,
+} from '../../registry/platforms/specific-normalize.js';
 
-const DEFAULT_OTHER_CONFIG = {
-  customFields: [],
-};
-
-const DEFAULT_PAYOUT_DAY = {
-  doordash: 1,
-  ubereats: 5,
-  foodora: 3,
-  skip: 4,
-  instacart: 3,
-  amazonflex: 5,
-  other: 5,
-};
-
-/**
- * @param {unknown} value
- * @param {{ min?: number, max?: number }} [opts]
- */
-function toNumber(value, opts = {}) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return null;
-  if (typeof opts.min === 'number' && n < opts.min) return null;
-  if (typeof opts.max === 'number' && n > opts.max) return null;
-  return n;
-}
-
-/**
- * @param {unknown} value
- * @returns {string[]}
- */
-function normalizeStringArray(value) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((v) => String(v || '').toLowerCase().trim())
-    .filter(Boolean)
-    .filter((v, i, arr) => arr.indexOf(v) === i);
-}
+const SUPPORTED_PLATFORM_IDS = new Set(PlatformRegistry.getAll().map((p) => p.id));
 
 /**
  * @param {unknown} value
@@ -58,63 +29,8 @@ function normalizePlatformId(value) {
  */
 export function normalizePlatformSpecific(platformId, input) {
   const id = normalizePlatformId(platformId);
-  const raw = input && typeof input === 'object' ? /** @type {Record<string, unknown>} */ (input) : {};
-
-  if (id === 'doordash') {
-    return {
-      peakPay: toNumber(raw.peakPay, { min: 0 }),
-      dashZone: raw.dashZone ? String(raw.dashZone).trim() : '',
-      acceptanceRate: toNumber(raw.acceptanceRate, { min: 0, max: 100 }),
-      customerRating: toNumber(raw.customerRating, { min: 0, max: 5 }),
-    };
-  }
-  if (id === 'ubereats') {
-    return {
-      surgeMultiplier: toNumber(raw.surgeMultiplier, { min: 0 }),
-      proStatus: raw.proStatus ? String(raw.proStatus).trim() : '',
-      completionRate: toNumber(raw.completionRate, { min: 0, max: 100 }),
-      questOnlineMinutes: toNumber(raw.questOnlineMinutes, { min: 0 }),
-    };
-  }
-  if (id === 'foodora') {
-    return {
-      orderTypeSplit: raw.orderTypeSplit && typeof raw.orderTypeSplit === 'object' ? raw.orderTypeSplit : {},
-      attendanceScore: toNumber(raw.attendanceScore, { min: 0, max: 100 }),
-    };
-  }
-  if (id === 'skip') {
-    return {
-      creditsPromos: toNumber(raw.creditsPromos, { min: 0 }),
-      cityScore: toNumber(raw.cityScore, { min: 0, max: 100 }),
-    };
-  }
-  if (id === 'instacart') {
-    return {
-      batchCount: toNumber(raw.batchCount, { min: 0 }),
-      batchTypes: normalizeStringArray(raw.batchTypes),
-    };
-  }
-  if (id === 'amazonflex') {
-    return {
-      blockDurationMinutes: toNumber(raw.blockDurationMinutes, { min: 0 }),
-      blockType: raw.blockType ? String(raw.blockType).trim() : '',
-    };
-  }
-
-  const fields = Array.isArray(raw.customFields)
-    ? raw.customFields
-        .filter((x) => x && typeof x === 'object')
-        .map((x) => ({
-          key: String(/** @type {any} */ (x).key || '').trim(),
-          label: String(/** @type {any} */ (x).label || '').trim(),
-          type: String(/** @type {any} */ (x).type || 'text').trim() || 'text',
-        }))
-        .filter((x) => x.key && x.label)
-    : [];
-  return {
-    ...DEFAULT_OTHER_CONFIG,
-    customFields: fields,
-  };
+  const def = PlatformRegistry.getById(id);
+  return normalizePlatformSpecificFromDef(def, input);
 }
 
 /**
@@ -131,7 +47,9 @@ export function extractShiftPlatformSpecific(shiftInput) {
       : {};
   const platformSpecific = normalizePlatformSpecific(platformId, rawSpecific);
   const peakPayRaw = toNumber(shiftInput.peakPay, { min: 0 });
-  const peakPay = platformId === 'doordash' ? peakPayRaw ?? toNumber(/** @type {any} */ (platformSpecific).peakPay, { min: 0 }) : null;
+  const catalog = getPlatformConfig(platformId);
+  const peakField = Array.isArray(catalog.relevantFields) && catalog.relevantFields.includes('peakPay');
+  const peakPay = peakField ? peakPayRaw ?? toNumber(/** @type {any} */ (platformSpecific).peakPay, { min: 0 }) : null;
 
   return {
     platformSpecific,
@@ -173,14 +91,18 @@ export function evaluatePlatformAlerts(input = {}) {
     }
   }
 
-  const ddRating = toNumber(input.doordashCustomerRating, { min: 0, max: 5 });
-  if (ddRating != null && ddRating < 4.7) {
-    alerts.push({ type: 'doordash_customer_rating_low', rating: ddRating });
-  }
-
-  const ueCompletion = toNumber(input.uberCompletionRate, { min: 0, max: 100 });
-  if (ueCompletion != null && ueCompletion < 95) {
-    alerts.push({ type: 'ubereats_completion_rate_low', completionRate: ueCompletion });
+  for (const def of PlatformRegistry.getAll()) {
+    if (!Array.isArray(def.alertChecks) || def.alertChecks.length === 0) continue;
+    for (const check of def.alertChecks) {
+      const rawIn = /** @type {Record<string, unknown>} */ (input);
+      const val = toNumber(rawIn[check.inputKey], {
+        min: check.min,
+        max: check.max,
+      });
+      if (val != null && val < check.below) {
+        alerts.push({ type: check.alertType, [check.payloadKey]: val });
+      }
+    }
   }
   return alerts;
 }
@@ -193,7 +115,8 @@ export function evaluatePlatformAlerts(input = {}) {
  */
 export function getPayoutCountdown(platformId, from = new Date(), weekday) {
   const id = normalizePlatformId(platformId);
-  const targetDay = Number.isInteger(weekday) ? Number(weekday) : DEFAULT_PAYOUT_DAY[id];
+  const def = PlatformRegistry.getById(id);
+  const targetDay = Number.isInteger(weekday) ? Number(weekday) : Number(def.payoutWeekday ?? 5);
   const now = from instanceof Date ? from : new Date(from);
   const d = new Date(now);
   const current = d.getDay();

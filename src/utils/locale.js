@@ -14,54 +14,15 @@
  * @property {'CRA'|'IRS'|''} [mileageRateSource]
  */
 
-/** @type {Record<string, LocaleConfig>} */
-const COUNTRY_CONFIGS = {
-  CA: {
-    currency: 'CAD',
-    symbol: '$',
-    distanceUnit: 'km',
-    taxInstallmentDates: [
-      { month: 3, day: 15, label: 'Q1 instalment' },
-      { month: 6, day: 15, label: 'Q2 instalment' },
-      { month: 9, day: 15, label: 'Q3 instalment' },
-      { month: 12, day: 15, label: 'Q4 instalment' },
-    ],
-    hasCPP: true,
-    hasHST: true,
-    mileageRateSource: 'CRA',
-  },
-  US: {
-    currency: 'USD',
-    symbol: '$',
-    distanceUnit: 'mi',
-    taxInstallmentDates: [
-      { month: 4, day: 15, label: 'Q1 estimated tax' },
-      { month: 6, day: 15, label: 'Q2 estimated tax' },
-      { month: 9, day: 15, label: 'Q3 estimated tax' },
-      { month: 1, day: 15, label: 'Q4 estimated tax', followYear: true },
-    ],
-    hasSETax: true,
-    mileageRateSource: 'IRS',
-  },
-  UK: {
-    currency: 'GBP',
-    symbol: '£',
-    distanceUnit: 'mi',
-    taxInstallmentDates: [
-      { month: 1, day: 31, label: 'Payment on account (balancing)' },
-      { month: 7, day: 31, label: 'Payment on account' },
-    ],
-    mileageRateSource: '',
-  },
-};
+import { CountryRegistry, countryDefToLocaleConfig } from '../registry/countries/index.js';
 
 /**
  * @param {string} country
  * @returns {LocaleConfig}
  */
 export function getLocaleConfig(country) {
-  const key = String(country || '').toUpperCase();
-  return COUNTRY_CONFIGS[key] ? { ...COUNTRY_CONFIGS[key] } : { ...COUNTRY_CONFIGS.CA };
+  const def = CountryRegistry.getById(country);
+  return { ...countryDefToLocaleConfig(def) };
 }
 
 /**
@@ -85,7 +46,7 @@ export function getNextTaxDeadline(country) {
 
   const upcoming = entries
     .filter((e) => e.date.getTime() >= startOfToday)
-    .sort((a, b) => a.date - b.date);
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const next = upcoming[0] || entries[0];
   if (!next) {
