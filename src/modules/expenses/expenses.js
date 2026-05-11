@@ -4,7 +4,8 @@ import { store } from '../../core/store.js';
 import { calcEVCost, calcFuelCost } from '../../utils/calculations.js';
 import { t } from '../../utils/strings.js';
 import { renderEmptyState, showModal, showToast } from '../../ui/components.js';
-import { renderExpenseForm, PRESET_EXPENSE_CATEGORIES } from './expense-form.js';
+import { ExpenseCategoryRegistry } from '../../registry/expense-categories/index.js';
+import { renderExpenseForm } from './expense-form.js';
 
 const APP_STATE_CUSTOM_CATEGORIES_KEY = 'expense_custom_categories';
 const AUTO_EXPENSE_SOURCES = new Set(['auto_fuel', 'auto_ev']);
@@ -218,7 +219,7 @@ export async function updateFuelPrice(vehicleId, price) {
 }
 
 export async function getAllCategories() {
-  const preset = PRESET_EXPENSE_CATEGORIES.map((c) => ({
+  const preset = ExpenseCategoryRegistry.getAll().map((c) => ({
     id: c.id,
     emoji: c.emoji,
     name: t(`expenses.categories.${c.id}`),

@@ -11,6 +11,8 @@ export default {
   taxInstallmentDates: [],
   mileageRateSource: '',
   tax: {
+    taxInstallmentReminderDays: 10,
+    hstOnboarding: false,
     intlLocaleTag: 'en-US',
     defaultWithholdingPct: 25,
     regionPresetType: null,

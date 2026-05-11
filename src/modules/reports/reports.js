@@ -1,5 +1,6 @@
 import { db } from '../../core/db.js';
 import { bus, DATA_IMPORTED } from '../../core/events.js';
+import { ReportRegistry } from '../../registry/reports/index.js';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 
 function num(v, fallback = 0) {
@@ -145,19 +146,13 @@ export async function getCustomDateRangeReport(startDate, endDate, options = {})
 }
 
 export function buildSummaryText(report, user) {
-  const locale = user?.locale?.country || 'US';
-  const currency = user?.locale?.currency || 'USD';
-  const sum = report.summary;
-  return [
-    `Report: ${report.startDate} to ${report.endDate}`,
-    `Gross: ${formatCurrency(sum.gross, locale, { currency })}`,
-    `Expenses: ${formatCurrency(sum.expenseTotal, locale, { currency })}`,
-    `Net: ${formatCurrency(sum.net, locale, { currency })}`,
-    `Shifts: ${sum.shiftCount}`,
-    `Orders: ${sum.orders}`,
-    `Hours: ${sum.hours.toFixed(1)}`,
-    `Hourly: ${formatCurrency(sum.hourly, locale, { currency })}`,
-  ].join('\n');
+  const lines = [];
+  for (const sec of ReportRegistry.getAll()) {
+    if (sec.id === 'placeholder') continue;
+    const chunk = sec.renderText(report, user);
+    if (chunk) lines.push(chunk);
+  }
+  return lines.join('\n\n');
 }
 
 function downloadTextFile(filename, text, mime) {
@@ -268,16 +263,13 @@ export async function restoreVaultBackup(backup) {
 }
 
 export function getDefaultReportTemplate() {
-  return {
-    sections: {
-      overview: true,
-      shifts: true,
-      expenses: true,
-      chart: true,
-      qr: true,
-      notes: false,
-    },
-  };
+  /** @type {Record<string, boolean>} */
+  const sections = {};
+  for (const s of ReportRegistry.getAll()) {
+    if (s.id === 'placeholder') continue;
+    sections[s.id] = s.defaultIncluded !== false;
+  }
+  return { sections };
 }
 
 export async function copySummaryToClipboard(report, user) {

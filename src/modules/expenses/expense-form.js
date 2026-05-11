@@ -1,23 +1,9 @@
 import { t } from '../../utils/strings.js';
 import { showNumericKeypad } from '../../ui/components.js';
+import { ExpenseCategoryRegistry } from '../../registry/expense-categories/index.js';
 
-export const PRESET_EXPENSE_CATEGORIES = [
-  { id: 'fuel', emoji: '⛽' },
-  { id: 'maintenance', emoji: '🔧' },
-  { id: 'parking', emoji: '🅿️' },
-  { id: 'tolls', emoji: '🛣️' },
-  { id: 'insurance', emoji: '🛡️' },
-  { id: 'registration', emoji: '📄' },
-  { id: 'phone', emoji: '📱' },
-  { id: 'data_plan', emoji: '📶' },
-  { id: 'car_wash', emoji: '🧼' },
-  { id: 'supplies', emoji: '🧰' },
-  { id: 'meals', emoji: '🍽️' },
-  { id: 'bank_fees', emoji: '🏦' },
-  { id: 'software', emoji: '💻' },
-  { id: 'accounting', emoji: '🧮' },
-  { id: 'other', emoji: '🧾' },
-];
+/** @deprecated Use `ExpenseCategoryRegistry.getAll()` — kept for bundle callers expecting this export. */
+export const PRESET_EXPENSE_CATEGORIES = ExpenseCategoryRegistry.getAll().map((c) => ({ id: c.id, emoji: c.emoji }));
 
 function esc(v) {
   return String(v ?? '')

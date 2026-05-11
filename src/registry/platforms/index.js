@@ -74,3 +74,12 @@ export const PlatformRegistry = {
 export function assertPlatformRegistryValid() {
   for (const p of PLATFORMS) validatePlatformDefinition(p);
 }
+
+/**
+ * First non-`other` catalog id — safe default for samples, synthetic rows, and fallbacks (Category A).
+ * @returns {string}
+ */
+export function getDefaultSamplePlatformId() {
+  const first = PLATFORMS.find((p) => p && p.id !== 'other');
+  return first?.id ?? 'other';
+}

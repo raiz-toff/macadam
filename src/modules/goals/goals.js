@@ -1,4 +1,6 @@
 import { db, getAppState, setAppState } from '../../core/db.js';
+import { BadgeRegistry } from '../../registry/badges/index.js';
+import { GoalScopeRegistry, GoalTypeRegistry } from '../../registry/goal-types/index.js';
 import {
   bus,
   BADGE_UNLOCKED,
@@ -17,8 +19,8 @@ const APP_STATE_KEYS = {
   PERSONAL_RECORDS: 'personal_records',
 };
 
-const GOAL_SCOPES = new Set(['daily', 'weekly', 'monthly']);
-const GOAL_TYPES = new Set(['earnings', 'deliveries', 'hours', 'distance', 'net_profit', 'tips']);
+const GOAL_SCOPES = GoalScopeRegistry.keysAsSet();
+const GOAL_TYPES = GoalTypeRegistry.keysAsSet();
 
 const DEFAULT_CHALLENGES = [
   {
@@ -110,6 +112,10 @@ async function sumShiftMetric(startDate, endDate, metric) {
     else if (metric === 'deliveries') total += num(shift.orders ?? shift.deliveryCount, 0);
     else if (metric === 'hours') total += num(shift.activeMinutes ?? shift.durationMinutes, 0) / 60;
     else if (metric === 'distance') total += num(shift.distanceKm, 0);
+    else if (metric === 'net_profit') {
+      const g = num(shift.gross ?? shift.grossEarnings, 0);
+      total += Math.max(0, g - num(shift.tips, 0) - num(shift.bonus, 0));
+    }
   }
   return total;
 }
@@ -236,10 +242,14 @@ async function evaluateGoalHistory() {
     if (goal.scope === 'weekly' && goal.type === 'earnings' && hit) {
       const streak = num(await getAppState(APP_STATE_KEYS.WEEK_GOAL_STREAK), 0) + 1;
       await setAppState(APP_STATE_KEYS.WEEK_GOAL_STREAK, streak);
-      if (streak >= 1) await maybeUnlockBadge('goal_week_hit');
     }
-    if (goal.scope === 'monthly' && goal.type === 'earnings' && hit) {
-      await maybeUnlockBadge('goal_month_hit');
+    if (hit) {
+      const gctx = { goal, hit };
+      for (const b of BadgeRegistry.getAll()) {
+        if (b.id === 'placeholder') continue;
+        if (typeof b.checkFromGoalHistory !== 'function') continue;
+        if (await b.checkFromGoalHistory(gctx)) await maybeUnlockBadge(b.id);
+      }
     }
   }
 }
@@ -268,11 +278,13 @@ export async function checkPersonalRecords(newShift) {
   };
 
   let changed = false;
+  let changedGross = false;
+  let changedNetHourly = false;
   const gross = num(newShift?.gross ?? newShift?.grossEarnings, 0);
   if (gross > records.bestShiftGross) {
     records.bestShiftGross = gross;
     changed = true;
-    await maybeUnlockBadge('personal_best_earnings');
+    changedGross = true;
   }
 
   const minutes = num(newShift?.activeMinutes ?? newShift?.durationMinutes, 0);
@@ -280,7 +292,15 @@ export async function checkPersonalRecords(newShift) {
   if (netHourly > records.bestNetHourly) {
     records.bestNetHourly = netHourly;
     changed = true;
-    await maybeUnlockBadge('personal_best_hours');
+    changedNetHourly = true;
+  }
+
+  if (changedGross || changedNetHourly) {
+    for (const b of BadgeRegistry.getAll()) {
+      if (b.id === 'placeholder') continue;
+      if (typeof b.checkFromPersonalRecords !== 'function') continue;
+      if (await b.checkFromPersonalRecords({ changedGross, changedNetHourly })) await maybeUnlockBadge(b.id);
+    }
   }
 
   if (changed) {
@@ -313,9 +333,6 @@ async function updateDayStreak(shiftDate) {
   await setAppState(APP_STATE_KEYS.STREAK_COUNT, streak);
   await setAppState(APP_STATE_KEYS.STREAK_FROZEN_COUNT, freezes);
 
-  if (streak >= 7) await maybeUnlockBadge('streak_7');
-  if (streak >= 30) await maybeUnlockBadge('streak_30');
-  if (streak >= 100) await maybeUnlockBadge('streak_100');
   return streak;
 }
 
@@ -326,12 +343,12 @@ export async function checkAllBadges() {
     getWeekendShiftCount(),
     getCurrentStreakCount(),
   ]);
-  if (shiftCount >= 1) await maybeUnlockBadge('first_shift');
-  if (expenseCount >= 10) await maybeUnlockBadge('expense_savvy');
-  if (weekendShifts >= 10) await maybeUnlockBadge('weekend_warrior');
-  if (streakCount >= 7) await maybeUnlockBadge('streak_7');
-  if (streakCount >= 30) await maybeUnlockBadge('streak_30');
-  if (streakCount >= 100) await maybeUnlockBadge('streak_100');
+  const stats = { shiftCount, expenseCount, weekendShifts, streakCount };
+  for (const b of BadgeRegistry.getAll()) {
+    if (b.id === 'placeholder') continue;
+    if (typeof b.checkFromSweep !== 'function') continue;
+    if (await b.checkFromSweep(stats)) await maybeUnlockBadge(b.id);
+  }
 }
 
 async function handleShiftSaved(payload) {
@@ -346,17 +363,14 @@ async function handleShiftSaved(payload) {
   await checkAllBadges();
 
   const gross = num(shift.gross ?? shift.grossEarnings, 0);
-  if (gross >= 100) await maybeUnlockBadge('century_day');
-  if (num(shift.bonus, 0) > 0 && gross > 0 && num(shift.bonus, 0) / gross >= 0.15) await maybeUnlockBadge('bonus_hunter');
-  if (num(shift.tips, 0) > 0 && gross > 0 && num(shift.tips, 0) / gross >= 0.25) await maybeUnlockBadge('tip_champion');
-  if (num(shift.activeMinutes ?? shift.durationMinutes, 0) >= 8 * 60) await maybeUnlockBadge('marathon_shift');
-  if (shift.isMultiApp === true) await maybeUnlockBadge('multi_app_master');
-  if ((shift.weather || '').toLowerCase().includes('rain')) await maybeUnlockBadge('rain_rider');
-
   const weekGross = await sumShiftMetric(startOfWeek(new Date()), endOfWeek(new Date()), 'earnings');
   const monthGross = await sumShiftMetric(startOfMonth(new Date()), endOfMonth(new Date()), 'earnings');
-  if (weekGross >= 500) await maybeUnlockBadge('five_hundred_week');
-  if (monthGross >= 1000) await maybeUnlockBadge('thousand_month');
+  const shiftCtx = { shift, gross, weekGross, monthGross };
+  for (const b of BadgeRegistry.getAll()) {
+    if (b.id === 'placeholder') continue;
+    if (typeof b.checkFromShift !== 'function') continue;
+    if (await b.checkFromShift(shiftCtx)) await maybeUnlockBadge(b.id);
+  }
 
   const deliveries = num(shift.orders ?? shift.deliveryCount, 0);
   await refreshChallengeProgress({ earnings: weekGross, deliveries, streak });

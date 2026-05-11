@@ -6,6 +6,7 @@ import { showConfirm, showToast } from '../../ui/components.js';
 import { t } from '../../utils/strings.js';
 import { resetVault } from '../onboarding/onboarding.js';
 import { mountSettingsPlatforms } from './platforms-settings.js';
+import { formatShortcutOverlayListItems } from './keyboard-shortcuts.js';
 
 const Sortable = /** @type {any} */ (SortableMod).default || SortableMod;
 const DEBUG_TAP_WINDOW_MS = 5500;
@@ -172,11 +173,7 @@ function mountKeyboardOverlay(host) {
     <div class="card card-raised settings-shortcuts-card" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
       <h3 class="settings-section-title">Keyboard shortcuts</h3>
       <ul class="settings-shortcuts-list">
-        <li><kbd>g</kbd> then <kbd>d</kbd> — Dashboard</li>
-        <li><kbd>g</kbd> then <kbd>s</kbd> — Shifts</li>
-        <li><kbd>g</kbd> then <kbd>t</kbd> — Tax</li>
-        <li><kbd>g</kbd> then <kbd>v</kbd> — Vehicles</li>
-        <li><kbd>Esc</kbd> — Close overlays</li>
+        ${formatShortcutOverlayListItems(esc)}
       </ul>
       <div class="settings-shortcuts-actions">
         <button type="button" class="btn btn-secondary btn-sm" data-close-shortcuts>${esc(t('common.close'))}</button>

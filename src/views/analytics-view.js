@@ -4,15 +4,16 @@ import {
   getBestZone,
   getEarningsVsHoursScatter,
   getMonthlySummary,
+  getRegisteredMetricDisplay,
   getRolling30DayTrend,
   getZerodays,
+  listAnalyticsDashboardMetricIds,
 } from '../modules/analytics/analytics.js';
 import {
   renderEarningsHeatmap,
   renderEarningsVsHoursChart,
   renderHourlyTrendChart,
 } from '../modules/analytics/analytics-charts.js';
-import { formatCurrency, formatLargeNumber } from '../utils/formatters.js';
 import { t } from '../utils/strings.js';
 import { store } from '../core/store.js';
 
@@ -42,6 +43,20 @@ export async function render(root, ctx) {
     getEarningsVsHoursScatter(`${now.getFullYear()}-01-01`, `${now.getFullYear()}-12-31`),
   ]);
 
+  const metricCtx = { summary: monthSummary, zeroDaysLength: zeroDays.length };
+  const currency = user?.locale?.currency || 'USD';
+  const statCardsHtml = listAnalyticsDashboardMetricIds()
+    .map((id) => {
+      const row = getRegisteredMetricDisplay(id, metricCtx, localeCountry, currency);
+      if (!row) return '';
+      const title = row.messageKey ? t(row.messageKey) : row.label;
+      return `<article class="card stat-card bento-cell-1x1">
+          <p>${esc(title)}</p>
+          <strong>${esc(row.value)}</strong>
+        </article>`;
+    })
+    .join('');
+
   root.innerHTML = `
     <section class="analytics-view">
       <header class="card card-raised">
@@ -49,22 +64,7 @@ export async function render(root, ctx) {
         <p>${esc(t('analytics.subtitle'))}</p>
       </header>
       <section class="bento-grid" style="margin-top: var(--space-4);">
-        <article class="card stat-card bento-cell-1x1">
-          <p>${esc(t('analytics.earnings'))}</p>
-          <strong>${esc(formatCurrency(monthSummary.gross, localeCountry, { currency: user?.locale?.currency || 'USD' }))}</strong>
-        </article>
-        <article class="card stat-card bento-cell-1x1">
-          <p>${esc(t('analytics.hourlyRate'))}</p>
-          <strong>${esc(formatCurrency(monthSummary.hourlyRate, localeCountry, { currency: user?.locale?.currency || 'USD' }))}</strong>
-        </article>
-        <article class="card stat-card bento-cell-1x1">
-          <p>${esc(t('analytics.orders'))}</p>
-          <strong>${esc(formatLargeNumber(monthSummary.orders || 0))}</strong>
-        </article>
-        <article class="card stat-card bento-cell-1x1">
-          <p>${esc(t('analytics.zeroDays'))}</p>
-          <strong>${esc(formatLargeNumber(zeroDays.length))}</strong>
-        </article>
+        ${statCardsHtml}
       </section>
       <section class="bento-grid" style="margin-top: var(--space-4);">
         <article class="card bento-cell-2x1">

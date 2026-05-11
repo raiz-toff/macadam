@@ -9,6 +9,14 @@ import { store } from './core/store.js';
 import { Router, updateOnboardingFocusClass } from './core/router.js';
 import { assertPlatformRegistryValid, PlatformRegistry } from './registry/platforms/index.js';
 import { assertCountryRegistryValid, CountryRegistry } from './registry/countries/index.js';
+import { assertWidgetRegistryValid, WidgetRegistry } from './registry/widgets/index.js';
+import { assertNotificationRegistryValid, NotificationRegistry } from './registry/notifications/index.js';
+import { assertBadgeRegistryValid, BadgeRegistry } from './registry/badges/index.js';
+import { assertMetricRegistryValid, MetricRegistry } from './registry/metrics/index.js';
+import { assertReportRegistryValid, ReportRegistry } from './registry/reports/index.js';
+import { assertExpenseCategoryRegistryValid, ExpenseCategoryRegistry } from './registry/expense-categories/index.js';
+import { assertGoalTypeRegistryValid, GoalScopeRegistry, GoalTypeRegistry } from './registry/goal-types/index.js';
+import { assertShiftFieldRegistryValid, ShiftFieldRegistry } from './registry/shift-fields/index.js';
 import { renderAppShell } from './core/shell.js';
 import { initPlatforms } from './modules/platforms/platforms.js';
 import { runOnOpenNotificationCheck } from './modules/notifications/notifications.js';
@@ -197,8 +205,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       assertPlatformRegistryValid();
       assertCountryRegistryValid();
+      assertWidgetRegistryValid();
+      assertNotificationRegistryValid();
+      assertBadgeRegistryValid();
+      assertMetricRegistryValid();
+      assertReportRegistryValid();
+      assertExpenseCategoryRegistryValid();
+      assertGoalTypeRegistryValid();
+      assertShiftFieldRegistryValid();
       console.log(
-        `[macadam] Registry ok: ${PlatformRegistry.getAll().length} platforms, ${CountryRegistry.getAll().length} countries`,
+        `[macadam] Registry ok: ${PlatformRegistry.getAll().length} platforms, ${CountryRegistry.getAll().length} countries, ${WidgetRegistry.getAll().length} widgets, ${NotificationRegistry.getAll().length} notification defs, ${BadgeRegistry.getAll().length} badge defs, ${MetricRegistry.getAll().length} metrics, ${ReportRegistry.getAll().length} report sections, ${ExpenseCategoryRegistry.getAll().length} expense categories, ${GoalTypeRegistry.getAll().length} goal types (${GoalScopeRegistry.getAll().length} scopes), ${ShiftFieldRegistry.getAll().length} global shift fields`,
       );
     } catch (regErr) {
       console.error('[macadam] registry validation failed', regErr);

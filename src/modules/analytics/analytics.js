@@ -1,4 +1,6 @@
 import { db } from '../../core/db.js';
+import { MetricRegistry, getMetricValue } from '../../registry/metrics/index.js';
+import { formatCurrency, formatLargeNumber } from '../../utils/formatters.js';
 import {
   calcBonusDependencyRatio,
   calcEarningsPerKm,
@@ -829,4 +831,65 @@ export async function getMoodTrend() {
       dominantMood: Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null,
     }));
   return points;
+}
+
+export { getMetricValue } from '../../registry/metrics/index.js';
+
+function formatDurationMinutes(mins) {
+  const m = Math.max(0, Math.floor(Number(mins) || 0));
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (!m) return '—';
+  return h > 0 ? `${h}h ${r}m` : `${r}m`;
+}
+
+/**
+ * @param {unknown} def
+ * @param {unknown} raw
+ * @param {string} localeCountry
+ * @param {string} currency
+ */
+export function formatRegisteredMetricValue(def, raw, localeCountry, currency) {
+  const d = /** @type {{ format?: string }} */ (def);
+  const f = d.format;
+  if (f === 'text') return raw == null || raw === '' ? '—' : String(raw);
+  if (raw == null) return '—';
+  if (f === 'currency' || f === 'currency_per_hour') {
+    return formatCurrency(Number(raw) || 0, localeCountry, { currency });
+  }
+  if (f === 'number') return formatLargeNumber(Number(raw) || 0);
+  if (f === 'duration') return formatDurationMinutes(raw);
+  return String(raw ?? '—');
+}
+
+/**
+ * @returns {string[]}
+ */
+export function listAnalyticsDashboardMetricIds() {
+  return MetricRegistry.getAll()
+    .filter((m) => m.showInAnalytics && m.id !== 'placeholder')
+    .sort(
+      (a, b) =>
+        num(/** @type {{ analyticsOrder?: number }} */ (a).analyticsOrder, 99) -
+        num(/** @type {{ analyticsOrder?: number }} */ (b).analyticsOrder, 99),
+    )
+    .map((m) => m.id);
+}
+
+/**
+ * @param {string} id
+ * @param {{ summary?: Record<string, unknown>; zeroDaysLength?: number }} ctx
+ * @param {string} localeCountry
+ * @param {string} currency
+ */
+export function getRegisteredMetricDisplay(id, ctx, localeCountry, currency) {
+  const def = MetricRegistry.getById(id);
+  if (!def) return null;
+  const raw = getMetricValue(id, ctx);
+  const messageKey = def.messageKey ? String(def.messageKey) : null;
+  return {
+    messageKey,
+    label: def.label,
+    value: formatRegisteredMetricValue(def, raw, localeCountry, currency),
+  };
 }

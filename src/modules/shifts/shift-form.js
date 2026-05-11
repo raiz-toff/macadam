@@ -1,5 +1,6 @@
 /**
  * F11 — shift form renderer (Feature 33–46 + basic/advanced toggle + live calc bar).
+ * Global field metadata: `ShiftFieldRegistry` in `src/registry/shift-fields/` (Category C).
  */
 
 import { t } from '../../utils/strings.js';
@@ -8,6 +9,7 @@ import { showNumericKeypad } from '../../ui/components.js';
 import { calcHourlyRate, calcCRAMileageDeduction, calcIRSMileageDeduction } from '../../utils/calculations.js';
 import { getPlatformConfig } from '../platforms/platform-config.js';
 import { getCountryTaxProfile } from '../../registry/countries/index.js';
+import { ShiftFieldRegistry } from '../../registry/shift-fields/index.js';
 
 function escapeAttr(v) {
   return String(v ?? '')
@@ -98,6 +100,7 @@ export function renderShiftForm(opts = {}) {
 
   const wrapper = document.createElement('div');
   wrapper.className = 'shifts-form';
+  wrapper.dataset.shiftFieldRegistryCount = String(ShiftFieldRegistry.getAll().length);
   wrapper.innerHTML = `
     <form class="shifts-form-inner" autocomplete="off">
       <div class="shifts-form-header">

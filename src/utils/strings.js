@@ -64,7 +64,7 @@ export const strings = {
       finish: 'Get started',
       stepProgress: 'Step {current} of {total}',
       welcomeTitle: 'Welcome',
-      platformsTitle: 'Your platforms',
+      platformsTitle: 'Which platforms do you use?',
       vehicleTitle: 'Your vehicle',
       goalsTitle: 'Weekly goal',
       notificationsTitle: 'Stay on track',
@@ -108,8 +108,9 @@ export const strings = {
         walking: 'Walking',
       },
       steps: {
-        platformsTitle: 'Where do you drive?',
-        platformsLead: 'Pick every platform you use. You can change this later.',
+        platformsTitle: 'Which platforms do you use?',
+        platformsLead:
+          'Select every gig or delivery app you earn through—including if you walk or bike. You can change this anytime in Settings.',
         profileTitle: 'How should we greet you?',
         profileLead: 'This name appears on your dashboard and exports.',
         driverName: 'Your name',
@@ -174,7 +175,8 @@ export const strings = {
       },
       why: {
         platformsSummary: 'Why we ask',
-        platformsBody: 'Active platforms drive terminology, colors, and filters across the app.',
+        platformsBody:
+          'We use your choices to match labels, colors, and filters to the services you actually work with.',
         profileSummary: 'Why we ask',
         profileBody: 'Exports and summaries read better with your name and a recognizable avatar.',
         regionSummary: 'Why we ask',
@@ -575,6 +577,12 @@ export const strings = {
       dataExport: 'Export data',
       dangerZone: 'Danger zone',
       about: 'About',
+      shortcuts: {
+        ctrlOrCmd: 'Ctrl / ⌘',
+        searchCmdK: 'Open search',
+        searchSlash: 'Open search (when not typing in a field)',
+        escOverlays: 'Close overlays',
+      },
     },
     pwa: {
       sectionTitle: 'Device features',
@@ -753,8 +761,8 @@ export const strings = {
         placeholderBody: 'Settings view copy finalizes in Phase 2 (`views/settings-view.js`).',
       },
       onboarding: {
-        title: 'Onboarding',
-        placeholderBody: 'Onboarding view shell finalizes in Phase 2 (`views/onboarding-view.js`).',
+        title: 'Set up Macadam',
+        placeholderBody: 'Guided setup: platforms, profile, and preferences before you enter your vault.',
       },
       about: {
         title: 'About Macadam',
@@ -867,7 +875,7 @@ export const strings = {
       finish: 'Commencer',
       stepProgress: 'Étape {current} sur {total}',
       welcomeTitle: 'Bienvenue',
-      platformsTitle: 'Vos plateformes',
+      platformsTitle: 'Quelles plateformes utilisez-vous ?',
       vehicleTitle: 'Votre véhicule',
       goalsTitle: 'Objectif hebdomadaire',
       notificationsTitle: 'Restez sur la bonne voie',
@@ -911,8 +919,9 @@ export const strings = {
         walking: 'À pied',
       },
       steps: {
-        platformsTitle: 'Où conduit-on ?',
-        platformsLead: 'Choisissez chaque plateforme utilisée. Modifiable plus tard.',
+        platformsTitle: 'Quelles plateformes utilisez-vous ?',
+        platformsLead:
+          'Sélectionnez chaque appli de gig ou de livraison avec laquelle vous gagnez de l’argent, y compris à pied ou à vélo. Modifiable à tout moment dans Paramètres.',
         profileTitle: 'Comment vous saluer ?',
         profileLead: 'Ce nom apparaît sur le tableau de bord et les exports.',
         driverName: 'Votre nom',
@@ -977,7 +986,8 @@ export const strings = {
       },
       why: {
         platformsSummary: 'Pourquoi on demande',
-        platformsBody: 'Les plateformes actives pilotent terminologie, couleurs et filtres.',
+        platformsBody:
+          'Nous nous appuyons sur vos choix pour aligner libellés, couleurs et filtres sur les services que vous utilisez vraiment.',
         profileSummary: 'Pourquoi on demande',
         profileBody: 'Les exports sont plus clairs avec votre nom et un avatar.',
         regionSummary: 'Pourquoi on demande',
@@ -1378,6 +1388,12 @@ export const strings = {
       dataExport: 'Exporter les données',
       dangerZone: 'Zone sensible',
       about: 'À propos',
+      shortcuts: {
+        ctrlOrCmd: 'Ctrl / ⌘',
+        searchCmdK: 'Ouvrir la recherche',
+        searchSlash: 'Ouvrir la recherche (hors champ texte)',
+        escOverlays: 'Fermer les fenêtres superposées',
+      },
     },
     pwa: {
       sectionTitle: 'Fonctions de l’appareil',
@@ -1556,8 +1572,9 @@ export const strings = {
         placeholderBody: 'Texte de la vue paramètres en phase 2 (`views/settings-view.js`).',
       },
       onboarding: {
-        title: 'Accueil',
-        placeholderBody: 'Coquille d’accueil en phase 2 (`views/onboarding-view.js`).',
+        title: 'Configurer Macadam',
+        placeholderBody:
+          'Configuration guidée : plateformes, profil et préférences avant d’entrer dans votre coffre.',
       },
       about: {
         title: 'À propos de Macadam',

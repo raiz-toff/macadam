@@ -1,6 +1,9 @@
 /**
  * F9 — Onboarding step bodies (plain HTML strings). Chrome lives in `onboarding.js`.
  * @see plan.md F9 — fifteen enumerated steps (platforms → completion).
+ *
+ * Category D (feature_modularity.md): a new **global** onboarding step still lands here —
+ * bump `TOTAL_STEPS`, extend `renderStepInner` / `validateStep`, and persist fields via `onboarding.js`.
  */
 
 /**

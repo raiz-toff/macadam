@@ -21,7 +21,8 @@ import {
   stopShiftTimer,
   updateShift,
 } from '../modules/shifts/shifts.js';
-import { calcHourlyRate } from '../utils/calculations.js';
+import { formatRegisteredMetricValue } from '../modules/analytics/analytics.js';
+import { MetricRegistry, getMetricValue } from '../registry/metrics/index.js';
 
 const Papa = /** @type {any} */ (PapaMod).default || PapaMod;
 
@@ -34,33 +35,6 @@ function escapeAttr(v) {
 
 function escapeHtml(v) {
   return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function fmtMoney(v) {
-  const user = store.get('user');
-  const sym = user && user.locale && typeof user.locale.currencySymbol === 'string' ? user.locale.currencySymbol : '$';
-  const n = Number(v);
-  if (!Number.isFinite(n)) return '—';
-  return `${sym}${n.toFixed(2)}`;
-}
-
-function fmtDuration(mins) {
-  const m = Math.max(0, Math.floor(Number(mins) || 0));
-  const h = Math.floor(m / 60);
-  const r = m % 60;
-  if (!m) return '—';
-  return h > 0 ? `${h}h ${r}m` : `${r}m`;
-}
-
-function minutesFromShift(s) {
-  if (Number.isFinite(Number(s.activeMinutes)) && Number(s.activeMinutes) > 0) return Number(s.activeMinutes);
-  if (typeof s.date === 'string' && typeof s.startTime === 'string' && typeof s.endTime === 'string') {
-    const start = new Date(`${s.date}T${s.startTime}:00`);
-    const end = new Date(`${s.date}T${s.endTime}:00`);
-    const ms = end.getTime() - start.getTime();
-    if (Number.isFinite(ms) && ms > 0) return Math.round(ms / 60000);
-  }
-  return 0;
 }
 
 /** @type {WeakMap<HTMLElement, () => void>} */
@@ -76,13 +50,28 @@ async function loadShiftsForView() {
   return list;
 }
 
+function shiftCardMetricsHtml(s) {
+  const user = store.get('user');
+  const localeCountry = user?.locale?.country || 'US';
+  const currency = user?.locale?.currency || 'USD';
+  return [...MetricRegistry.getAll()]
+    .filter((m) => m.showOnShiftCard)
+    .sort((a, b) => (a.shiftCardOrder || 0) - (b.shiftCardOrder || 0))
+    .map((m) => {
+      const raw = getMetricValue(m.id, { shift: s });
+      const valueStr = formatRegisteredMetricValue(m, raw, localeCountry, currency);
+      const label = m.messageKey ? t(String(m.messageKey)) : m.label;
+      return `<div class="shift-card-metric">
+          <div class="shift-card-metric-label">${escapeHtml(label)}</div>
+          <div class="shift-card-metric-value">${escapeHtml(valueStr)}</div>
+        </div>`;
+    })
+    .join('');
+}
+
 function shiftCardHtml(s) {
   const pid = String(s.platformId || 'other');
   const pl = getPlatformConfig(pid);
-  const durationMin = minutesFromShift(s);
-  const gross = Number(s.gross || 0);
-  const hourly = durationMin > 0 ? calcHourlyRate(gross, durationMin) : 0;
-  const zone = typeof s.zoneTag === 'string' && s.zoneTag ? s.zoneTag : '';
   const badge = `<span class="shift-badge" data-platform-id="${escapeAttr(pid)}">${escapeHtml(pl.name || pid)}</span>`;
   return `
     <article class="shift-card" data-shift-id="${escapeAttr(String(s.id))}">
@@ -91,22 +80,7 @@ function shiftCardHtml(s) {
         <div class="shift-card-platform">${badge}</div>
       </div>
       <div class="shift-card-main">
-        <div class="shift-card-metric">
-          <div class="shift-card-metric-label">${escapeHtml(t('shifts.gross'))}</div>
-          <div class="shift-card-metric-value">${escapeHtml(fmtMoney(gross))}</div>
-        </div>
-        <div class="shift-card-metric">
-          <div class="shift-card-metric-label">${escapeHtml(t('analytics.hourlyRate'))}</div>
-          <div class="shift-card-metric-value">${escapeHtml(durationMin ? fmtMoney(hourly) : '—')}</div>
-        </div>
-        <div class="shift-card-metric">
-          <div class="shift-card-metric-label">${escapeHtml(t('shifts.duration'))}</div>
-          <div class="shift-card-metric-value">${escapeHtml(fmtDuration(durationMin))}</div>
-        </div>
-        <div class="shift-card-metric">
-          <div class="shift-card-metric-label">${escapeHtml(t('shifts.zone'))}</div>
-          <div class="shift-card-metric-value">${escapeHtml(zone || '—')}</div>
-        </div>
+        ${shiftCardMetricsHtml(s)}
       </div>
       <div class="shift-card-actions">
         <button type="button" class="btn btn-ghost" data-action="edit">${escapeHtml(t('common.edit'))}</button>

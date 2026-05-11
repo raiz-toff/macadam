@@ -25,6 +25,7 @@ import { getIcon } from './icons.js';
 import { t } from '../utils/strings.js';
 import { bus, SHIFT_TIMER_START, SHIFT_TIMER_STOP } from '../core/events.js';
 import { store } from '../core/store.js';
+import { PlatformRegistry } from '../registry/platforms/index.js';
 
 /* ------------------------------------------------------------------------- */
 /* Small helpers                                                             */
@@ -1195,14 +1196,8 @@ export function showNumericKeypad(opts = {}) {
 /* Platform color + badge                                                    */
 /* ------------------------------------------------------------------------- */
 
-const KNOWN_PLATFORMS = new Set([
-  'doordash',
-  'ubereats',
-  'foodora',
-  'skip',
-  'instacart',
-  'amazonflex',
-]);
+/** CSS theme tokens exist per catalog id — keep in sync via PlatformRegistry (Category A). */
+const KNOWN_PLATFORMS = new Set(PlatformRegistry.getAll().map((p) => String(p.id || '').toLowerCase()));
 
 /**
  * Resolve a CSS color reference for a given platform id. Falls back to brand.

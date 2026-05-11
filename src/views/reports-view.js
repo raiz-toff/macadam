@@ -22,6 +22,7 @@ import {
   previewVaultImportDiff,
   restoreVaultBackup,
 } from '../modules/reports/reports.js';
+import { ReportRegistry } from '../registry/reports/index.js';
 
 const html2canvas = /** @type {any} */ (html2canvasMod).default || html2canvasMod;
 const QRCode = /** @type {any} */ (QRCodeMod).default || QRCodeMod;
@@ -41,17 +42,9 @@ function formatMoney(v) {
 }
 
 function summaryRows(report) {
-  const s = report.summary;
-  return [
-    ['Gross', formatMoney(s.gross)],
-    ['Expenses', formatMoney(s.expenseTotal)],
-    ['Net', formatMoney(s.net)],
-    ['Shifts', String(s.shiftCount)],
-    ['Hours', s.hours.toFixed(1)],
-    ['Orders', String(s.orders)],
-    ['Hourly', formatMoney(s.hourly)],
-    ['Net hourly', formatMoney(s.netHourly)],
-  ];
+  const ov = ReportRegistry.getById('overview');
+  const fn = /** @type {{ buildSummaryRows?: (r: unknown, u: unknown) => [string, string][] }} */ (ov)?.buildSummaryRows;
+  return typeof fn === 'function' ? fn(report, store.get('user')) : [];
 }
 
 function periodPayload(period, form) {

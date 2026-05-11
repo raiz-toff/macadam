@@ -1,4 +1,5 @@
 import { db, getAppState, setAppState } from '../../core/db.js';
+import { getDefaultSamplePlatformId } from '../../registry/platforms/index.js';
 import { isVaultActive } from '../../core/vault-gate.js';
 import { showModal, showToast } from '../../ui/components.js';
 
@@ -153,7 +154,7 @@ async function generateSyntheticData() {
     const day = String(d.getDate()).padStart(2, '0');
     rows.push({
       date: `${y}-${m}-${day}`,
-      platformId: 'doordash',
+      platformId: getDefaultSamplePlatformId(),
       gross: 90 + i * 8,
       tips: 16 + i * 2,
       bonus: i % 2 === 0 ? 5 : 0,

@@ -439,3 +439,25 @@ export function renderGitHubHeatmap(container, data, opts = {}) {
   container.appendChild(wrap);
   return wrap;
 }
+
+/**
+ * Category D — Chart.js-backed renderer lookup (feature_modularity.md).
+ * Non-Chart.js helpers above stay separate; add new Chart types here when you add a wrapper.
+ */
+export const CHART_RENDERERS = {
+  bar: renderBarChart,
+  line: renderLineChart,
+  doughnut: renderDonutChart,
+  donut: renderDonutChart,
+  scatter: renderScatterChart,
+};
+
+/**
+ * @param {string} id
+ * @returns {((canvas: HTMLCanvasElement, data: unknown, options?: Record<string, unknown>) => unknown) | null}
+ */
+export function getChartRenderer(id) {
+  const key = String(id || '').toLowerCase();
+  const fn = /** @type {Record<string, unknown>} */ (CHART_RENDERERS)[key];
+  return typeof fn === 'function' ? /** @type {any} */ (fn) : null;
+}

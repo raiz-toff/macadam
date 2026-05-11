@@ -16,6 +16,7 @@ import {
 import { t } from '../../utils/strings.js';
 import { getLocaleConfig } from '../../utils/locale.js';
 import { getCountryTaxProfile } from '../../registry/countries/index.js';
+import { getDefaultSamplePlatformId } from '../../registry/platforms/index.js';
 import { showConfirm, showToast } from '../../ui/components.js';
 import {
   TOTAL_STEPS,
@@ -130,7 +131,9 @@ function downloadJson(filename, obj) {
 export async function loadSampleData() {
   const user = await getUser();
   const platformId =
-    (Array.isArray(user?.platforms) && user.platforms[0]) || (await db.platforms.filter((p) => p.active).first())?.id || 'doordash';
+    (Array.isArray(user?.platforms) && user.platforms[0]) ||
+    (await db.platforms.filter((p) => p.active).first())?.id ||
+    getDefaultSamplePlatformId();
   const t0 = nowIso();
   const rows = [];
   for (let d = 0; d < 14; d += 1) {

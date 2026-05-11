@@ -4,6 +4,8 @@
  */
 
 import Dexie from '../libs/dexie.min.js';
+import { BadgeRegistry } from '../registry/badges/index.js';
+import { PlatformRegistry } from '../registry/platforms/index.js';
 
 /** Logical data schema version (appState.schema_version). Non-destructive migrations only. */
 export const CURRENT_LOGICAL_SCHEMA_VERSION = 1;
@@ -91,144 +93,22 @@ export const APP_STATE_KEY_DEFAULTS = {
   install_prompt_shown: null,
 };
 
-/**
- * Feature 139 — badge definitions (locked until unlock logic runs in P5).
- * Slugs are stable API surface for goals/badge modules.
- */
-export const DEFAULT_BADGE_DEFINITIONS = [
-  ['first_shift', 'First Shift', 'Log your first shift.', '🚗'],
-  ['century_day', 'Century Day', 'Earn $100+ in a single day.', '💯'],
-  ['five_hundred_week', 'Power Week', 'Earn $500+ in one week.', '💵'],
-  ['thousand_month', 'Thousand Club', 'Earn $1,000+ in a month.', '🏆'],
-  ['early_bird', 'Early Bird', 'Complete a shift starting before 7am.', '🌅'],
-  ['night_owl', 'Night Owl', 'Complete a shift ending after midnight.', '🦉'],
-  ['marathon_shift', 'Marathon', 'Work a single shift over 8 hours.', '⏱️'],
-  ['multi_app_master', 'Multi-App', 'Log a multi-app shift.', '📱'],
-  ['tip_champion', 'Tip Champion', 'Tip rate above 25% on a shift.', '💜'],
-  ['bonus_hunter', 'Bonus Hunter', 'Bonus earnings over 15% of gross on a shift.', '🎯'],
-  ['goal_week_hit', 'Weekly Goal', 'Hit your weekly earnings goal.', '✅'],
-  ['goal_month_hit', 'Monthly Goal', 'Hit your monthly earnings goal.', '📅'],
-  ['streak_7', '7-Day Streak', 'Work 7 days in a row.', '🔥'],
-  ['streak_30', '30-Day Streak', 'Work 30 days in a row.', '🔥'],
-  ['streak_100', 'Century Streak', '100-day work streak.', '🌋'],
-  ['expense_savvy', 'Expense Savvy', 'Log 10 expenses.', '🧾'],
-  ['vehicle_caretaker', 'Vehicle Care', 'Add a maintenance log entry.', '🔧'],
-  ['data_archivist', 'Data Archivist', 'Export a backup.', '📦'],
-  ['personal_best_earnings', 'Personal Best', 'Beat your best single-shift gross.', '📈'],
-  ['personal_best_hours', 'Hour Hero', 'Beat your best net hourly rate.', '⚡'],
-  ['weekend_warrior', 'Weekend Warrior', '10+ weekend shifts logged.', '🎉'],
-  ['rain_rider', 'Rain Rider', 'Log shifts in tagged bad weather.', '🌧️'],
-  ['peak_collector', 'Peak Pay', 'Log platform peak/surge bonus fields.', '📊'],
-  ['perfect_week', 'Perfect Week', 'Hit goal every day of the week.', '⭐'],
-];
-
-const DEFAULT_PLATFORMS = [
-  {
-    id: 'doordash',
-    name: 'DoorDash',
-    color: '#FF3008',
-    terminology: { driver: 'Dasher', delivery: 'Delivery', bonus: 'Peak Pay', surge: 'Peak Pay' },
-    weeklyGoal: 0,
-    monthlyGoal: 0,
-    taxRatePct: 0,
-    notes: '',
-    priority: 1,
-    active: false,
-    addedAt: null,
-    deactivatedAt: null,
-    platformSpecific: {},
-  },
-  {
-    id: 'ubereats',
-    name: 'Uber Eats',
-    color: '#06C167',
-    terminology: { driver: 'Courier', delivery: 'Delivery', bonus: 'Quest', surge: 'Surge' },
-    weeklyGoal: 0,
-    monthlyGoal: 0,
-    taxRatePct: 0,
-    notes: '',
-    priority: 2,
-    active: false,
-    addedAt: null,
-    deactivatedAt: null,
-    platformSpecific: {},
-  },
-  {
-    id: 'foodora',
-    name: 'Foodora',
-    color: '#E21B70',
-    terminology: { driver: 'Rider', delivery: 'Delivery', bonus: 'Bonus', surge: 'Busy pay' },
-    weeklyGoal: 0,
-    monthlyGoal: 0,
-    taxRatePct: 0,
-    notes: '',
-    priority: 3,
-    active: false,
-    addedAt: null,
-    deactivatedAt: null,
-    platformSpecific: {},
-  },
-  {
-    id: 'skip',
-    name: 'SkipTheDishes',
-    color: '#ED5A1F',
-    terminology: { driver: 'Courier', delivery: 'Delivery', bonus: 'Promo', surge: 'Busy fee' },
-    weeklyGoal: 0,
-    monthlyGoal: 0,
-    taxRatePct: 0,
-    notes: '',
-    priority: 4,
-    active: false,
-    addedAt: null,
-    deactivatedAt: null,
-    platformSpecific: {},
-  },
-  {
-    id: 'instacart',
-    name: 'Instacart',
-    color: '#0AAD0A',
-    terminology: { driver: 'Shopper', delivery: 'Batch', bonus: 'Boost', surge: 'Peak' },
-    weeklyGoal: 0,
-    monthlyGoal: 0,
-    taxRatePct: 0,
-    notes: '',
-    priority: 5,
-    active: false,
-    addedAt: null,
-    deactivatedAt: null,
-    platformSpecific: {},
-  },
-  {
-    id: 'amazonflex',
-    name: 'Amazon Flex',
-    color: '#232F3E',
-    terminology: { driver: 'Flex driver', delivery: 'Block', bonus: 'Incentive', surge: 'Surge' },
-    weeklyGoal: 0,
-    monthlyGoal: 0,
-    taxRatePct: 0,
-    notes: '',
-    priority: 6,
-    active: false,
-    addedAt: null,
-    deactivatedAt: null,
-    platformSpecific: {},
-  },
-  {
-    id: 'other',
-    name: 'Other',
-    color: '#6B7280',
-    terminology: { driver: 'Driver', delivery: 'Delivery', bonus: 'Bonus', surge: 'Surge' },
-    weeklyGoal: 0,
-    monthlyGoal: 0,
-    taxRatePct: 0,
-    notes: '',
-    priority: 99,
-    active: false,
-    addedAt: null,
-    deactivatedAt: null,
-    platformSpecific: {},
-  },
-];
+/** Dexie seed rows for `platforms` — derived from catalog (Registry_arch / Category A). */
+const DEFAULT_PLATFORMS = PlatformRegistry.getAll().map((def, idx) => ({
+  id: def.id,
+  name: def.name,
+  color: def.color,
+  terminology: { ...(def.terminology || {}) },
+  weeklyGoal: 0,
+  monthlyGoal: 0,
+  taxRatePct: 0,
+  notes: '',
+  priority: def.id === 'other' ? 99 : idx + 1,
+  active: false,
+  addedAt: null,
+  deactivatedAt: null,
+  platformSpecific: {},
+}));
 
 class MacadamDatabase extends Dexie {
   constructor() {
@@ -286,14 +166,16 @@ async function seedFirstRun() {
     }));
     await db.platforms.bulkPut(platformRows);
 
-    const badgeRows = DEFAULT_BADGE_DEFINITIONS.map(([id, name, description, icon]) => ({
-      id,
-      name,
-      description,
-      icon,
-      unlockedAt: null,
-      notified: false,
-    }));
+    const badgeRows = BadgeRegistry.getAll()
+      .filter((b) => b.id !== 'placeholder')
+      .map((b) => ({
+        id: b.id,
+        name: b.name,
+        description: b.description,
+        icon: b.icon,
+        unlockedAt: null,
+        notified: false,
+      }));
     await db.badges.bulkPut(badgeRows);
 
     await putMissingAppStateDefaults(t);
