@@ -1,2 +1,438 @@
-// F1 placeholder — shift CRUD, timer, templates.
-export {};
+/**
+ * F11 — Shift Logging Core
+ * Dexie-backed shift CRUD + templates + conflict checks + live timer persistence.
+ *
+ * Notes:
+ * - All user data stored in IndexedDB (Dexie). Templates/timer state use `appState` (Dexie) + localStorage mirror.
+ * - Migrations are non-destructive (we only add new `appState` keys as needed).
+ */
+
+import { db, setAppState, getAppState, softDelete, restoreDeleted, purgeOldDeleted } from '../../core/db.js';
+import { bus, SHIFT_DELETED, SHIFT_SAVED, SHIFT_TIMER_START, SHIFT_TIMER_STOP } from '../../core/events.js';
+
+const LS_TIMER_KEY = 'macadam_active_shift_timer';
+const APP_STATE_TIMER_KEY = 'active_shift_start';
+const APP_STATE_TEMPLATES_KEY = 'shift_templates';
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function clampNum(v, { min = -Infinity, max = Infinity } = {}) {
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(min, Math.min(max, n));
+}
+
+function normStr(v) {
+  if (typeof v !== 'string') return '';
+  return v.trim();
+}
+
+function ymdFromDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function isYmd(s) {
+  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+
+function isHm(s) {
+  return typeof s === 'string' && /^\d{2}:\d{2}$/.test(s);
+}
+
+function minutesBetween(ymd, startHm, endHm) {
+  if (!isYmd(ymd) || !isHm(startHm) || !isHm(endHm)) return null;
+  const start = new Date(`${ymd}T${startHm}:00`);
+  const end = new Date(`${ymd}T${endHm}:00`);
+  const ms = end.getTime() - start.getTime();
+  if (!Number.isFinite(ms)) return null;
+  const min = Math.round(ms / 60000);
+  return min;
+}
+
+function safeJsonParse(raw, fallback) {
+  if (typeof raw !== 'string' || !raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * @typedef {Object} ShiftRow
+ * @property {number} [id]
+ * @property {string} date YYYY-MM-DD
+ * @property {string} platformId
+ * @property {string|null} startTime HH:mm
+ * @property {string|null} endTime HH:mm
+ * @property {number|null} gross
+ * @property {number|null} tips
+ * @property {number|null} bonus
+ * @property {number|null} orders
+ * @property {number|null} distanceKm
+ * @property {number|null} onlineMinutes
+ * @property {number|null} activeMinutes
+ * @property {number|null} vehicleId
+ * @property {string|null} weather
+ * @property {string|null} zoneTag
+ * @property {string|null} mood
+ * @property {string} notes
+ * @property {string|null} deletedAt
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * Normalize and validate incoming shift fields per F11 constraints.
+ * @param {Record<string, unknown>} input
+ * @returns {Omit<ShiftRow, 'id'>}
+ */
+function normalizeShiftInput(input) {
+  const dateRaw = typeof input.date === 'string' ? input.date : '';
+  const today = new Date();
+  const minDate = new Date();
+  minDate.setFullYear(today.getFullYear() - 2);
+
+  const date = isYmd(dateRaw) ? dateRaw : ymdFromDate(today);
+  const dateObj = new Date(`${date}T00:00:00`);
+  if (dateObj.getTime() < minDate.getTime()) {
+    throw new Error('shift:date:too_old');
+  }
+
+  const platformId = normStr(input.platformId);
+  if (!platformId) throw new Error('shift:platform:required');
+
+  const startTime = isHm(input.startTime) ? String(input.startTime) : null;
+  const endTime = isHm(input.endTime) ? String(input.endTime) : null;
+
+  const gross = clampNum(input.gross, { min: 0 });
+  const tips = clampNum(input.tips, { min: 0 });
+  const bonus = clampNum(input.bonus, { min: 0 });
+  const orders = clampNum(input.orders, { min: 0 });
+  const distanceKm = clampNum(input.distanceKm, { min: 0 });
+  const onlineMinutes = clampNum(input.onlineMinutes, { min: 0 });
+  const activeMinutes = clampNum(input.activeMinutes, { min: 0 });
+  const vehicleId = input.vehicleId == null ? null : clampNum(input.vehicleId, { min: 0 });
+
+  const weatherRaw = normStr(input.weather);
+  const weather = weatherRaw ? weatherRaw : null;
+  const zoneTagRaw = normStr(input.zoneTag);
+  const zoneTag = zoneTagRaw ? zoneTagRaw : null;
+  const moodRaw = normStr(input.mood);
+  const mood = moodRaw ? moodRaw : null;
+  const notes = typeof input.notes === 'string' ? input.notes : '';
+
+  const t = nowIso();
+  return {
+    date,
+    platformId,
+    startTime,
+    endTime,
+    gross,
+    tips,
+    bonus,
+    orders,
+    distanceKm,
+    onlineMinutes,
+    activeMinutes,
+    vehicleId,
+    weather,
+    zoneTag,
+    mood,
+    notes,
+    deletedAt: null,
+    createdAt: t,
+    updatedAt: t,
+  };
+}
+
+/**
+ * Validate start/end time ordering when both present.
+ * Allows end == start (0 minutes) for quick entries.
+ * @param {string} date
+ * @param {string|null} startTime
+ * @param {string|null} endTime
+ */
+function validateTimeWindow(date, startTime, endTime) {
+  if (!startTime || !endTime) return;
+  const mins = minutesBetween(date, startTime, endTime);
+  if (mins == null) return;
+  if (mins < 0) throw new Error('shift:time:invalid');
+}
+
+/**
+ * @param {number} id
+ * @returns {Promise<ShiftRow | undefined>}
+ */
+export async function getShift(id) {
+  return db.shifts.get(id);
+}
+
+/**
+ * Feature 54 — check overlaps on same day for non-deleted shifts.
+ * @param {string} date YYYY-MM-DD
+ * @param {string|null} startTime HH:mm
+ * @param {string|null} endTime HH:mm
+ * @param {{ excludeId?: number }} [opts]
+ */
+export async function checkConflict(date, startTime, endTime, opts = {}) {
+  if (!isYmd(date) || !isHm(startTime) || !isHm(endTime)) return null;
+  const excludeId = typeof opts.excludeId === 'number' ? opts.excludeId : null;
+  const shifts = await db.shifts.where('date').equals(date).toArray();
+  const targetStart = new Date(`${date}T${startTime}:00`).getTime();
+  const targetEnd = new Date(`${date}T${endTime}:00`).getTime();
+  if (!Number.isFinite(targetStart) || !Number.isFinite(targetEnd)) return null;
+
+  for (const s of shifts) {
+    if (s.deletedAt != null) continue;
+    if (excludeId != null && s.id === excludeId) continue;
+    if (!isHm(s.startTime) || !isHm(s.endTime)) continue;
+    const sStart = new Date(`${date}T${s.startTime}:00`).getTime();
+    const sEnd = new Date(`${date}T${s.endTime}:00`).getTime();
+    if (!Number.isFinite(sStart) || !Number.isFinite(sEnd)) continue;
+    const overlap = targetStart < sEnd && targetEnd > sStart;
+    if (overlap) return s;
+  }
+  return null;
+}
+
+/**
+ * Feature 55 — total worked minutes for the day (from shifts with times).
+ * @param {string} date YYYY-MM-DD
+ * @returns {Promise<{ totalMinutes: number } | null>}
+ */
+export async function checkHoursWarning(date) {
+  if (!isYmd(date)) return null;
+  const shifts = await db.shifts.where('date').equals(date).toArray();
+  let total = 0;
+  for (const s of shifts) {
+    if (s.deletedAt != null) continue;
+    const mins = minutesBetween(date, s.startTime, s.endTime);
+    if (mins != null && mins > 0) total += mins;
+  }
+  return { totalMinutes: total };
+}
+
+/**
+ * Insert shift (Feature 33–46 + save action).
+ * Emits SHIFT_SAVED with `{ id }`.
+ * @param {Record<string, unknown>} shiftData
+ */
+export async function saveShift(shiftData) {
+  const row = normalizeShiftInput(shiftData);
+  validateTimeWindow(row.date, row.startTime, row.endTime);
+  const conflict = await checkConflict(row.date, row.startTime, row.endTime);
+  if (conflict) throw new Error('shift:conflict');
+
+  const id = await db.shifts.add(row);
+  bus.emit(SHIFT_SAVED, { id });
+  return id;
+}
+
+/**
+ * Patch update shift.
+ * Emits SHIFT_SAVED with `{ id }`.
+ * @param {number} id
+ * @param {Record<string, unknown>} patch
+ */
+export async function updateShift(id, patch) {
+  const prev = await db.shifts.get(id);
+  if (!prev) throw new Error('shift:not_found');
+
+  const next = {
+    ...prev,
+    ...patch,
+    updatedAt: nowIso(),
+  };
+
+  // Normalize critical fields if present.
+  if (patch.date != null) {
+    if (!isYmd(next.date)) throw new Error('shift:date:invalid');
+  }
+  if (patch.platformId != null) {
+    if (!normStr(next.platformId)) throw new Error('shift:platform:required');
+  }
+  if (patch.startTime != null) next.startTime = isHm(next.startTime) ? next.startTime : null;
+  if (patch.endTime != null) next.endTime = isHm(next.endTime) ? next.endTime : null;
+
+  validateTimeWindow(next.date, next.startTime, next.endTime);
+  const conflict = await checkConflict(next.date, next.startTime, next.endTime, { excludeId: id });
+  if (conflict) throw new Error('shift:conflict');
+
+  await db.shifts.put(next);
+  bus.emit(SHIFT_SAVED, { id });
+}
+
+/**
+ * Soft delete (Feature 48). Emits SHIFT_DELETED with `{ id }`.
+ * @param {number} id
+ */
+export async function deleteShift(id) {
+  await softDelete('shifts', id);
+  bus.emit(SHIFT_DELETED, { id });
+}
+
+/**
+ * Restore from trash (Feature 49). Emits SHIFT_SAVED with `{ id }`.
+ * @param {number} id
+ */
+export async function restoreShift(id) {
+  await restoreDeleted('shifts', id);
+  bus.emit(SHIFT_SAVED, { id });
+}
+
+/**
+ * Permanently delete shifts older than 30 days in trash (Feature 49).
+ */
+export async function purgeShifts() {
+  await purgeOldDeleted('shifts', 30);
+}
+
+/**
+ * Duplicate shift (Feature 50) — returns a new shift object (no id) for prefill.
+ * @param {number} id
+ */
+export async function duplicateShift(id) {
+  const s = await db.shifts.get(id);
+  if (!s) throw new Error('shift:not_found');
+  const { id: _id, createdAt: _c, updatedAt: _u, deletedAt: _d, ...rest } = s;
+  return { ...rest };
+}
+
+/**
+ * Templates: stored in appState as array of `{ id, name, data, createdAt }`.
+ * @typedef {{ id: string, name: string, data: Record<string, unknown>, createdAt: string }} ShiftTemplate
+ */
+
+function templateId() {
+  return `tpl_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+}
+
+/** @returns {Promise<ShiftTemplate[]>} */
+export async function getTemplates() {
+  const raw = await getAppState(APP_STATE_TEMPLATES_KEY);
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((t) => t && typeof t === 'object')
+    .map((t) => /** @type {any} */ (t))
+    .filter((t) => typeof t.id === 'string' && typeof t.name === 'string' && typeof t.data === 'object' && t.data);
+}
+
+/**
+ * Save template (Feature 51).
+ * @param {Record<string, unknown>} shiftData
+ * @param {string} name
+ */
+export async function saveAsTemplate(shiftData, name) {
+  const nm = normStr(name);
+  if (!nm) throw new Error('template:name:required');
+  const list = await getTemplates();
+  const t = nowIso();
+  const next = [
+    { id: templateId(), name: nm, data: { ...shiftData }, createdAt: t },
+    ...list,
+  ].slice(0, 50);
+  await setAppState(APP_STATE_TEMPLATES_KEY, next);
+  return next[0].id;
+}
+
+/**
+ * Apply template to form (Feature 51). Returns data payload.
+ * @param {string} templateId
+ */
+export async function applyTemplate(templateId) {
+  const list = await getTemplates();
+  const tpl = list.find((t) => t.id === templateId);
+  if (!tpl) throw new Error('template:not_found');
+  return { ...tpl.data };
+}
+
+/**
+ * Live shift timer (Feature 32).
+ * Writes `{ startTime, platformId }` to `appState` and localStorage.
+ * @param {string} platformId
+ */
+export async function startShiftTimer(platformId) {
+  const pid = normStr(platformId);
+  if (!pid) throw new Error('shift:platform:required');
+  const payload = { startTime: nowIso(), platformId: pid };
+  await setAppState(APP_STATE_TIMER_KEY, payload);
+  try {
+    localStorage.setItem(LS_TIMER_KEY, JSON.stringify(payload));
+  } catch {
+    /* private mode */
+  }
+  bus.emit(SHIFT_TIMER_START, payload);
+
+  // Feature 248 (Wake Lock) best-effort.
+  try {
+    if (navigator.wakeLock && typeof navigator.wakeLock.request === 'function') {
+      void navigator.wakeLock.request('screen').catch(() => {});
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Stop timer, clear persisted state, and return prefill payload for shift form.
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+export async function stopShiftTimer() {
+  /** @type {{ startTime?: unknown, platformId?: unknown } | null} */
+  const state = (await getAppState(APP_STATE_TIMER_KEY)) || null;
+  await setAppState(APP_STATE_TIMER_KEY, null);
+  try {
+    localStorage.removeItem(LS_TIMER_KEY);
+  } catch {
+    /* ignore */
+  }
+  bus.emit(SHIFT_TIMER_STOP, null);
+
+  const startIso = state && typeof state.startTime === 'string' ? state.startTime : null;
+  const platformId = state && typeof state.platformId === 'string' ? state.platformId : null;
+  if (!startIso) return null;
+
+  const start = new Date(startIso);
+  const end = new Date();
+  const durMin = Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
+  const date = ymdFromDate(start);
+  const startHm = start.toTimeString().slice(0, 5);
+  const endHm = end.toTimeString().slice(0, 5);
+
+  return {
+    platformId,
+    date,
+    startTime: startHm,
+    endTime: endHm,
+    activeMinutes: durMin,
+    onlineMinutes: durMin,
+  };
+}
+
+/**
+ * On app-open: restore timer from localStorage into appState if missing.
+ * (F11 requires localStorage restore; store reads from appState.)
+ */
+export async function restoreShiftTimerFromLocalStorage() {
+  const current = await getAppState(APP_STATE_TIMER_KEY);
+  if (current) return;
+  let raw = null;
+  try {
+    raw = localStorage.getItem(LS_TIMER_KEY);
+  } catch {
+    raw = null;
+  }
+  const parsed = safeJsonParse(raw, null);
+  if (!parsed || typeof parsed !== 'object') return;
+  const o = /** @type {any} */ (parsed);
+  if (typeof o.startTime !== 'string') return;
+  if (typeof o.platformId !== 'string') return;
+  await setAppState(APP_STATE_TIMER_KEY, { startTime: o.startTime, platformId: o.platformId });
+}
+

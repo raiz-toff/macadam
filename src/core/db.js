@@ -66,6 +66,8 @@ export const DEFAULT_USER = {
   layoutDensity: 'comfortable',
   dashboardWidgets: [],
   heroStats: [],
+  /** @type {'tabs'|'dropdown'} */
+  platformSwitcherMode: 'tabs',
   onboardingComplete: false,
   onboardingStep: 0,
   createdAt: null,

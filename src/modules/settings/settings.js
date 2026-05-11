@@ -1,2 +1,1 @@
-// F1 placeholder — settings module.
-export {};
+export { mountSettingsPlatforms } from './platforms-settings.js';

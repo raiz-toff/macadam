@@ -2,7 +2,8 @@ import dayjs from '../libs/dayjs.min.js';
 import relativeTime from '../libs/dayjs.relativeTime.min.js';
 import durationPlugin from '../libs/dayjs.duration.min.js';
 import { getLocaleConfig } from './locale.js';
-import { PLATFORM_TERMINOLOGY } from '../modules/platforms/platform-config.js';
+import { getTerminology } from '../modules/platforms/platform-config.js';
+import { store } from '../core/store.js';
 
 dayjs.extend(relativeTime);
 dayjs.extend(durationPlugin);
@@ -150,10 +151,7 @@ export function truncate(str, length) {
  * @param {string} term
  */
 export function platformLabel(platformId, term) {
-  const id = String(platformId ?? '');
-  const key = String(term ?? '');
-  const fromCfg = PLATFORM_TERMINOLOGY[id]?.[key];
-  if (fromCfg) return fromCfg;
-  if (!key) return '';
-  return key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/^\s+/, '').replace(/\b\w/g, (c) => c.toUpperCase());
+  const rows = /** @type {{ id?: string }[]} */ (store.get('platforms') || []);
+  const ids = rows.map((r) => String(r?.id || '')).filter(Boolean);
+  return getTerminology(platformId, String(term ?? ''), ids);
 }

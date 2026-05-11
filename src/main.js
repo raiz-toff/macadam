@@ -1,14 +1,21 @@
 /*
- * Macadam — entry point.
- * F2: service worker (static shell), PWA manifest hooks, install prompt, standalone flag.
- * F4: Dexie / IndexedDB init (see src/core/db.js).
+ * Macadam — entry point (F2 SW, F4 Dexie, F5 shell + router + event bus).
+ * Theme: `public/theme-init.js` runs before paint (`macadam-theme`); `store.loadFromDB` syncs user.theme.
  */
 
-import { db, initDatabase } from './core/db.js';
+import { db, initDatabase, getAppState, purgeOldDeleted } from './core/db.js';
+import { bus } from './core/events.js';
+import { store } from './core/store.js';
+import { Router } from './core/router.js';
+import { renderAppShell } from './core/shell.js';
+import { initPlatforms } from './modules/platforms/platforms.js';
+import { runOnOpenNotificationCheck } from './modules/notifications/notifications.js';
+import { generateRecurringExpenses, initExpensesModule } from './modules/expenses/expenses.js';
 import './utils/formatters.js';
 import './utils/calculations.js';
 import './utils/locale.js';
 import './utils/strings.js';
+import { t } from './utils/strings.js';
 import './ui/icons.js';
 
 /** @type {ServiceWorkerRegistration | null} */
@@ -25,6 +32,8 @@ window.__macadam = window.__macadam || {
   triggerInstall: null,
   swRegistration: null,
 };
+
+window.__macadam.bus = bus;
 
 function setStandaloneDataset() {
   const standalone =
@@ -63,11 +72,11 @@ function showSwUpdateBanner() {
   ].join(';');
 
   const msg = document.createElement('span');
-  msg.textContent = 'App updated — reload for latest version';
+  msg.textContent = t('app.updateAvailable');
 
   const reload = document.createElement('button');
   reload.type = 'button';
-  reload.textContent = 'Reload';
+  reload.textContent = t('app.reload');
   reload.style.cssText = [
     'cursor:pointer',
     'border:none',
@@ -138,8 +147,19 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+function wireConnectivity() {
+  window.addEventListener('online', () => store.set('isOnline', true));
+  window.addEventListener('offline', () => store.set('isOnline', false));
+}
+
+async function checkBackupOverdue() {
+  await getAppState('last_backup');
+  /* Phase 2: surface reminder UI */
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   registerServiceWorker();
+  wireConnectivity();
 
   const app = document.getElementById('app');
   if (!app) return;
@@ -147,9 +167,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     await initDatabase();
     window.__macadam.db = db;
-    app.textContent = 'Macadam — IndexedDB ready (F4).';
+
+    await store.loadFromDB();
+    window.__macadam.store = store;
+
+    await initPlatforms();
+    initExpensesModule();
+    await renderAppShell(app);
+
+    window.__macadam.router = Router;
+    Router.init();
   } catch (err) {
-    console.error('[macadam] database init failed', err);
-    app.textContent = 'Macadam — database init failed (see console).';
+    console.error('[macadam] boot failed', err);
+    app.textContent = t('errors.dbOpen');
+    return;
+  }
+
+  try {
+    await runOnOpenNotificationCheck();
+  } catch (e) {
+    console.warn('[macadam] on-open notifications skipped', e);
+  }
+
+  try {
+    await generateRecurringExpenses();
+  } catch (e) {
+    console.warn('[macadam] recurring expenses generation skipped', e);
+  }
+
+  try {
+    await purgeOldDeleted('shifts', 30);
+    await purgeOldDeleted('expenses', 30);
+  } catch (e) {
+    console.warn('[macadam] purge old deleted skipped', e);
+  }
+
+  try {
+    await checkBackupOverdue();
+  } catch (e) {
+    console.warn('[macadam] backup overdue check skipped', e);
   }
 });

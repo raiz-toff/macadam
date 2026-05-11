@@ -1,2 +1,270 @@
-// F1 placeholder — expense form renderer.
-export {};
+import { t } from '../../utils/strings.js';
+import { showNumericKeypad } from '../../ui/components.js';
+
+export const PRESET_EXPENSE_CATEGORIES = [
+  { id: 'fuel', emoji: '⛽' },
+  { id: 'maintenance', emoji: '🔧' },
+  { id: 'parking', emoji: '🅿️' },
+  { id: 'tolls', emoji: '🛣️' },
+  { id: 'insurance', emoji: '🛡️' },
+  { id: 'registration', emoji: '📄' },
+  { id: 'phone', emoji: '📱' },
+  { id: 'data_plan', emoji: '📶' },
+  { id: 'car_wash', emoji: '🧼' },
+  { id: 'supplies', emoji: '🧰' },
+  { id: 'meals', emoji: '🍽️' },
+  { id: 'bank_fees', emoji: '🏦' },
+  { id: 'software', emoji: '💻' },
+  { id: 'accounting', emoji: '🧮' },
+  { id: 'other', emoji: '🧾' },
+];
+
+function esc(v) {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/"/g, '&quot;');
+}
+
+function nowYmd() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+async function readReceiptAsBase64(file) {
+  if (!file) return null;
+  const dataUrl = await new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(typeof fr.result === 'string' ? fr.result : null);
+    fr.onerror = () => reject(new Error('receipt:read_failed'));
+    fr.readAsDataURL(file);
+  });
+  if (!dataUrl || !file.type.startsWith('image/')) return dataUrl;
+
+  const img = await new Promise((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error('receipt:decode_failed'));
+    el.src = dataUrl;
+  });
+  const maxW = 1280;
+  const maxH = 1280;
+  const scale = Math.min(1, maxW / img.width, maxH / img.height);
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL('image/jpeg', 0.82);
+}
+
+/**
+ * @param {{
+ *   initial?: Record<string, unknown>;
+ *   platforms?: Array<{ id: string; name?: string }>;
+ *   categories?: Array<{ id: string; name: string; emoji?: string; custom?: boolean }>;
+ *   isHstRegistered?: boolean;
+ *   currencySymbol?: string;
+ *   submitLabel?: string;
+ *   onCancel?: () => void;
+ * }} options
+ */
+export function renderExpenseForm(options = {}) {
+  const {
+    initial = {},
+    platforms = [],
+    categories = [],
+    isHstRegistered = false,
+    currencySymbol = '$',
+    submitLabel = t('common.save'),
+    onCancel,
+  } = options;
+
+  const catRows = categories.length
+    ? categories
+    : PRESET_EXPENSE_CATEGORIES.map((c) => ({ id: c.id, name: c.id, emoji: c.emoji, custom: false }));
+
+  const platformOptions = [
+    `<option value="all">${esc(t('app.platformAll'))}</option>`,
+    ...platforms.map((p) => `<option value="${esc(p.id)}">${esc(p.name || p.id)}</option>`),
+  ].join('');
+
+  const root = document.createElement('div');
+  root.className = 'expenses-form-inner';
+  root.innerHTML = `
+    <form class="expenses-form" novalidate>
+      <div class="expenses-categories" data-slot="categories"></div>
+
+      <label class="field">
+        <span class="field-label">${esc(t('expenses.amount'))}</span>
+        <div class="field-inline">
+          <input class="input" type="number" step="0.01" min="0" name="amount" inputmode="decimal" />
+          <button type="button" class="btn btn-ghost btn-sm" data-action="keypad">${esc(t('ui.keypad.open'))}</button>
+        </div>
+      </label>
+
+      <label class="field">
+        <span class="field-label">${esc(t('expenses.date'))}</span>
+        <input class="input" type="date" name="date" />
+      </label>
+
+      <label class="field">
+        <span class="field-label">${esc(t('expenses.platformAssignment'))}</span>
+        <select class="select" name="platformId">${platformOptions}</select>
+      </label>
+
+      <label class="field">
+        <span class="field-label">${esc(t('expenses.businessUsePct'))}</span>
+        <input type="range" min="0" max="100" step="1" name="businessPct" />
+        <span class="field-hint" data-slot="business-pct-label"></span>
+      </label>
+
+      <label class="field">
+        <span class="field-label">${esc(t('expenses.notes'))}</span>
+        <textarea class="input textarea" name="notes" placeholder="${esc(t('expenses.notesPlaceholder'))}"></textarea>
+      </label>
+
+      <label class="field">
+        <span class="field-label">${esc(t('expenses.receipt'))}</span>
+        <input class="input" type="file" accept="image/*" name="receiptFile" />
+        <span class="field-hint" data-slot="receipt-label">${esc(t('expenses.receiptHint'))}</span>
+      </label>
+
+      <label class="toggle">
+        <input type="checkbox" name="isRecurring" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span>${esc(t('expenses.recurring'))}</span>
+      </label>
+
+      <label class="field" data-slot="interval-wrap" hidden>
+        <span class="field-label">${esc(t('expenses.recurringInterval'))}</span>
+        <select class="select" name="recurringInterval">
+          <option value="monthly">${esc(t('expenses.recurringMonthly'))}</option>
+          <option value="annual">${esc(t('expenses.recurringAnnual'))}</option>
+          <option value="weekly">${esc(t('expenses.recurringWeekly'))}</option>
+        </select>
+      </label>
+
+      <label class="field" data-slot="hst-wrap" ${isHstRegistered ? '' : 'hidden'}>
+        <span class="field-label">${esc(t('expenses.hstItc'))}</span>
+        <input class="input" type="number" name="hstItcAmount" min="0" step="0.01" inputmode="decimal" />
+      </label>
+
+      <div class="shifts-form-actions">
+        <button type="button" class="btn btn-ghost" data-action="cancel">${esc(t('common.cancel'))}</button>
+        <button type="submit" class="btn btn-primary">${esc(submitLabel)}</button>
+      </div>
+    </form>
+  `;
+
+  const form = root.querySelector('form');
+  const cats = root.querySelector('[data-slot="categories"]');
+  const pctLabel = root.querySelector('[data-slot="business-pct-label"]');
+  const intervalWrap = root.querySelector('[data-slot="interval-wrap"]');
+
+  let selectedCategory = String(initial.category || catRows[0]?.id || 'other');
+  const customCategory = String(initial.customCategory || '');
+  let receiptData = typeof initial.receiptData === 'string' ? initial.receiptData : null;
+
+  function renderCategoryGrid() {
+    if (!cats) return;
+    cats.innerHTML = catRows
+      .map((c) => {
+        const active = c.id === selectedCategory;
+        return `<button type="button" class="expense-category-btn${active ? ' is-selected' : ''}" data-category-id="${esc(c.id)}">${esc(c.emoji || '🧾')} <span>${esc(c.name)}</span></button>`;
+      })
+      .join('');
+  }
+
+  function updateBusinessLabel() {
+    if (!pctLabel || !form) return;
+    const pct = Number(form.businessPct.value || 0);
+    pctLabel.textContent = t('expenses.businessUseLabel').replace('{pct}', String(Math.round(pct)));
+  }
+
+  function syncRecurringVisibility() {
+    if (!form || !intervalWrap) return;
+    intervalWrap.hidden = !form.isRecurring.checked;
+  }
+
+  renderCategoryGrid();
+
+  if (form) {
+    form.amount.value = initial.amount != null ? String(initial.amount) : '';
+    form.date.value = initial.date ? String(initial.date) : nowYmd();
+    form.platformId.value = initial.platformId == null ? 'all' : String(initial.platformId || 'all');
+    form.businessPct.value = initial.businessPct != null ? String(initial.businessPct) : '100';
+    form.notes.value = initial.notes ? String(initial.notes) : '';
+    form.isRecurring.checked = Boolean(initial.isRecurring);
+    form.recurringInterval.value = String(initial.recurringInterval || 'monthly');
+    form.hstItcAmount.value = initial.hstItcAmount != null ? String(initial.hstItcAmount) : '';
+    updateBusinessLabel();
+    syncRecurringVisibility();
+  }
+
+  root.addEventListener('click', async (e) => {
+    const el = e.target instanceof HTMLElement ? e.target.closest('[data-action],[data-category-id]') : null;
+    if (!el) return;
+    const action = el.getAttribute('data-action');
+    if (action === 'cancel') {
+      onCancel?.();
+      return;
+    }
+    if (action === 'keypad' && form) {
+      showNumericKeypad({
+        value: form.amount.value,
+        currency: currencySymbol,
+        onConfirm: (val) => {
+          form.amount.value = val;
+        },
+      });
+      return;
+    }
+    const categoryId = el.getAttribute('data-category-id');
+    if (categoryId) {
+      selectedCategory = categoryId;
+      renderCategoryGrid();
+    }
+  });
+
+  form?.businessPct.addEventListener('input', updateBusinessLabel);
+  form?.isRecurring.addEventListener('change', syncRecurringVisibility);
+  form?.receiptFile.addEventListener('change', async () => {
+    const file = form.receiptFile.files && form.receiptFile.files[0];
+    if (!file) {
+      receiptData = null;
+      return;
+    }
+    receiptData = await readReceiptAsBase64(file);
+    const lab = root.querySelector('[data-slot="receipt-label"]');
+    if (lab) lab.textContent = t('expenses.receiptAttached');
+  });
+
+  return {
+    el: root,
+    getValue() {
+      if (!form) return {};
+      const platformValue = String(form.platformId.value || 'all');
+      const recurring = Boolean(form.isRecurring.checked);
+      return {
+        category: selectedCategory,
+        customCategory: selectedCategory === 'custom' ? customCategory : '',
+        amount: Number(form.amount.value || 0),
+        date: String(form.date.value || nowYmd()),
+        platformId: platformValue === 'all' ? null : platformValue,
+        businessPct: Number(form.businessPct.value || 0),
+        notes: String(form.notes.value || ''),
+        receiptData,
+        isRecurring: recurring,
+        recurringInterval: recurring ? String(form.recurringInterval.value || 'monthly') : null,
+        hstItcAmount: isHstRegistered ? Number(form.hstItcAmount.value || 0) : 0,
+      };
+    },
+  };
+}

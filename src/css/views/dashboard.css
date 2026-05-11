@@ -1,7 +1,129 @@
-/* Macadam — dashboard view (Phase 2). F3 stub. */
-/*
- * Sections (fill in later):
- * - Hero stats / header strip
- * - Bento widget density
- * - Platform breakdown cards
- */
+/* Macadam — F12 expenses core view mounted on dashboard route. */
+
+.expenses-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.expenses-view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.expenses-view-title {
+  margin: 0;
+  font-size: var(--text-2xl);
+}
+
+.expenses-view-subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.expenses-filters {
+  padding: var(--space-4);
+}
+
+.expenses-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.expenses-filters-grid .field,
+.expenses-filters-grid .toggle {
+  grid-column: span 12;
+}
+
+@media (min-width: 720px) {
+  .expenses-filters-grid .field,
+  .expenses-filters-grid .toggle {
+    grid-column: span 6;
+  }
+}
+
+@media (min-width: 1100px) {
+  .expenses-filters-grid .field,
+  .expenses-filters-grid .toggle {
+    grid-column: span 3;
+  }
+}
+
+.expenses-list-wrap {
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.expenses-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.expenses-table th,
+.expenses-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.expenses-table th {
+  background: var(--color-surface-raised);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.expenses-row-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.expenses-form-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.expenses-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.expenses-categories {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+@media (min-width: 640px) {
+  .expenses-categories {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.expense-category-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: var(--text-xs);
+}
+
+.expense-category-btn.is-selected {
+  border-color: var(--color-brand);
+  background: color-mix(in srgb, var(--color-brand) 16%, var(--color-surface));
+}

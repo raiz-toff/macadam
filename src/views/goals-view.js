@@ -1,2 +1,6 @@
-// F1 placeholder — goals route view.
-export {};
+import { renderViewPlaceholder } from './view-utils.js';
+
+/** @param {HTMLElement} root @param {Record<string, unknown>} ctx */
+export function render(root, ctx) {
+  renderViewPlaceholder(root, 'views.goals.title', 'views.goals.placeholderBody', String(ctx.hash || ''));
+}

@@ -1,6 +1,297 @@
-/* Macadam — shifts view (Phase 2). F3 stub. */
-/*
- * Sections (fill in later):
- * - Shift list rows
- * - Shift form layout
- */
+/* Macadam — shifts view (F11). */
+
+.shifts-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.shifts-view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.shifts-view-title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+
+.shifts-view-subtitle {
+  margin: var(--space-1) 0 0 0;
+  color: var(--color-text-secondary);
+}
+
+.shifts-view-header-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.shifts-list {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-3);
+}
+
+.shift-card {
+  grid-column: span 12;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 780px) {
+  .shift-card {
+    grid-column: span 6;
+  }
+}
+
+@media (min-width: 1100px) {
+  .shift-card {
+    grid-column: span 4;
+  }
+}
+
+.shift-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.shift-card-date {
+  font-weight: 700;
+}
+
+.shift-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--platform-color, var(--color-border)) 25%, var(--color-border));
+  background: color-mix(in srgb, var(--platform-color, var(--color-surface-raised)) 14%, var(--color-surface));
+  color: var(--platform-color, var(--color-text-primary));
+}
+
+.shift-badge[data-platform-id='doordash'] {
+  --platform-color: #ff3008;
+}
+.shift-badge[data-platform-id='ubereats'] {
+  --platform-color: #06c167;
+}
+.shift-badge[data-platform-id='foodora'] {
+  --platform-color: #e21b70;
+}
+.shift-badge[data-platform-id='skip'] {
+  --platform-color: #ed5a1f;
+}
+.shift-badge[data-platform-id='instacart'] {
+  --platform-color: #0aad0a;
+}
+.shift-badge[data-platform-id='amazonflex'] {
+  --platform-color: #232f3e;
+}
+.shift-badge[data-platform-id='other'] {
+  --platform-color: #6b7280;
+}
+
+.shift-card-main {
+  margin-top: var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.shift-card-metric-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.shift-card-metric-value {
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.shift-card-actions {
+  margin-top: var(--space-3);
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Form */
+.shifts-form-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.shifts-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.shifts-form-title {
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+
+.shifts-form-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.shifts-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field--span2 {
+  grid-column: span 2;
+}
+
+.field-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.field-inline {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.field-hint {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.shifts-form-toggle {
+  grid-column: span 2;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.shifts-advanced.is-hidden {
+  display: none;
+}
+
+.shifts-advanced-grid {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.mood-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.mood-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 18px;
+}
+
+.mood-btn.is-selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+.shifts-livebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  flex-wrap: wrap;
+}
+
+.shifts-livebar-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 120px;
+}
+
+.shifts-livebar-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.shifts-livebar-value {
+  font-weight: 700;
+}
+
+/* Templates + import */
+.shifts-muted {
+  color: var(--color-text-muted);
+}
+
+.shifts-secondary {
+  color: var(--color-text-secondary);
+}
+
+.template-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.template-row:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 22%, var(--color-border));
+}
+
+.import-pre {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  max-height: 260px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}

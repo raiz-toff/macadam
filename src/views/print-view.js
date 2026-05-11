@@ -2,5 +2,5 @@ import { renderViewPlaceholder } from './view-utils.js';
 
 /** @param {HTMLElement} root @param {Record<string, unknown>} ctx */
 export function render(root, ctx) {
-  renderViewPlaceholder(root, 'views.reports.title', 'views.reports.placeholderBody', String(ctx.hash || ''));
+  renderViewPlaceholder(root, 'views.print.title', 'views.print.placeholderBody', String(ctx.hash || ''));
 }

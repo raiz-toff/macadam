@@ -1,2 +1,159 @@
-// F1 placeholder — hash router (F5).
-export {};
+/**
+ * Hash router (F5). Offline-safe; route guard for onboarding; nav sync; error boundary on view render.
+ */
+
+import { bus, NAVIGATION } from './events.js';
+import { store } from './store.js';
+import { render as renderDashboard } from '../views/dashboard.js';
+import { render as renderShifts } from '../views/shifts-view.js';
+import { render as renderAnalytics } from '../views/analytics-view.js';
+import { render as renderTax } from '../views/tax-view.js';
+import { render as renderVehicles } from '../views/vehicles-view.js';
+import { render as renderSchedule } from '../views/schedule-view.js';
+import { render as renderGoals } from '../views/goals-view.js';
+import { render as renderReports } from '../views/reports-view.js';
+import { render as renderSearch } from '../views/search-view.js';
+import { render as renderSettings } from '../views/settings-view.js';
+import { render as renderOnboarding } from '../views/onboarding-view.js';
+import { render as renderAbout } from '../views/about-view.js';
+import { render as renderPrint } from '../views/print-view.js';
+import { t } from '../utils/strings.js';
+
+/** @typedef {{ hash: string, name: string, context: Record<string, unknown> }} MacadamRoute */
+
+function canonicalHash() {
+  const raw = window.location.hash || '';
+  const noQuery = raw.split('?')[0];
+  if (noQuery === '' || noQuery === '#' || noQuery === '#/') return '#/';
+  if (!noQuery.startsWith('#/')) return '#/';
+  return noQuery;
+}
+
+/**
+ * @param {string} hash
+ * @returns {MacadamRoute | null}
+ */
+function resolveRouteDef(hash) {
+  /** @type {Array<{ hash: string; name: string; render: (el: HTMLElement, ctx: Record<string, unknown>) => void }>} */
+  const table = [
+    { hash: '#/shifts/new', name: 'shifts', render: renderShifts },
+    { hash: '#/analytics/week', name: 'analytics', render: renderAnalytics },
+    { hash: '#/settings/about', name: 'settings', render: renderSettings },
+    { hash: '#/dashboard', name: 'dashboard', render: renderDashboard },
+    { hash: '#/shifts', name: 'shifts', render: renderShifts },
+    { hash: '#/analytics', name: 'analytics', render: renderAnalytics },
+    { hash: '#/tax', name: 'tax', render: renderTax },
+    { hash: '#/vehicles', name: 'vehicles', render: renderVehicles },
+    { hash: '#/schedule', name: 'schedule', render: renderSchedule },
+    { hash: '#/goals', name: 'goals', render: renderGoals },
+    { hash: '#/reports', name: 'reports', render: renderReports },
+    { hash: '#/search', name: 'search', render: renderSearch },
+    { hash: '#/settings', name: 'settings', render: renderSettings },
+    { hash: '#/onboarding', name: 'onboarding', render: renderOnboarding },
+    { hash: '#/about', name: 'about', render: renderAbout },
+    { hash: '#/print', name: 'print', render: renderPrint },
+  ];
+  const row = table.find((r) => r.hash === hash);
+  return row ? { hash: row.hash, name: row.name, context: buildContext(row) } : null;
+}
+
+/**
+ * @param {{ hash: string; name: string; render: Function }} row
+ */
+function buildContext(row) {
+  const ctx = { hash: row.hash, routeName: row.name };
+  if (row.hash === '#/shifts/new') ctx.openNew = true;
+  if (row.hash === '#/analytics/week') ctx.analyticsPeriod = 'week';
+  if (row.hash === '#/settings/about') ctx.settingsTab = 'about';
+  return ctx;
+}
+
+function updateNavActive(hash) {
+  document.querySelectorAll('[data-nav-route]').forEach((el) => {
+    const target = el.getAttribute('data-nav-route');
+    if (!target) return;
+    const active = hash === target || (target !== '#/dashboard' && hash.startsWith(target + '/'));
+    if (active) el.setAttribute('aria-current', 'page');
+    else el.removeAttribute('aria-current');
+  });
+}
+
+function renderErrorBoundary(root, err) {
+  console.error('[macadam] view render failed', err);
+  root.textContent = '';
+  const box = document.createElement('div');
+  box.className = 'card card-raised route-error';
+  box.setAttribute('role', 'alert');
+  const p = document.createElement('p');
+  p.textContent = t('errors.viewRender');
+  box.appendChild(p);
+  root.appendChild(box);
+}
+
+function handleRoute() {
+  const viewRoot = document.getElementById('view-container');
+  if (!viewRoot) return;
+
+  let hash = canonicalHash();
+  const user = /** @type {{ onboardingComplete?: boolean } | null} */ (store.get('user'));
+
+  if (hash === '#/') {
+    const next = user?.onboardingComplete ? '#/dashboard' : '#/onboarding';
+    if (window.location.hash !== next) {
+      window.location.hash = next;
+      return;
+    }
+    hash = next;
+  }
+
+  if (!user?.onboardingComplete) {
+    if (hash !== '#/onboarding') {
+      window.location.hash = '#/onboarding';
+      return;
+    }
+  } else if (hash === '#/onboarding') {
+    window.location.hash = '#/dashboard';
+    return;
+  }
+
+  let def = resolveRouteDef(hash);
+  if (!def) {
+    window.location.hash = '#/dashboard';
+    return;
+  }
+
+  window.__macadam = window.__macadam || {};
+  window.__macadam.currentRoute = def;
+
+  updateNavActive(hash);
+
+  viewRoot.textContent = '';
+  try {
+    const maybe = def.render(viewRoot, def.context);
+    if (maybe && typeof /** @type {{ then?: unknown }} */ (maybe).then === 'function') {
+      /** @type {Promise<unknown>} */ (maybe).catch((e) => renderErrorBoundary(viewRoot, e));
+    }
+  } catch (e) {
+    renderErrorBoundary(viewRoot, e);
+  }
+
+  bus.emit(NAVIGATION, { hash: def.hash, name: def.name, context: def.context });
+}
+
+export const Router = {
+  /** @param {string} path e.g. `dashboard` or `#/shifts` */
+  navigate(path) {
+    const h = path.startsWith('#') ? path : `#/${path.replace(/^\//, '')}`;
+    if (window.location.hash === h) handleRoute();
+    else window.location.hash = h;
+  },
+
+  init() {
+    window.addEventListener('hashchange', () => handleRoute());
+    return handleRoute();
+  },
+
+  refresh() {
+    return handleRoute();
+  },
+};
