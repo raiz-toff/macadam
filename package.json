@@ -1,0 +1,14 @@
+{
+  "name": "macadam",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Macadam — Local-first gig driver earnings app",
+  "scripts": {
+    "dev": "node build.js --dev",
+    "build": "node build.js --prod",
+    "preview": "npx serve dist"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5"
+  }
+}
