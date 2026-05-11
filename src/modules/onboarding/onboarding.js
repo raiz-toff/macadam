@@ -363,7 +363,7 @@ export async function mountOnboarding(root) {
 
   const baseDraft = defaultDraftFromUser(user);
   const sessionSnap = readSession();
-  let draft = mergeDraft(null, baseDraft);
+  let draft = mergeDraft(sessionSnap, baseDraft);
 
   const platformRows = await db.platforms.toArray();
   platformRows.sort((a, b) => (Number(a.priority) || 0) - (Number(b.priority) || 0));

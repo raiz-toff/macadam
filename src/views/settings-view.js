@@ -1,5 +1,7 @@
 import { t } from '../utils/strings.js';
-import { mountSettingsPlatforms } from '../modules/settings/platforms-settings.js';
+import { mountSettings } from '../modules/settings/settings.js';
+import { mountPwaSettings } from '../modules/pwa/pwa-settings.js';
+import { mountZonesSettings } from '../modules/zones/zones-settings.js';
 
 /** @param {HTMLElement} root @param {Record<string, unknown>} ctx */
 export async function render(root, ctx) {
@@ -28,20 +30,52 @@ export async function render(root, ctx) {
   }
   wrap.appendChild(header);
 
-  const platformsHost = document.createElement('section');
-  platformsHost.className = 'settings-view-section';
-  wrap.appendChild(platformsHost);
+  const settingsHost = document.createElement('section');
+  settingsHost.className = 'settings-view-section';
+  wrap.appendChild(settingsHost);
+
+  /* P12 — Zone management (Features 190–194). */
+  const zonesHost = document.createElement('section');
+  zonesHost.className = 'settings-view-section card card-raised';
+  wrap.appendChild(zonesHost);
+
+  /* P12 — PWA deep features (Features 241–249). */
+  const pwaHost = document.createElement('section');
+  pwaHost.className = 'settings-view-section card card-raised';
+  wrap.appendChild(pwaHost);
 
   root.appendChild(wrap);
 
   try {
-    await mountSettingsPlatforms(platformsHost);
+    await mountSettings(settingsHost, ctx);
   } catch (e) {
-    console.error('[macadam] settings platforms mount failed', e);
+    console.error('[macadam] settings mount failed', e);
     const err = document.createElement('p');
     err.className = 'route-error';
     err.setAttribute('role', 'alert');
     err.textContent = t('errors.viewRender');
-    platformsHost.appendChild(err);
+    settingsHost.appendChild(err);
+  }
+
+  try {
+    await mountZonesSettings(zonesHost);
+  } catch (e) {
+    console.error('[macadam] zones mount failed', e);
+    const err = document.createElement('p');
+    err.className = 'route-error';
+    err.setAttribute('role', 'alert');
+    err.textContent = t('errors.viewRender');
+    zonesHost.appendChild(err);
+  }
+
+  try {
+    mountPwaSettings(pwaHost);
+  } catch (e) {
+    console.error('[macadam] pwa settings mount failed', e);
+    const err = document.createElement('p');
+    err.className = 'route-error';
+    err.setAttribute('role', 'alert');
+    err.textContent = t('errors.viewRender');
+    pwaHost.appendChild(err);
   }
 }

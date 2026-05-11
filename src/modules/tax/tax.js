@@ -1,2 +1,582 @@
-// F1 placeholder — tax helpers and views data.
-export {};
+import { db, saveUser } from '../../core/db.js';
+import {
+  calcActualCostDeduction,
+  calcCPPContribution,
+  calcCRAMileageDeduction,
+  calcHSTRemittable,
+  calcIRSMileageDeduction,
+  calcSEtax,
+  calcTaxSetAside,
+} from '../../utils/calculations.js';
+import { formatCurrency, formatLargeNumber, formatPercent } from '../../utils/formatters.js';
+import { getAllTaxDeadlines } from '../../utils/locale.js';
+import { t } from '../../utils/strings.js';
+import { renderProgressRing, showToast } from '../../ui/components.js';
+
+const DEFAULT_CA_REGION = 'ON';
+const DEFAULT_US_REGION = 'CA';
+const TAX_VIRTUAL_JAR_KEY = 'tax_virtual_jar';
+
+const TAX_RATE_PRESETS_CA = {
+  AB: 26,
+  BC: 28,
+  MB: 30,
+  NB: 30,
+  NL: 31,
+  NS: 32,
+  NT: 30,
+  NU: 28,
+  ON: 29,
+  PE: 31,
+  QC: 33,
+  SK: 29,
+  YT: 28,
+};
+
+const TAX_RATE_PRESETS_US = {
+  AL: 24,
+  AK: 22,
+  AZ: 24,
+  AR: 25,
+  CA: 30,
+  CO: 25,
+  CT: 29,
+  DE: 27,
+  FL: 23,
+  GA: 25,
+  HI: 30,
+  IA: 25,
+  ID: 25,
+  IL: 25,
+  IN: 24,
+  KS: 24,
+  KY: 24,
+  LA: 24,
+  MA: 28,
+  MD: 29,
+  ME: 28,
+  MI: 25,
+  MN: 29,
+  MO: 24,
+  MS: 24,
+  MT: 25,
+  NC: 24,
+  ND: 23,
+  NE: 24,
+  NH: 23,
+  NJ: 30,
+  NM: 24,
+  NV: 23,
+  NY: 31,
+  OH: 25,
+  OK: 24,
+  OR: 30,
+  PA: 24,
+  RI: 28,
+  SC: 24,
+  SD: 23,
+  TN: 23,
+  TX: 23,
+  UT: 24,
+  VA: 25,
+  VT: 28,
+  WA: 23,
+  WI: 25,
+  WV: 24,
+  WY: 22,
+  DC: 31,
+};
+
+function num(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function esc(v) {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function toYmd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function inferLocaleTag(country) {
+  if (country === 'CA') return 'en-CA';
+  if (country === 'US') return 'en-US';
+  if (country === 'UK') return 'en-GB';
+  return 'en-US';
+}
+
+function inferDistanceUnit(country) {
+  return country === 'US' || country === 'UK' ? 'mi' : 'km';
+}
+
+function csvEscape(value) {
+  const s = String(value ?? '');
+  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function parseAppStateValue(row, fallback = 0) {
+  if (!row || typeof row.value !== 'string') return fallback;
+  try {
+    return JSON.parse(row.value);
+  } catch {
+    return fallback;
+  }
+}
+
+function downloadTextFile(filename, text, mime) {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildRegionOptions(country) {
+  const map = country === 'CA' ? TAX_RATE_PRESETS_CA : TAX_RATE_PRESETS_US;
+  return Object.entries(map).map(([code, rate]) => ({ code, rate }));
+}
+
+function defaultRegionCode(country) {
+  return country === 'CA' ? DEFAULT_CA_REGION : DEFAULT_US_REGION;
+}
+
+function getTaxRatePresets(country) {
+  return country === 'CA' ? TAX_RATE_PRESETS_CA : TAX_RATE_PRESETS_US;
+}
+
+async function loadTaxSummary(year) {
+  const user = (await db.users.get(1)) || null;
+  const country = String(user?.locale?.country || 'US').toUpperCase();
+  const currency = user?.locale?.currency || (country === 'CA' ? 'CAD' : 'USD');
+  const localeTag = inferLocaleTag(country);
+  const shifts = await db.shifts
+    .where('date')
+    .between(`${year}-01-01`, `${year}-12-31`, true, true)
+    .filter((row) => row.deletedAt == null)
+    .toArray();
+  const expenses = await db.expenses
+    .where('date')
+    .between(`${year}-01-01`, `${year}-12-31`, true, true)
+    .filter((row) => row.deletedAt == null)
+    .toArray();
+
+  const gross = shifts.reduce((sum, s) => sum + num(s.grossEarnings ?? s.gross), 0);
+  const businessExpenses = expenses.reduce((sum, e) => sum + num(e.amount) * (num(e.businessPct, 100) / 100), 0);
+  const netIncome = Math.max(0, gross - businessExpenses);
+  const taxRatePct = num(user?.taxWithholdingPct, country === 'CA' ? 28 : 25);
+  const taxSetAside = calcTaxSetAside(gross, taxRatePct);
+  const virtualJar = num(parseAppStateValue(await db.appState.get(TAX_VIRTUAL_JAR_KEY), 0), 0);
+  const setAsideCoveragePct = taxSetAside > 0 ? Math.min(100, (virtualJar / Math.max(1, taxSetAside)) * 100) : 0;
+
+  const hstRate = country === 'CA' ? 0.13 : 0;
+  const hstCollected = user?.hstRegistered ? gross * hstRate : 0;
+  const itcTotal = expenses.reduce((sum, e) => sum + num(e.hstItcAmount), 0);
+  const hstRemittable = calcHSTRemittable(hstCollected, itcTotal);
+
+  const distanceKm = shifts.reduce((sum, s) => sum + num(s.distanceKm), 0);
+  const totalMiles = distanceKm * 0.621371192;
+  const craMileage = calcCRAMileageDeduction(distanceKm, year);
+  const irsMileage = calcIRSMileageDeduction(totalMiles, year);
+  const actualCostDeduction = calcActualCostDeduction(
+    expenses.reduce((sum, e) => sum + num(e.amount), 0),
+    100,
+  );
+
+  const cppEstimate = country === 'CA' ? calcCPPContribution(netIncome, year) : 0;
+  const seTaxEstimate = country === 'US' ? calcSEtax(netIncome) : 0;
+  const deadlines = getAllTaxDeadlines(country, year);
+
+  return {
+    year,
+    country,
+    currency,
+    localeTag,
+    taxRatePct,
+    gross,
+    businessExpenses,
+    netIncome,
+    taxSetAside,
+    virtualJar,
+    setAsideCoveragePct,
+    hstCollected,
+    itcTotal,
+    hstRemittable,
+    distanceKm,
+    totalMiles,
+    craMileage,
+    irsMileage,
+    actualCostDeduction,
+    cppEstimate,
+    seTaxEstimate,
+    user,
+    deadlines,
+    distanceUnit: inferDistanceUnit(country),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function renderTaxHelpers(country) {
+  const t2125Rows = [
+    t('tax.t2125.grossIncome'),
+    t('tax.t2125.advertising'),
+    t('tax.t2125.meals'),
+    t('tax.t2125.motorVehicle'),
+    t('tax.t2125.supplies'),
+    t('tax.t2125.other'),
+    t('tax.t2125.netIncome'),
+  ];
+  const scheduleCRows = [
+    t('tax.scheduleC.partIIncome'),
+    t('tax.scheduleC.partIIExpenses'),
+    t('tax.scheduleC.carTruck'),
+    t('tax.scheduleC.depreciation'),
+    t('tax.scheduleC.homeOffice'),
+    t('tax.scheduleC.other'),
+    t('tax.scheduleC.netProfit'),
+  ];
+  return `
+    <div class="bento-grid" style="margin-top: var(--space-4);">
+      <article class="card bento-cell-1x1">
+        <h3>${esc(t('tax.t2125.title'))}</h3>
+        <ol style="padding-left: var(--space-4); margin: var(--space-3) 0 0;">
+          ${t2125Rows.map((row) => `<li>${esc(row)}</li>`).join('')}
+        </ol>
+      </article>
+      <article class="card bento-cell-1x1">
+        <h3>${esc(t('tax.scheduleC.title'))}</h3>
+        <ol style="padding-left: var(--space-4); margin: var(--space-3) 0 0;">
+          ${scheduleCRows.map((row) => `<li>${esc(row)}</li>`).join('')}
+        </ol>
+      </article>
+      <article class="card bento-cell-1x1">
+        <h3>${esc(t('tax.referenceLinks'))}</h3>
+        <ul style="padding-left: var(--space-4); margin: var(--space-3) 0 0;">
+          <li><a href="https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/sole-proprietorships-partnerships/report-business-income-expenses.html" target="_blank" rel="noopener noreferrer">CRA — ${esc(
+            t('tax.links.businessIncomeGuide'),
+          )}</a></li>
+          <li><a href="https://www.irs.gov/forms-pubs/about-schedule-c-form-1040" target="_blank" rel="noopener noreferrer">IRS — ${esc(
+            t('tax.links.scheduleCGuide'),
+          )}</a></li>
+          <li><a href="https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses.html" target="_blank" rel="noopener noreferrer">CRA — ${esc(
+            t('tax.links.hstGuide'),
+          )}</a></li>
+          <li><a href="https://www.irs.gov/businesses/small-businesses-self-employed/estimated-taxes" target="_blank" rel="noopener noreferrer">IRS — ${esc(
+            t('tax.links.estimatedTaxes'),
+          )}</a></li>
+        </ul>
+        <p style="margin-top: var(--space-3); color: var(--color-text-secondary);">
+          ${esc(country === 'CA' ? t('tax.footnoteCanada') : t('tax.footnoteUs'))}
+        </p>
+      </article>
+    </div>
+  `;
+}
+
+function toTaxSummaryJson(summary) {
+  return JSON.stringify(
+    {
+      generatedAt: summary.generatedAt,
+      year: summary.year,
+      country: summary.country,
+      currency: summary.currency,
+      taxRatePct: summary.taxRatePct,
+      gross: summary.gross,
+      businessExpenses: summary.businessExpenses,
+      netIncome: summary.netIncome,
+      taxSetAside: summary.taxSetAside,
+      virtualJar: summary.virtualJar,
+      hstCollected: summary.hstCollected,
+      itcTotal: summary.itcTotal,
+      hstRemittable: summary.hstRemittable,
+      distanceKm: summary.distanceKm,
+      totalMiles: summary.totalMiles,
+      craMileageDeduction: summary.craMileage,
+      irsMileageDeduction: summary.irsMileage,
+      actualCostDeduction: summary.actualCostDeduction,
+      cppEstimate: summary.cppEstimate,
+      seTaxEstimate: summary.seTaxEstimate,
+      deadlines: summary.deadlines.map((d) => ({
+        label: d.label,
+        date: toYmd(d.date),
+        daysUntil: d.daysUntil,
+      })),
+    },
+    null,
+    2,
+  );
+}
+
+function toTaxSummaryCsv(summary) {
+  const rows = [
+    ['metric', 'value'],
+    ['generated_at', summary.generatedAt],
+    ['tax_year', summary.year],
+    ['country', summary.country],
+    ['currency', summary.currency],
+    ['tax_rate_pct', summary.taxRatePct],
+    ['gross', summary.gross],
+    ['business_expenses', summary.businessExpenses],
+    ['net_income', summary.netIncome],
+    ['tax_set_aside', summary.taxSetAside],
+    ['virtual_jar', summary.virtualJar],
+    ['hst_collected', summary.hstCollected],
+    ['itc_total', summary.itcTotal],
+    ['hst_remittable', summary.hstRemittable],
+    ['distance_km', summary.distanceKm],
+    ['distance_miles', summary.totalMiles],
+    ['cra_mileage_deduction', summary.craMileage],
+    ['irs_mileage_deduction', summary.irsMileage],
+    ['actual_cost_deduction', summary.actualCostDeduction],
+    ['cpp_estimate', summary.cppEstimate],
+    ['se_tax_estimate', summary.seTaxEstimate],
+  ];
+  summary.deadlines.forEach((d, idx) => {
+    rows.push([`deadline_${idx + 1}`, `${toYmd(d.date)} (${d.label})`]);
+  });
+  return rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+}
+
+async function exportTaxSummary(summary, format) {
+  const fileSafeCountry = summary.country.toLowerCase();
+  if (format === 'json') {
+    downloadTextFile(
+      `macadam-tax-summary-${fileSafeCountry}-${summary.year}.json`,
+      toTaxSummaryJson(summary),
+      'application/json;charset=utf-8',
+    );
+  } else {
+    downloadTextFile(
+      `macadam-tax-summary-${fileSafeCountry}-${summary.year}.csv`,
+      toTaxSummaryCsv(summary),
+      'text/csv;charset=utf-8',
+    );
+  }
+}
+
+export async function renderTaxDashboard(root, ctx = {}) {
+  const selectedYear = Math.floor(num(ctx.taxYear, new Date().getFullYear()));
+  const summary = await loadTaxSummary(selectedYear);
+  const regionOptions = buildRegionOptions(summary.country);
+  const rateMap = getTaxRatePresets(summary.country);
+  const storedRegion = String(summary.user?.taxRegion || defaultRegionCode(summary.country));
+  const selectedRegion = regionOptions.some((r) => r.code === storedRegion) ? storedRegion : defaultRegionCode(summary.country);
+  const selectedRegionRate = num(rateMap[selectedRegion], summary.taxRatePct);
+  const netAfterSetAside = summary.netIncome - summary.taxSetAside;
+  const stdDeduction = summary.country === 'CA' ? summary.craMileage : summary.irsMileage;
+  const mileageUnitLabel = summary.distanceUnit === 'mi' ? t('tax.miles') : t('tax.kilometres');
+
+  root.innerHTML = `
+    <section class="tax-view">
+      <header class="card card-raised">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);flex-wrap:wrap;">
+          <div>
+            <h1>${esc(t('tax.title'))}</h1>
+            <p style="margin-top:var(--space-2);color:var(--color-text-secondary);">${esc(t('tax.subtitle'))}</p>
+          </div>
+          <label class="input-group" style="max-width:180px;">
+            <span class="input-label">${esc(t('tax.taxYear'))}</span>
+            <select class="select" data-tax-year>
+              ${[0, 1, 2].map((delta) => {
+                const y = new Date().getFullYear() - delta;
+                return `<option value="${y}" ${y === selectedYear ? 'selected' : ''}>${y}</option>`;
+              }).join('')}
+            </select>
+          </label>
+        </div>
+      </header>
+
+      <section class="bento-grid" style="margin-top: var(--space-4);">
+        <article class="card bento-cell-1x1">
+          <h2>${esc(t('tax.virtualJar'))}</h2>
+          <div style="display:flex;gap:var(--space-3);align-items:center;margin-top:var(--space-3);">
+            ${renderProgressRing({
+              value: summary.virtualJar,
+              max: Math.max(summary.taxSetAside, calcTaxSetAside(summary.gross, selectedRegionRate), 1),
+              size: 84,
+              strokeWidth: 7,
+              label: formatPercent(summary.setAsideCoveragePct, 0),
+            })}
+            <div>
+              <p>${esc(t('tax.targetSetAside'))}: <strong>${esc(
+                formatCurrency(calcTaxSetAside(summary.gross, selectedRegionRate), summary.localeTag, { currency: summary.currency }),
+              )}</strong></p>
+              <p>${esc(t('tax.currentSetAside'))}: <strong>${esc(
+                formatCurrency(summary.virtualJar, summary.localeTag, { currency: summary.currency }),
+              )}</strong></p>
+            </div>
+          </div>
+          <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);">
+            <button class="btn btn-secondary btn-sm" type="button" data-jar-adjust="-25">-25</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-jar-adjust="-10">-10</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-jar-adjust="10">+10</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-jar-adjust="25">+25</button>
+          </div>
+        </article>
+
+        <article class="card bento-cell-1x1">
+          <h2>${esc(t('tax.hstCollectedTracker'))}</h2>
+          <p>${esc(t('tax.collected'))}: <strong>${esc(
+            formatCurrency(summary.hstCollected, summary.localeTag, { currency: summary.currency }),
+          )}</strong></p>
+          <p>${esc(t('tax.itcTracker'))}: <strong>${esc(
+            formatCurrency(summary.itcTotal, summary.localeTag, { currency: summary.currency }),
+          )}</strong></p>
+          <p>${esc(t('tax.remittable'))}: <strong>${esc(
+            formatCurrency(summary.hstRemittable, summary.localeTag, { currency: summary.currency }),
+          )}</strong></p>
+        </article>
+
+        <article class="card bento-cell-1x1">
+          <h2>${esc(t('tax.incomeSnapshot'))}</h2>
+          <p>${esc(t('tax.grossIncome'))}: <strong>${esc(
+            formatCurrency(summary.gross, summary.localeTag, { currency: summary.currency }),
+          )}</strong></p>
+          <p>${esc(t('tax.businessExpenses'))}: <strong>${esc(
+            formatCurrency(summary.businessExpenses, summary.localeTag, { currency: summary.currency }),
+          )}</strong></p>
+          <p>${esc(t('tax.netIncome'))}: <strong>${esc(
+            formatCurrency(summary.netIncome, summary.localeTag, { currency: summary.currency }),
+          )}</strong></p>
+          <p>${esc(t('tax.netAfterSetAside'))}: <strong>${esc(
+            formatCurrency(netAfterSetAside, summary.localeTag, { currency: summary.currency }),
+          )}</strong></p>
+        </article>
+
+        <article class="card bento-cell-1x1">
+          <h2>${esc(t('tax.provinceStatePresets'))}</h2>
+          <label class="input-group">
+            <span class="input-label">${esc(summary.country === 'CA' ? t('tax.province') : t('tax.state'))}</span>
+            <select class="select" data-tax-region>
+              ${regionOptions.map((row) => `<option value="${row.code}" ${row.code === selectedRegion ? 'selected' : ''}>${row.code} (${row.rate}%)</option>`).join('')}
+            </select>
+          </label>
+          <button class="btn btn-secondary" type="button" data-apply-rate style="margin-top:var(--space-3);">${esc(
+            t('tax.applyPreset'),
+          )}</button>
+          <p style="margin-top:var(--space-2);color:var(--color-text-secondary);">${esc(t('tax.currentRate'))}: ${esc(
+            formatPercent(summary.taxRatePct),
+          )}</p>
+        </article>
+      </section>
+
+      <section class="bento-grid" style="margin-top: var(--space-4);">
+        <article class="card bento-cell-1x1">
+          <h2>${esc(t('tax.mileageDeduction'))}</h2>
+          <p>${esc(t('tax.totalDistance'))}: <strong>${esc(
+            `${formatLargeNumber(summary.distanceUnit === 'mi' ? summary.totalMiles : summary.distanceKm)} ${mileageUnitLabel}`,
+          )}</strong></p>
+          <p>${esc(t('tax.standardMileage'))}: <strong>${esc(
+            formatCurrency(stdDeduction, summary.localeTag, { currency: summary.currency }),
+          )}</strong></p>
+          <p>${esc(t('tax.actualCost'))}: <strong>${esc(
+            formatCurrency(summary.actualCostDeduction, summary.localeTag, { currency: summary.currency }),
+          )}</strong></p>
+          <p>${esc(t('tax.recommendedMethod'))}: <strong>${esc(
+            summary.actualCostDeduction > stdDeduction ? t('tax.methodActual') : t('tax.methodStandard'),
+          )}</strong></p>
+        </article>
+
+        <article class="card bento-cell-1x1">
+          <h2>${esc(summary.country === 'CA' ? t('tax.cppEstimator') : t('tax.seTaxEstimator'))}</h2>
+          <p>${esc(t('tax.estimatedValue'))}: <strong>${esc(
+            formatCurrency(summary.country === 'CA' ? summary.cppEstimate : summary.seTaxEstimate, summary.localeTag, {
+              currency: summary.currency,
+            }),
+          )}</strong></p>
+          <p style="color:var(--color-text-secondary);">${esc(
+            summary.country === 'CA' ? t('tax.cppNote') : t('tax.seTaxNote'),
+          )}</p>
+        </article>
+
+        <article class="card bento-cell-1x1">
+          <h2>${esc(t('tax.installmentDeadlines'))}</h2>
+          <ul style="padding-left:var(--space-4);margin:var(--space-3) 0 0;">
+            ${summary.deadlines
+              .map(
+                (row) =>
+                  `<li>${esc(
+                    `${toYmd(row.date)} · ${row.label} (${row.daysUntil >= 0 ? `${row.daysUntil}d` : t('tax.overdue')})`,
+                  )}</li>`,
+              )
+              .join('')}
+          </ul>
+        </article>
+      </section>
+
+      ${renderTaxHelpers(summary.country)}
+
+      <section class="card" style="margin-top: var(--space-4);">
+        <h3>${esc(t('tax.exportSummary'))}</h3>
+        <p style="color:var(--color-text-secondary);">${esc(t('tax.exportHint'))}</p>
+        <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);">
+          <button class="btn btn-secondary" type="button" data-export-tax="json">${esc(t('tax.exportJson'))}</button>
+          <button class="btn btn-secondary" type="button" data-export-tax="csv">${esc(t('tax.exportCsv'))}</button>
+        </div>
+      </section>
+    </section>
+  `;
+
+  const yearSelect = root.querySelector('[data-tax-year]');
+  if (yearSelect instanceof HTMLSelectElement) {
+    yearSelect.addEventListener('change', () => {
+      const year = Math.floor(num(yearSelect.value, selectedYear));
+      void renderTaxDashboard(root, { taxYear: year });
+    });
+  }
+
+  const regionSelect = root.querySelector('[data-tax-region]');
+  const applyBtn = root.querySelector('[data-apply-rate]');
+  if (regionSelect instanceof HTMLSelectElement && applyBtn instanceof HTMLButtonElement) {
+    applyBtn.addEventListener('click', async () => {
+      const code = regionSelect.value;
+      const nextRate = num(rateMap[code], summary.taxRatePct);
+      await saveUser({ taxWithholdingPct: nextRate, taxRegion: code });
+      showToast({
+        type: 'success',
+        message: t('tax.presetApplied').replace('{rate}', formatPercent(nextRate, 0)),
+        duration: 1800,
+      });
+      await renderTaxDashboard(root, { taxYear: selectedYear });
+    });
+  }
+
+  root.querySelectorAll('[data-export-tax]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const format = btn.getAttribute('data-export-tax');
+      if (format !== 'json' && format !== 'csv') return;
+      await exportTaxSummary(summary, format);
+      showToast({
+        type: 'success',
+        message: format === 'json' ? t('tax.exportedJson') : t('tax.exportedCsv'),
+        duration: 1800,
+      });
+    });
+  });
+
+  root.querySelectorAll('[data-jar-adjust]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const delta = num(btn.getAttribute('data-jar-adjust'), 0);
+      const next = Math.max(0, summary.virtualJar + delta);
+      await db.appState.put({
+        key: TAX_VIRTUAL_JAR_KEY,
+        value: JSON.stringify(next),
+        updatedAt: new Date().toISOString(),
+      });
+      await renderTaxDashboard(root, { taxYear: selectedYear });
+    });
+  });
+}

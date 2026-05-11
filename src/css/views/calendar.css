@@ -1,6 +1,173 @@
-/* Macadam — schedule / calendar view (Phase 2). F3 stub. */
-/*
- * Sections (fill in later):
- * - Month grid
- * - Time-block chips
- */
+.schedule-view {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.schedule-grid-2 {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.schedule-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.schedule-week-cell {
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+  min-height: 120px;
+}
+
+.schedule-week-cell.is-off-day,
+.schedule-month-cell.is-off-day {
+  background: color-mix(in srgb, var(--danger, #d9534f) 8%, transparent);
+}
+
+.schedule-week-cell header,
+.schedule-week-cell footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.schedule-shift-blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.schedule-shift-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border-muted);
+  background: var(--surface-raised);
+  padding: 2px 8px;
+  font-size: 0.78rem;
+}
+
+.schedule-shift-chip.is-night {
+  border-color: var(--warning, #f59e0b);
+}
+
+.schedule-shift-chip.is-plan {
+  border-style: dashed;
+  opacity: 0.9;
+}
+
+.schedule-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.schedule-month-cell {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-muted);
+  min-height: 82px;
+  padding: 6px;
+}
+
+.schedule-month-cell.is-outside {
+  opacity: 0.5;
+}
+
+.schedule-month-day {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.schedule-month-earn {
+  font-size: 0.72rem;
+  margin-top: 4px;
+  min-height: 1em;
+}
+
+.schedule-platform-dots {
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+}
+
+.schedule-platform-dots .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--text-muted);
+}
+
+.schedule-platform-dots .dot-doordash { background: #ff3008; }
+.schedule-platform-dots .dot-ubereats { background: #06c167; }
+.schedule-platform-dots .dot-foodora { background: #e21b70; }
+.schedule-platform-dots .dot-skip { background: #ed5a1f; }
+.schedule-platform-dots .dot-instacart { background: #0aad0a; }
+.schedule-platform-dots .dot-amazonflex { background: #232f3e; }
+
+.schedule-month-cell.heat-0 { background: color-mix(in srgb, var(--surface) 98%, #22c55e 2%); }
+.schedule-month-cell.heat-1 { background: color-mix(in srgb, var(--surface) 90%, #22c55e 10%); }
+.schedule-month-cell.heat-2 { background: color-mix(in srgb, var(--surface) 78%, #22c55e 22%); }
+.schedule-month-cell.heat-3 { background: color-mix(in srgb, var(--surface) 64%, #22c55e 36%); }
+.schedule-month-cell.heat-4 { background: color-mix(in srgb, var(--surface) 50%, #22c55e 50%); }
+
+.schedule-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.schedule-hours-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+}
+
+.schedule-hours-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent, #f5a623);
+}
+
+.schedule-scatter {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(to right, transparent 24%, rgba(128, 128, 128, 0.16) 25%, transparent 26%),
+    linear-gradient(to top, transparent 24%, rgba(128, 128, 128, 0.16) 25%, transparent 26%),
+    var(--surface);
+  background-size: 20% 100%, 100% 20%, auto;
+}
+
+.schedule-point {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: var(--accent, #f5a623);
+}
+
+.schedule-empty {
+  color: var(--text-muted);
+}
+
+@media (max-width: 960px) {
+  .schedule-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-week-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

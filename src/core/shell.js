@@ -77,13 +77,14 @@ export async function renderAppShell(root) {
   const initials = initialsFromUser(user);
 
   root.innerHTML = `
+    <a href="#view-container" class="skip-link" data-skip-link>${escapeHtml(t('app.skipToContent'))}</a>
     <div class="app-shell">
-      <header class="app-header" aria-label="${escapeAttr(t('app.headerAria'))}">
+      <header class="app-header" role="banner" aria-label="${escapeAttr(t('app.headerAria'))}">
         <div class="app-header-avatar" aria-hidden="true">${initials}</div>
         <div id="platform-tabs-slot" class="platform-tabs app-header-platforms" aria-label="${escapeAttr(t('platforms.switcher'))}"></div>
         <div class="app-header-spacer"></div>
         <time id="header-clock" class="app-header-clock"></time>
-        <span id="offline-indicator" class="offline-pill" data-online="true"></span>
+        <span id="offline-indicator" class="offline-pill" role="status" aria-live="polite" data-online="true"></span>
         <a href="#/settings" class="app-header-settings" data-nav-route="#/settings" aria-label="${escapeAttr(t('app.navSettings'))}">
           ${getIcon('settings', 22, 'header-settings-icon')}
         </a>
@@ -101,10 +102,10 @@ export async function renderAppShell(root) {
           ${navLink('#/search', 'search', 'app.navSearch')}
           ${navLink('#/settings', 'settings', 'app.navSettings')}
         </nav>
-        <main class="app-main">
+        <main class="app-main" role="main" id="app-main">
           <div id="shift-timer-bar" class="shift-timer-bar is-collapsed" hidden></div>
-          <div id="view-container"></div>
-          <div id="toast-container" class="toast-host"></div>
+          <div id="view-container" tabindex="-1"></div>
+          <div id="toast-container" class="toast-host" aria-live="polite" aria-atomic="true"></div>
           <div id="modal-overlay" class="modal-host" aria-live="polite"></div>
         </main>
       </div>
@@ -122,6 +123,18 @@ export async function renderAppShell(root) {
   if (clockEl) {
     updateClock(clockEl);
     clockTimer = setInterval(() => updateClock(clockEl), 60000);
+  }
+
+  const skipLink = root.querySelector('[data-skip-link]');
+  if (skipLink) {
+    skipLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.getElementById('view-container');
+      if (target && typeof target.focus === 'function') {
+        target.focus({ preventScroll: false });
+        target.scrollIntoView({ block: 'start' });
+      }
+    });
   }
 
   bindOfflineIndicator();

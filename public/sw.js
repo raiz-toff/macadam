@@ -57,6 +57,22 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+/* Feature 241 — Background Sync hook (P12).
+ * SW NEVER touches IndexedDB; instead it posts a message to all controlled
+ * clients telling the page to replay any queued exports from Dexie appState.
+ */
+self.addEventListener('sync', (event) => {
+  if (!event || event.tag !== 'macadam-deferred-exports') return;
+  event.waitUntil(
+    (async () => {
+      const clientsList = await self.clients.matchAll({ includeUncontrolled: false, type: 'window' });
+      for (const client of clientsList) {
+        client.postMessage({ type: 'macadam:replay-deferred', tag: event.tag });
+      }
+    })(),
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') {

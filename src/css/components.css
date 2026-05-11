@@ -1223,3 +1223,45 @@
     transition: none !important;
   }
 }
+
+.macadam-splash {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--color-bg, #fff);
+  z-index: 9999;
+  transition: opacity 220ms ease;
+}
+
+.macadam-splash.is-done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.macadam-splash-logo {
+  width: 132px;
+  height: 132px;
+  animation: p13-pop 1s ease-in-out infinite alternate;
+}
+
+@keyframes p13-pop {
+  from { transform: scale(0.96); }
+  to { transform: scale(1.03); }
+}
+
+body.zen-mode .app-header,
+body.zen-mode .app-sidebar,
+body.zen-mode .bottom-nav,
+body.zen-mode #macadam-fab {
+  opacity: 0.08;
+}
+
+body.zen-mode .app-main {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.p13-about-section {
+  margin-top: var(--space-4);
+}

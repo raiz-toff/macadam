@@ -19,7 +19,7 @@ import { render as renderAbout } from '../views/about-view.js';
 import { render as renderPrint } from '../views/print-view.js';
 import { t } from '../utils/strings.js';
 
-/** @typedef {{ hash: string, name: string, context: Record<string, unknown> }} MacadamRoute */
+/** @typedef {{ hash: string, name: string, context: Record<string, unknown>, render: (el: HTMLElement, ctx: Record<string, unknown>) => void | Promise<void> }} MacadamRoute */
 
 function canonicalHash() {
   const raw = window.location.hash || '';
@@ -54,7 +54,7 @@ function resolveRouteDef(hash) {
     { hash: '#/print', name: 'print', render: renderPrint },
   ];
   const row = table.find((r) => r.hash === hash);
-  return row ? { hash: row.hash, name: row.name, context: buildContext(row) } : null;
+  return row ? { hash: row.hash, name: row.name, context: buildContext(row), render: row.render } : null;
 }
 
 /**

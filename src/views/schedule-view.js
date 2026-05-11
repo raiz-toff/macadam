@@ -1,6 +1,7 @@
-import { renderViewPlaceholder } from './view-utils.js';
+import { renderScheduleModule } from '../modules/schedule/schedule.js';
 
 /** @param {HTMLElement} root @param {Record<string, unknown>} ctx */
-export function render(root, ctx) {
-  renderViewPlaceholder(root, 'views.schedule.title', 'views.schedule.placeholderBody', String(ctx.hash || ''));
+export async function render(root, ctx) {
+  void ctx;
+  await renderScheduleModule(root);
 }

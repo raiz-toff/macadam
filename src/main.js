@@ -11,6 +11,15 @@ import { renderAppShell } from './core/shell.js';
 import { initPlatforms } from './modules/platforms/platforms.js';
 import { runOnOpenNotificationCheck } from './modules/notifications/notifications.js';
 import { generateRecurringExpenses, initExpensesModule } from './modules/expenses/expenses.js';
+import { initGoalsModule } from './modules/goals/goals.js';
+import { initSearchModule } from './modules/search/search.js';
+import { apiSpecMarkdown, initP13 } from './modules/p13/p13.js';
+import {
+  initPwaModule,
+  parseShareTargetIntent,
+  onDeferredReplay,
+  tryRegisterDeferredSync,
+} from './modules/pwa/pwa.js';
 import './utils/formatters.js';
 import './utils/calculations.js';
 import './utils/locale.js';
@@ -158,6 +167,7 @@ async function checkBackupOverdue() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const splash = document.getElementById('macadam-splash');
   registerServiceWorker();
   wireConnectivity();
 
@@ -173,6 +183,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await initPlatforms();
     initExpensesModule();
+    initSearchModule();
+    await initGoalsModule();
     await renderAppShell(app);
 
     window.__macadam.router = Router;
@@ -206,5 +218,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     await checkBackupOverdue();
   } catch (e) {
     console.warn('[macadam] backup overdue check skipped', e);
+  }
+
+  try {
+    await initP13();
+  } catch (e) {
+    console.warn('[macadam] p13 init skipped', e);
+  }
+
+  /* P12 — PWA deep features wiring. */
+  try {
+    initPwaModule();
+    /* Feature 241: re-register sync on app start and on reconnect. */
+    void tryRegisterDeferredSync();
+    window.addEventListener('online', () => void tryRegisterDeferredSync());
+    /* Page-side replay listener — modules that own actual replay logic can
+     * extend this via the bus; here we just clear unsupported items to avoid
+     * indefinite queue growth. The Reports module is the primary replayer. */
+    onDeferredReplay(async (items) => {
+      for (const it of items) {
+        try {
+          bus.emit('pwa:replay-deferred-export', it);
+        } catch (err) {
+          console.warn('[macadam] deferred replay dispatch failed', err);
+        }
+      }
+    });
+    /* Feature 244: surface a share-target intent if present. */
+    const intent = parseShareTargetIntent();
+    if (intent) {
+      window.__macadam.shareIntent = intent;
+      bus.emit('pwa:share-intent', intent);
+    }
+  } catch (e) {
+    console.warn('[macadam] p12 pwa init skipped', e);
+  }
+
+  window.__macadam.apiSpecMarkdown = apiSpecMarkdown;
+  if (splash) {
+    splash.classList.add('is-done');
+    setTimeout(() => splash.remove(), 320);
   }
 });

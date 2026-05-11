@@ -9,6 +9,8 @@
 
 import { db, setAppState, getAppState, softDelete, restoreDeleted, purgeOldDeleted } from '../../core/db.js';
 import { bus, SHIFT_DELETED, SHIFT_SAVED, SHIFT_TIMER_START, SHIFT_TIMER_STOP } from '../../core/events.js';
+import { acquireWakeLock, releaseWakeLock } from '../pwa/pwa.js';
+import { extractShiftPlatformSpecific } from '../platforms/platform-specific.js';
 
 const LS_TIMER_KEY = 'macadam_active_shift_timer';
 const APP_STATE_TIMER_KEY = 'active_shift_start';
@@ -82,6 +84,10 @@ function safeJsonParse(raw, fallback) {
  * @property {string|null} zoneTag
  * @property {string|null} mood
  * @property {string} notes
+ * @property {number|null} peakPay
+ * @property {boolean} isMultiApp
+ * @property {string[]} multiAppPlatformIds
+ * @property {Record<string, unknown>} platformSpecific
  * @property {string|null} deletedAt
  * @property {string} createdAt
  * @property {string} updatedAt
@@ -126,6 +132,7 @@ function normalizeShiftInput(input) {
   const moodRaw = normStr(input.mood);
   const mood = moodRaw ? moodRaw : null;
   const notes = typeof input.notes === 'string' ? input.notes : '';
+  const platformExtra = extractShiftPlatformSpecific(input);
 
   const t = nowIso();
   return {
@@ -145,6 +152,10 @@ function normalizeShiftInput(input) {
     zoneTag,
     mood,
     notes,
+    peakPay: platformExtra.peakPay,
+    isMultiApp: platformExtra.isMultiApp,
+    multiAppPlatformIds: platformExtra.multiAppPlatformIds,
+    platformSpecific: platformExtra.platformSpecific,
     deletedAt: null,
     createdAt: t,
     updatedAt: t,
@@ -259,6 +270,19 @@ export async function updateShift(id, patch) {
   }
   if (patch.startTime != null) next.startTime = isHm(next.startTime) ? next.startTime : null;
   if (patch.endTime != null) next.endTime = isHm(next.endTime) ? next.endTime : null;
+  if (
+    patch.platformId != null ||
+    patch.platformSpecific != null ||
+    patch.peakPay != null ||
+    patch.multiAppPlatformIds != null ||
+    patch.isMultiApp != null
+  ) {
+    const platformExtra = extractShiftPlatformSpecific(next);
+    next.peakPay = platformExtra.peakPay;
+    next.isMultiApp = platformExtra.isMultiApp;
+    next.multiAppPlatformIds = platformExtra.multiAppPlatformIds;
+    next.platformSpecific = platformExtra.platformSpecific;
+  }
 
   validateTimeWindow(next.date, next.startTime, next.endTime);
   const conflict = await checkConflict(next.date, next.startTime, next.endTime, { excludeId: id });
@@ -369,14 +393,8 @@ export async function startShiftTimer(platformId) {
   }
   bus.emit(SHIFT_TIMER_START, payload);
 
-  // Feature 248 (Wake Lock) best-effort.
-  try {
-    if (navigator.wakeLock && typeof navigator.wakeLock.request === 'function') {
-      void navigator.wakeLock.request('screen').catch(() => {});
-    }
-  } catch {
-    /* ignore */
-  }
+  /* Feature 248 — Wake Lock managed by P12 PWA module (re-acquires on visibility). */
+  void acquireWakeLock().catch(() => {});
 }
 
 /**
@@ -393,6 +411,9 @@ export async function stopShiftTimer() {
     /* ignore */
   }
   bus.emit(SHIFT_TIMER_STOP, null);
+
+  /* Feature 248 — release the wake lock when the timer stops. */
+  void releaseWakeLock().catch(() => {});
 
   const startIso = state && typeof state.startTime === 'string' ? state.startTime : null;
   const platformId = state && typeof state.platformId === 'string' ? state.platformId : null;
