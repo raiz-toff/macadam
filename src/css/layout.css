@@ -387,6 +387,21 @@ samp {
   border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 40%, var(--color-border));
 }
 
+.app-header-search {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+}
+
+.app-header-search:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-raised);
+}
+
 .app-header-settings {
   flex-shrink: 0;
   display: flex;
@@ -403,6 +418,7 @@ samp {
 }
 
 .nav-link .nav-icon,
+.app-header-search svg,
 .app-header-settings svg {
   display: block;
 }

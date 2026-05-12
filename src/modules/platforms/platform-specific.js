@@ -5,7 +5,7 @@
  */
 
 import { PlatformRegistry } from '../../registry/platforms/index.js';
-import { getPlatformConfig } from './platform-config.js';
+import { getPlatformConfig } from '../../registry/platforms/terminology.js';
 import {
   normalizePlatformSpecificFromDef,
   toNumberField as toNumber,

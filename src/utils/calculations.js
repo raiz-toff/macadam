@@ -1,17 +1,3 @@
-/** CRA simplified business mileage (per km, CAD) — tier at 5,000 km. */
-const CRA_KM = {
-  2024: { breakKm: 5000, first: 0.72, rest: 0.66 },
-  2025: { breakKm: 5000, first: 0.72, rest: 0.66 },
-  2026: { breakKm: 5000, first: 0.73, rest: 0.68 },
-};
-
-/** IRS standard mileage (USD per business mile). */
-const IRS_MI = {
-  2024: 0.67,
-  2025: 0.7,
-  2026: 0.7,
-};
-
 /** ISO-style week labels starting Monday (plan: Mon…Sun). */
 const DOW_KEYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -82,21 +68,6 @@ export function calcVehicleCostPerKm(vehicle, expenses) {
 export function calcDepreciation(purchasePrice, lifespanKm, distanceKm) {
   const life = Math.max(1, num(lifespanKm));
   return num(purchasePrice) * (num(distanceKm) / life);
-}
-
-export function calcCRAMileageDeduction(totalKm, year) {
-  const y = Math.floor(num(year, new Date().getFullYear()));
-  const row = CRA_KM[y] || CRA_KM[2026];
-  const km = Math.max(0, num(totalKm));
-  const b = Math.min(km, row.breakKm);
-  const rest = Math.max(0, km - row.breakKm);
-  return b * row.first + rest * row.rest;
-}
-
-export function calcIRSMileageDeduction(totalMiles, year) {
-  const y = Math.floor(num(year, new Date().getFullYear()));
-  const rate = IRS_MI[y] ?? IRS_MI[2026];
-  return Math.max(0, num(totalMiles)) * rate;
 }
 
 export function calcActualCostDeduction(expenses, businessPct) {
@@ -173,28 +144,6 @@ export function aggregateByHourOfDay(shifts) {
     const h = String(i);
     out[h] = counts[h] ? sums[h] / counts[h] : 0;
   }
-  return out;
-}
-
-/**
- * @param {Array<{ zone?: string, zoneName?: string, gross?: number, durationMinutes?: number }>} shifts
- */
-export function aggregateByZone(shifts) {
-  /** @type {Record<string, { total: number, count: number, durationMinutes: number }>} */
-  const map = {};
-  (shifts || []).forEach((s) => {
-    const z = String(s?.zoneName || s?.zone || 'Unknown');
-    if (!map[z]) map[z] = { total: 0, count: 0, durationMinutes: 0 };
-    map[z].total += num(s?.gross);
-    map[z].count += 1;
-    map[z].durationMinutes += num(s?.durationMinutes);
-  });
-  const out = {};
-  Object.keys(map).forEach((z) => {
-    const m = map[z];
-    const hourlyRate = m.durationMinutes > 0 ? (m.total / m.durationMinutes) * 60 : 0;
-    out[z] = { hourlyRate, count: m.count, total: m.total };
-  });
   return out;
 }
 

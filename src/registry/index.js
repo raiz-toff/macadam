@@ -1,7 +1,7 @@
 /**
  * Registry entrypoints — platform & country catalogs plus Category B feature registries.
- * @see Registry_arch.md
- * @see feature_modularity.md
+ * @see docs/Registry_arch.md
+ * @see docs/feature_modularity.md
  */
 
 export {
@@ -15,6 +15,7 @@ export {
   countryDefToLocaleConfig,
   getCountryTaxProfile,
 } from './countries/index.js';
+export { ProvinceRegistry, assertProvinceRegistryValid } from './provinces/index.js';
 
 export { WidgetRegistry, assertWidgetRegistryValid } from './widgets/index.js';
 export { NotificationRegistry, assertNotificationRegistryValid } from './notifications/index.js';

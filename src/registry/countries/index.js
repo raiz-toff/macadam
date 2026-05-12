@@ -1,6 +1,6 @@
 /**
  * Country registry — one module per ISO-style market; locale helpers read from here.
- * @see Registry_arch.md
+ * @see docs/Registry_arch.md
  */
 
 import CA from './CA.country.js';

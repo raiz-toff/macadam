@@ -6,9 +6,8 @@
 import { t } from '../../utils/strings.js';
 import { store } from '../../core/store.js';
 import { showNumericKeypad } from '../../ui/components.js';
-import { calcHourlyRate, calcCRAMileageDeduction, calcIRSMileageDeduction } from '../../utils/calculations.js';
-import { getPlatformConfig } from '../platforms/platform-config.js';
-import { getCountryTaxProfile } from '../../registry/countries/index.js';
+import { calcHourlyRate } from '../../utils/calculations.js';
+import { getPlatformConfig } from '../../registry/platforms/terminology.js';
 import { ShiftFieldRegistry } from '../../registry/shift-fields/index.js';
 
 function escapeAttr(v) {
@@ -214,9 +213,9 @@ export function renderShiftForm(opts = {}) {
             </label>
 
             <label class="field">
-              <span class="field-label">${escapeHtml(t('shifts.zone'))}</span>
-              <input class="input" name="zoneTag" placeholder="${escapeAttr(t('shifts.zonePlaceholder'))}" list="macadam-zone-suggestions" />
-              <datalist id="macadam-zone-suggestions"></datalist>
+              <span class="field-label">${escapeHtml(t('shifts.deadMiles'))}</span>
+              <input class="input" name="deadMilesKm" inputmode="decimal" placeholder="0" />
+              <span class="field-hint">${escapeHtml(distanceUnit() === 'mi' ? t('shifts.unitMiles') : t('shifts.unitKm'))}</span>
             </label>
 
             <div class="field field--span2 is-hidden" data-ps-wrap>
@@ -253,7 +252,7 @@ export function renderShiftForm(opts = {}) {
           <span class="shifts-livebar-value" data-live-hourly>—</span>
         </div>
         <div class="shifts-livebar-item">
-          <span class="shifts-livebar-label">${escapeHtml(t('shifts.vehicleEstimate'))}</span>
+          <span class="shifts-livebar-label">${escapeHtml(t('shifts.deadMilesRatio'))}</span>
           <span class="shifts-livebar-value" data-live-vehicle>—</span>
         </div>
       </div>
@@ -278,7 +277,7 @@ export function renderShiftForm(opts = {}) {
   const activeEl = /** @type {HTMLInputElement | null} */ (wrapper.querySelector('input[name="activeMinutes"]'));
   const vehicleSel = /** @type {HTMLSelectElement | null} */ (wrapper.querySelector('select[name="vehicleId"]'));
   const weatherSel = /** @type {HTMLSelectElement | null} */ (wrapper.querySelector('select[name="weather"]'));
-  const zoneEl = /** @type {HTMLInputElement | null} */ (wrapper.querySelector('input[name="zoneTag"]'));
+  const deadMilesEl = /** @type {HTMLInputElement | null} */ (wrapper.querySelector('input[name="deadMilesKm"]'));
   const notesEl = /** @type {HTMLTextAreaElement | null} */ (wrapper.querySelector('textarea[name="notes"]'));
   const moodHidden = /** @type {HTMLInputElement | null} */ (wrapper.querySelector('input[name="mood"]'));
   const bonusLabel = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-bonus-label]'));
@@ -361,18 +360,12 @@ export function renderShiftForm(opts = {}) {
     }
 
     if (liveVehicle) {
-      const country = user && user.locale && typeof user.locale.country === 'string' ? user.locale.country : 'US';
-      const tax = getCountryTaxProfile(country);
-      const distanceKm = parseDistanceToKm(distanceEl?.value || 0);
-      if (!distanceKm) liveVehicle.textContent = '—';
-      else if (tax.stdMileageChoice === 'CRA') {
-        liveVehicle.textContent = fmtMoney(calcCRAMileageDeduction(distanceKm, new Date().getFullYear()));
-      } else if (tax.stdMileageChoice === 'IRS') {
-        const miles = distanceKm / 1.60934;
-        liveVehicle.textContent = fmtMoney(calcIRSMileageDeduction(miles, new Date().getFullYear()));
-      } else {
-        liveVehicle.textContent = fmtMoney(distanceKm * 0.6);
-      }
+      const totalKm = parseDistanceToKm(distanceEl?.value || 0);
+      const deadKm = deadMilesEl?.value ? Math.max(0, num(deadMilesEl.value)) : 0;
+      const dead = unit === 'mi' ? deadKm * 1.60934 : deadKm;
+      if (!totalKm || totalKm <= 0) liveVehicle.textContent = '—';
+      else if (dead <= 0) liveVehicle.textContent = '0%';
+      else liveVehicle.textContent = `${Math.min(100, Math.round((100 * dead) / totalKm))}%`;
     }
   }
 
@@ -382,7 +375,7 @@ export function renderShiftForm(opts = {}) {
     btn.addEventListener('click', () => {
       showNumericKeypad({
         currency: currencySymbol(),
-        initial: String(inputEl.value || ''),
+        value: String(inputEl.value || ''),
         allowDecimal: true,
         onConfirm: (val) => {
           inputEl.value = String(val || '');
@@ -497,15 +490,32 @@ export function renderShiftForm(opts = {}) {
     if (!el) return;
     if (typeof val === 'string' || typeof val === 'number') el.value = String(val);
   };
-  seed('gross', initial.gross ?? initial.grossEarnings ?? '');
-  seed('tips', initial.tips ?? '');
-  seed('bonus', initial.bonus ?? '');
+  const ge = initial.grossEarnings;
+  const gLegacy = initial.gross;
+  let grossDollars = '';
+  if (ge != null && Number.isFinite(Number(ge))) grossDollars = String(Number(ge) / 100);
+  else if (gLegacy != null && Number.isFinite(Number(gLegacy))) grossDollars = String(Number(gLegacy));
+
+  let tipsDollars = '';
+  if (ge != null && initial.tips != null && Number.isFinite(Number(initial.tips)))
+    tipsDollars = String(Number(initial.tips) / 100);
+  else if (initial.tips != null && Number.isFinite(Number(initial.tips))) tipsDollars = String(Number(initial.tips));
+
+  let bonusDollars = '';
+  if (ge != null && (initial.bonusEarnings != null || initial.bonus != null)) {
+    const b = Number(initial.bonusEarnings ?? initial.bonus ?? 0);
+    if (Number.isFinite(b)) bonusDollars = String(b / 100);
+  } else if (initial.bonus != null && Number.isFinite(Number(initial.bonus))) bonusDollars = String(Number(initial.bonus));
+
+  seed('gross', grossDollars);
+  seed('tips', tipsDollars);
+  seed('bonus', bonusDollars);
   seed('orders', initial.orders ?? '');
   seed('distance', initial.distanceKm ?? initial.distance ?? '');
   seed('onlineMinutes', initial.onlineMinutes ?? '');
   seed('activeMinutes', initial.activeMinutes ?? '');
   seed('weather', initial.weather ?? '');
-  seed('zoneTag', initial.zoneTag ?? '');
+  seed('deadMilesKm', initial.deadMilesKm ?? '');
   seed('notes', initial.notes ?? '');
   if (typeof initial.mood === 'string') setMood(initial.mood);
 
@@ -532,7 +542,9 @@ export function renderShiftForm(opts = {}) {
     const activeMinutes = activeEl?.value ? Math.floor(num(activeEl.value)) : null;
     const vehicleId = vehicleSel?.value ? Number(vehicleSel.value) : null;
     const weather = weatherSel?.value ? String(weatherSel.value) : null;
-    const zoneTag = zoneEl?.value ? String(zoneEl.value).trim() : null;
+    const deadRaw = deadMilesEl?.value ? Math.max(0, num(deadMilesEl.value)) : 0;
+    const deadMilesKm =
+      deadRaw > 0 ? (unit === 'mi' ? deadRaw * 1.60934 : deadRaw) : null;
     const mood = moodHidden?.value ? String(moodHidden.value) : null;
     const notes = notesEl?.value ? String(notesEl.value) : '';
 
@@ -577,7 +589,7 @@ export function renderShiftForm(opts = {}) {
       activeMinutes,
       vehicleId,
       weather,
-      zoneTag,
+      deadMilesKm,
       mood,
       notes,
       platformSpecific,

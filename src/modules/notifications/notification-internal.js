@@ -168,19 +168,27 @@ export async function getWeeklyGoal(user, weekStart, weekEnd) {
   const platformSum = platformTargets.reduce((sum, p) => sum + Math.max(0, num(p.weeklyGoal)), 0);
   if (platformSum > 0) return platformSum;
   const fallback = num(user?.weeklyGoal);
-  if (fallback > 0) return fallback;
+  if (fallback > 0) return fallback / 100;
 
   const history = await db.shifts
     .filter((s) => s.deletedAt == null && String(s.date) >= weekStart && String(s.date) <= weekEnd)
     .toArray();
-  return history.reduce((sum, s) => sum + Math.max(0, num(s.gross)), 0);
+  return history.reduce((sum, s) => {
+    const raw = s.grossEarnings ?? s.gross;
+    const dollars = s.grossEarnings != null ? Math.max(0, num(raw)) / 100 : Math.max(0, num(raw));
+    return sum + dollars;
+  }, 0);
 }
 
 /**
  * @param {Array<Record<string, unknown>>} shifts
  */
 export function sumGross(shifts) {
-  return shifts.reduce((sum, s) => sum + Math.max(0, num(s.gross ?? s.grossEarnings)), 0);
+  return shifts.reduce((sum, s) => {
+    const raw = s.grossEarnings ?? s.gross;
+    const dollars = s.grossEarnings != null ? Math.max(0, num(raw)) / 100 : Math.max(0, num(raw));
+    return sum + dollars;
+  }, 0);
 }
 
 /**

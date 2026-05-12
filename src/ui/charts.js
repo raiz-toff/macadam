@@ -441,7 +441,7 @@ export function renderGitHubHeatmap(container, data, opts = {}) {
 }
 
 /**
- * Category D — Chart.js-backed renderer lookup (feature_modularity.md).
+ * Category D — Chart.js-backed renderer lookup (docs/feature_modularity.md).
  * Non-Chart.js helpers above stay separate; add new Chart types here when you add a wrapper.
  */
 export const CHART_RENDERERS = {

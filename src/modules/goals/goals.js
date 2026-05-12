@@ -107,14 +107,21 @@ async function sumShiftMetric(startDate, endDate, metric) {
 
   let total = 0;
   for (const shift of shifts) {
-    if (metric === 'earnings') total += num(shift.gross ?? shift.grossEarnings, 0);
-    else if (metric === 'tips') total += num(shift.tips, 0);
+    if (metric === 'earnings') {
+      const raw = shift.grossEarnings ?? shift.gross;
+      total += shift.grossEarnings != null ? num(raw) / 100 : num(raw, 0);
+    }
+    else if (metric === 'tips') {
+      total += shift.grossEarnings != null ? num(shift.tips ?? 0) / 100 : num(shift.tips, 0);
+    }
     else if (metric === 'deliveries') total += num(shift.orders ?? shift.deliveryCount, 0);
     else if (metric === 'hours') total += num(shift.activeMinutes ?? shift.durationMinutes, 0) / 60;
     else if (metric === 'distance') total += num(shift.distanceKm, 0);
     else if (metric === 'net_profit') {
-      const g = num(shift.gross ?? shift.grossEarnings, 0);
-      total += Math.max(0, g - num(shift.tips, 0) - num(shift.bonus, 0));
+      const g = shift.grossEarnings != null ? num(shift.grossEarnings ?? 0) / 100 : num(shift.gross, 0);
+      const tips = shift.grossEarnings != null ? num(shift.tips ?? 0) / 100 : num(shift.tips, 0);
+      const bonus = shift.grossEarnings != null ? num(shift.bonusEarnings ?? shift.bonus ?? 0) / 100 : num(shift.bonus, 0);
+      total += Math.max(0, g - tips - bonus);
     }
   }
   return total;
@@ -280,7 +287,7 @@ export async function checkPersonalRecords(newShift) {
   let changed = false;
   let changedGross = false;
   let changedNetHourly = false;
-  const gross = num(newShift?.gross ?? newShift?.grossEarnings, 0);
+  const gross = newShift?.grossEarnings != null ? num(newShift.grossEarnings) / 100 : num(newShift?.gross ?? newShift?.grossEarnings, 0);
   if (gross > records.bestShiftGross) {
     records.bestShiftGross = gross;
     changed = true;
@@ -362,7 +369,7 @@ async function handleShiftSaved(payload) {
   await checkPersonalRecords(shift);
   await checkAllBadges();
 
-  const gross = num(shift.gross ?? shift.grossEarnings, 0);
+  const gross = shift.grossEarnings != null ? num(shift.grossEarnings) / 100 : num(shift.gross ?? shift.grossEarnings, 0);
   const weekGross = await sumShiftMetric(startOfWeek(new Date()), endOfWeek(new Date()), 'earnings');
   const monthGross = await sumShiftMetric(startOfMonth(new Date()), endOfMonth(new Date()), 'earnings');
   const shiftCtx = { shift, gross, weekGross, monthGross };

@@ -10,7 +10,8 @@ export default {
   /** @param {unknown} shift @param {unknown} [_vehicle] */
   calcPerShift: (shift, _vehicle) => {
     const s = /** @type {{ gross?: unknown; grossEarnings?: unknown }} */ (shift);
-    const n = Number(s?.gross ?? s?.grossEarnings ?? 0);
-    return Number.isFinite(n) ? n : 0;
+    const cents = Number(s?.grossEarnings ?? s?.gross ?? 0);
+    if (!Number.isFinite(cents)) return 0;
+    return cents / 100;
   },
 };

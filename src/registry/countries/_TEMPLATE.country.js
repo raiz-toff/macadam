@@ -1,6 +1,6 @@
 /**
  * Copy to `{ISO}.country.js`, fill fields, add import + entry in `./index.js`.
- * @see Registry_arch.md
+ * @see docs/Registry_arch.md
  */
 export default {
   id: 'XX',

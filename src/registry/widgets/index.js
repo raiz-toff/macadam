@@ -1,7 +1,7 @@
 /**
  * Dashboard widget registry (Category B).
  * Engines consume this; definitions stay in `*.widget.js` files.
- * @see feature_modularity.md
+ * @see docs/feature_modularity.md
  */
 
 import earnings from './earnings.widget.js';

@@ -1,5 +1,5 @@
 /**
- * Shared registry typedefs (avoid circular imports with platform-config facade).
+ * Shared registry typedefs (avoid circular imports with registry/platform surfaces).
  *
  * @typedef {{ driver?: string; delivery?: string; bonus?: string; surge?: string }} PlatformTerms
  *

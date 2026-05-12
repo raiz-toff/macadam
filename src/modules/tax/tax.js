@@ -1,10 +1,7 @@
 import { db, saveUser } from '../../core/db.js';
 import {
-  calcActualCostDeduction,
   calcCPPContribution,
-  calcCRAMileageDeduction,
   calcHSTRemittable,
-  calcIRSMileageDeduction,
   calcSEtax,
   calcTaxSetAside,
 } from '../../utils/calculations.js';
@@ -182,8 +179,13 @@ async function loadTaxSummary(year) {
     .filter((row) => row.deletedAt == null)
     .toArray();
 
-  const gross = shifts.reduce((sum, s) => sum + num(s.grossEarnings ?? s.gross), 0);
-  const businessExpenses = expenses.reduce((sum, e) => sum + num(e.amount) * (num(e.businessPct, 100) / 100), 0);
+  const grossCents = shifts.reduce((sum, s) => sum + num(s.grossEarnings ?? s.gross), 0);
+  const gross = grossCents / 100;
+  const businessExpensesCents = expenses.reduce(
+    (sum, e) => sum + num(e.amount) * (num(e.businessPct, 100) / 100),
+    0,
+  );
+  const businessExpenses = businessExpensesCents / 100;
   const netIncome = Math.max(0, gross - businessExpenses);
   const taxRatePct = num(user?.taxWithholdingPct, taxProfile.defaultWithholdingPct);
   const taxSetAside = calcTaxSetAside(gross, taxRatePct);
@@ -192,17 +194,13 @@ async function loadTaxSummary(year) {
 
   const hstRate = taxProfile.hstRateWhenRegistered || 0;
   const hstCollected = user?.hstRegistered ? gross * hstRate : 0;
-  const itcTotal = expenses.reduce((sum, e) => sum + num(e.hstItcAmount), 0);
+  const itcTotalCents = expenses.reduce((sum, e) => sum + num(e.hstPaid ?? e.hstItcAmount), 0);
+  const itcTotal = itcTotalCents / 100;
   const hstRemittable = calcHSTRemittable(hstCollected, itcTotal);
 
   const distanceKm = shifts.reduce((sum, s) => sum + num(s.distanceKm), 0);
   const totalMiles = distanceKm * 0.621371192;
-  const craMileage = calcCRAMileageDeduction(distanceKm, year);
-  const irsMileage = calcIRSMileageDeduction(totalMiles, year);
-  const actualCostDeduction = calcActualCostDeduction(
-    expenses.reduce((sum, e) => sum + num(e.amount), 0),
-    100,
-  );
+  const actualCostDeduction = businessExpenses;
 
   const cppEstimate = taxProfile.calcCpp ? calcCPPContribution(netIncome, year) : 0;
   const seTaxEstimate = taxProfile.calcSeTax ? calcSEtax(netIncome) : 0;
@@ -226,8 +224,6 @@ async function loadTaxSummary(year) {
     hstRemittable,
     distanceKm,
     totalMiles,
-    craMileage,
-    irsMileage,
     actualCostDeduction,
     cppEstimate,
     seTaxEstimate,
@@ -322,8 +318,6 @@ function toTaxSummaryJson(summary) {
       hstRemittable: summary.hstRemittable,
       distanceKm: summary.distanceKm,
       totalMiles: summary.totalMiles,
-      craMileageDeduction: summary.craMileage,
-      irsMileageDeduction: summary.irsMileage,
       actualCostDeduction: summary.actualCostDeduction,
       cppEstimate: summary.cppEstimate,
       seTaxEstimate: summary.seTaxEstimate,
@@ -356,8 +350,6 @@ function toTaxSummaryCsv(summary) {
     ['hst_remittable', summary.hstRemittable],
     ['distance_km', summary.distanceKm],
     ['distance_miles', summary.totalMiles],
-    ['cra_mileage_deduction', summary.craMileage],
-    ['irs_mileage_deduction', summary.irsMileage],
     ['actual_cost_deduction', summary.actualCostDeduction],
     ['cpp_estimate', summary.cppEstimate],
     ['se_tax_estimate', summary.seTaxEstimate],
@@ -434,7 +426,6 @@ export async function renderTaxDashboard(root, ctx = {}) {
         : '';
   const selectedRegionRate = selectedRegion ? num(rateMap[selectedRegion], summary.taxRatePct) : summary.taxRatePct;
   const netAfterSetAside = summary.netIncome - summary.taxSetAside;
-  const stdDeduction = summary.taxProfile.stdMileageChoice === 'CRA' ? summary.craMileage : summary.irsMileage;
   const mileageUnitLabel = summary.distanceUnit === 'mi' ? t('tax.miles') : t('tax.kilometres');
   const regionLabel = summary.taxProfile.regionLabel === 'province' ? t('tax.province') : t('tax.state');
   const regionPresetCard =
@@ -539,19 +530,14 @@ export async function renderTaxDashboard(root, ctx = {}) {
 
       <section class="bento-grid" style="margin-top: var(--space-4);">
         <article class="card bento-cell-1x1">
-          <h2>${esc(t('tax.mileageDeduction'))}</h2>
+          <h2>${esc(t('tax.vehicleActualCosts'))}</h2>
           <p>${esc(t('tax.totalDistance'))}: <strong>${esc(
             `${formatLargeNumber(summary.distanceUnit === 'mi' ? summary.totalMiles : summary.distanceKm)} ${mileageUnitLabel}`,
-          )}</strong></p>
-          <p>${esc(t('tax.standardMileage'))}: <strong>${esc(
-            formatCurrency(stdDeduction, summary.localeTag, { currency: summary.currency }),
           )}</strong></p>
           <p>${esc(t('tax.actualCost'))}: <strong>${esc(
             formatCurrency(summary.actualCostDeduction, summary.localeTag, { currency: summary.currency }),
           )}</strong></p>
-          <p>${esc(t('tax.recommendedMethod'))}: <strong>${esc(
-            summary.actualCostDeduction > stdDeduction ? t('tax.methodActual') : t('tax.methodStandard'),
-          )}</strong></p>
+          <p style="color:var(--color-text-secondary);">${esc(t('tax.actualCostsNote'))}</p>
         </article>
 
         ${renderSecondaryEstimatorArticle(summary)}

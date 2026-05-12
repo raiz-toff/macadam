@@ -9,6 +9,7 @@
 
 import { db, setAppState, getAppState, softDelete, restoreDeleted, purgeOldDeleted } from '../../core/db.js';
 import { bus, SHIFT_DELETED, SHIFT_SAVED, SHIFT_TIMER_START, SHIFT_TIMER_STOP } from '../../core/events.js';
+import { store } from '../../core/store.js';
 import { acquireWakeLock, releaseWakeLock } from '../pwa/pwa.js';
 import { extractShiftPlatformSpecific } from '../platforms/platform-specific.js';
 
@@ -29,6 +30,32 @@ function clampNum(v, { min = -Infinity, max = Infinity } = {}) {
 function normStr(v) {
   if (typeof v !== 'string') return '';
   return v.trim();
+}
+
+function resolveProvinceId(input) {
+  const raw = typeof input.provinceId === 'string' ? input.provinceId.trim().toUpperCase() : '';
+  if (raw) return raw;
+  const user = /** @type {{ provinceId?: string } | null} */ (store.get('user'));
+  if (user?.provinceId) return String(user.provinceId).toUpperCase();
+  return 'ON';
+}
+
+/** User-entered currency → integer cents (plan v3). */
+function dollarsToCents(v) {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 100);
+}
+
+function centsFromInput(input, keys) {
+  for (const k of keys) {
+    if (input[k] != null && input[k] !== '') {
+      const n = Number(input[k]);
+      if (Number.isFinite(n) && n >= 0) return Math.round(n);
+    }
+  }
+  return null;
 }
 
 function ymdFromDate(d) {
@@ -70,24 +97,25 @@ function safeJsonParse(raw, fallback) {
  * @property {number} [id]
  * @property {string} date YYYY-MM-DD
  * @property {string} platformId
+ * @property {string} provinceId
  * @property {string|null} startTime HH:mm
  * @property {string|null} endTime HH:mm
- * @property {number|null} gross
- * @property {number|null} tips
- * @property {number|null} bonus
- * @property {number|null} orders
+ * @property {number|null} durationMinutes
+ * @property {number|null} grossEarnings cents
+ * @property {number|null} tips cents
+ * @property {number|null} bonusEarnings cents
+ * @property {number|null} deliveryCount
  * @property {number|null} distanceKm
+ * @property {number|null} deadMilesKm
  * @property {number|null} onlineMinutes
  * @property {number|null} activeMinutes
  * @property {number|null} vehicleId
  * @property {string|null} weather
- * @property {string|null} zoneTag
  * @property {string|null} mood
  * @property {string} notes
- * @property {number|null} peakPay
  * @property {boolean} isMultiApp
  * @property {string[]} multiAppPlatformIds
- * @property {Record<string, unknown>} platformSpecific
+ * @property {Record<string, unknown>} customFields
  * @property {string|null} deletedAt
  * @property {string} createdAt
  * @property {string} updatedAt
@@ -113,49 +141,64 @@ function normalizeShiftInput(input) {
   const platformId = normStr(input.platformId);
   if (!platformId) throw new Error('shift:platform:required');
 
+  const provinceId = resolveProvinceId(input);
+
   const startTime = isHm(input.startTime) ? String(input.startTime) : null;
   const endTime = isHm(input.endTime) ? String(input.endTime) : null;
 
-  const gross = clampNum(input.gross, { min: 0 });
-  const tips = clampNum(input.tips, { min: 0 });
-  const bonus = clampNum(input.bonus, { min: 0 });
-  const orders = clampNum(input.orders, { min: 0 });
+  let durationMinutes = clampNum(input.durationMinutes, { min: 0 });
+  if (durationMinutes == null && date && startTime && endTime) {
+    durationMinutes = minutesBetween(date, startTime, endTime);
+  }
+
+  const grossEarnings = centsFromInput(input, ['grossEarnings']) ?? dollarsToCents(input.gross);
+  const tips = centsFromInput(input, ['tips']) ?? dollarsToCents(input.tips);
+  const bonusEarnings = centsFromInput(input, ['bonusEarnings']) ?? dollarsToCents(input.bonus);
+
+  const deliveryCount = clampNum(input.deliveryCount ?? input.orders, { min: 0 });
   const distanceKm = clampNum(input.distanceKm, { min: 0 });
+  const dm = clampNum(input.deadMilesKm, { min: 0 });
+  const deadMilesKm = dm == null ? 0 : dm;
   const onlineMinutes = clampNum(input.onlineMinutes, { min: 0 });
   const activeMinutes = clampNum(input.activeMinutes, { min: 0 });
   const vehicleId = input.vehicleId == null ? null : clampNum(input.vehicleId, { min: 0 });
 
   const weatherRaw = normStr(input.weather);
   const weather = weatherRaw ? weatherRaw : null;
-  const zoneTagRaw = normStr(input.zoneTag);
-  const zoneTag = zoneTagRaw ? zoneTagRaw : null;
   const moodRaw = normStr(input.mood);
   const mood = moodRaw ? moodRaw : null;
   const notes = typeof input.notes === 'string' ? input.notes : '';
   const platformExtra = extractShiftPlatformSpecific(input);
+  /** @type {Record<string, unknown>} */
+  const customFields = {
+    ...(typeof input.customFields === 'object' && input.customFields ? input.customFields : {}),
+    ...platformExtra.platformSpecific,
+  };
+  if (platformExtra.peakPay != null) customFields.peakPay = platformExtra.peakPay;
 
   const t = nowIso();
   return {
     date,
     platformId,
+    provinceId,
     startTime,
     endTime,
-    gross,
+    durationMinutes,
+    grossEarnings,
     tips,
-    bonus,
-    orders,
+    bonusEarnings,
+    deliveryCount,
     distanceKm,
+    deadMilesKm,
     onlineMinutes,
     activeMinutes,
     vehicleId,
     weather,
-    zoneTag,
     mood,
     notes,
-    peakPay: platformExtra.peakPay,
     isMultiApp: platformExtra.isMultiApp,
     multiAppPlatformIds: platformExtra.multiAppPlatformIds,
-    platformSpecific: platformExtra.platformSpecific,
+    customFields,
     deletedAt: null,
     createdAt: t,
     updatedAt: t,
@@ -273,16 +316,24 @@ export async function updateShift(id, patch) {
   if (
     patch.platformId != null ||
     patch.platformSpecific != null ||
+    patch.customFields != null ||
     patch.peakPay != null ||
     patch.multiAppPlatformIds != null ||
     patch.isMultiApp != null
   ) {
     const platformExtra = extractShiftPlatformSpecific(next);
-    next.peakPay = platformExtra.peakPay;
+    const baseCf =
+      next.customFields && typeof next.customFields === 'object'
+        ? /** @type {Record<string, unknown>} */ ({ .../** @type {object} */ (next.customFields) })
+        : {};
+    next.customFields = { ...baseCf, ...platformExtra.platformSpecific };
+    if (platformExtra.peakPay != null) next.customFields.peakPay = platformExtra.peakPay;
     next.isMultiApp = platformExtra.isMultiApp;
     next.multiAppPlatformIds = platformExtra.multiAppPlatformIds;
-    next.platformSpecific = platformExtra.platformSpecific;
+    delete next.platformSpecific;
+    delete next.peakPay;
   }
+  if (patch.provinceId != null) next.provinceId = resolveProvinceId({ provinceId: patch.provinceId });
 
   validateTimeWindow(next.date, next.startTime, next.endTime);
   const conflict = await checkConflict(next.date, next.startTime, next.endTime, { excludeId: id });

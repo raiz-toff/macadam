@@ -1,6 +1,6 @@
 /**
  * Copy to `{id}.platform.js`, fill required fields, add import + entry in `./index.js`.
- * @see Registry_arch.md
+ * @see docs/Registry_arch.md
  */
 import { SVG_OT } from './_logos.js';
 

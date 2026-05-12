@@ -1,10 +1,10 @@
 import PapaMod from '../libs/papaparse.min.js';
 import { db } from '../core/db.js';
-import { bus, SHIFT_DELETED, SHIFT_SAVED } from '../core/events.js';
+import { bus, PLATFORM_CHANGED, SHIFT_DELETED, SHIFT_SAVED } from '../core/events.js';
 import { store } from '../core/store.js';
 import { t } from '../utils/strings.js';
 import { showDrawer, showModal, showToast, initFAB, renderEmptyState } from '../ui/components.js';
-import { getPlatformConfig } from '../modules/platforms/platform-config.js';
+import { getPlatformConfig } from '../registry/platforms/terminology.js';
 import { renderShiftForm } from '../modules/shifts/shift-form.js';
 import {
   applyTemplate,
@@ -220,6 +220,7 @@ export async function render(root, ctx) {
   const onBus = () => void renderList();
   const offSaved = bus.on(SHIFT_SAVED, onBus);
   const offDel = bus.on(SHIFT_DELETED, onBus);
+  const offPlatform = bus.on(PLATFORM_CHANGED, onBus);
 
   const onClick = async (e) => {
     const tEl = /** @type {HTMLElement | null} */ (e.target && /** @type {HTMLElement} */ (e.target).closest('[data-action],[data-shift-id]'));
@@ -323,6 +324,7 @@ export async function render(root, ctx) {
   teardownByRoot.set(root, () => {
     offSaved();
     offDel();
+    offPlatform();
     root.removeEventListener('click', onClick);
   });
 

@@ -1,6 +1,6 @@
 /**
  * Copy to `{id}.badge.js`, register in `./index.js`.
- * @see feature_modularity.md — Badge registry (Category B).
+ * @see docs/feature_modularity.md — Badge registry (Category B).
  */
 
 export default {

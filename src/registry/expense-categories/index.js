@@ -1,6 +1,6 @@
 /**
  * Preset expense categories (Category C). Custom categories stay in appState.
- * @see feature_modularity.md
+ * @see docs/feature_modularity.md
  */
 
 /** @typedef {{ id: string; emoji: string; deductible: boolean; vehicleRelated: boolean }} ExpenseCategoryDef */

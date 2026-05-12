@@ -700,7 +700,7 @@ While **`!user?.onboardingComplete`**, the app should show **only** the onboardi
    // State shape:
    {
      user: null,              // loaded from DB on init
-     activePlatformId: 'all', // current platform filter
+     activePlatformId: 'all', // header switcher: scope Shifts list + default platform for "Start shift" when All
      platforms: [],           // active platforms list
      activeShiftTimer: null,  // { startTime, platformId } or null
      currentWeekEarnings: 0,  // updated after each shift save
@@ -1047,7 +1047,10 @@ All components are plain JS functions that return HTML strings OR manipulate DOM
    - Mode stored in user prefs
    - "All" tab always first (Feature 23)
    - Color-coded tabs per platform (Feature 24)
-   - Switching emits `PLATFORM_CHANGED` event → all views react via store subscription
+   - **Selection behavior (implemented):** choosing a tab or dropdown value updates `store.activePlatformId` (`'all'` or a platform id) and emits **`PLATFORM_CHANGED`** on the bus. The switcher UI re-renders from that event and from `store.subscribe('platforms' | 'user', …)`. `store.js` also listens for `PLATFORM_CHANGED` and **`store.refresh('platforms')`** so the header stays aligned with persisted platform data.
+   - **Shifts view:** `src/views/shifts-view.js` listens for **`PLATFORM_CHANGED`** (same as `SHIFT_SAVED` / `SHIFT_DELETED`) and re-runs the list so **`loadShiftsForView()`** immediately reflects `activePlatformId` (all rows vs `platformId` match). Without this subscription, the list would stay stale until navigation or another shift event.
+   - **Start shift (Shifts header):** uses `activePlatformId`; when `'all'`, uses the first active platform in `store.platforms` (fallback `'other'`).
+   - Other screens (dashboard, analytics, etc.) do **not** yet scope to `activePlatformId` unless explicitly wired later.
    - Hidden when only 1 platform active (Feature 21)
    - Drag-to-reorder tabs via Sortable.js (Feature 30)
 
@@ -1117,6 +1120,7 @@ All components are plain JS functions that return HTML strings OR manipulate DOM
    - Save button at bottom always visible
 
 5. Shift list / log view:
+   - **`src/views/shifts-view.js`:** list data comes from Dexie filtered by **`store.activePlatformId`** (`'all'` = no platform filter; otherwise `shift.platformId` must match). **`bus.on(PLATFORM_CHANGED, …)`** triggers the same re-render path as shift save/delete so the log updates as soon as the user changes the header platform switcher.
    - `renderShiftsList(filters)` → renders paginated/scrollable list of shifts
    - Each shift card: date, platform badge, earnings, hourly rate, duration, zone
    - Tap to expand → full detail with all fields
@@ -1532,7 +1536,7 @@ All components are plain JS functions that return HTML strings OR manipulate DOM
 9. Break reminder toast (Feature 222)
 10. Mileage health warning for long days (Feature 225)
 11. End-of-year review screen + canvas export (Feature 303)
-12. MacadamAPI spec markdown doc (Feature 302)
+12. MacadamAPI spec — [`MacadamAPI.md`](MacadamAPI.md) (Feature 302)
 13. Debug mode full implementation (Features 266–270):
     - Raw vault inspector
     - IndexedDB query timing

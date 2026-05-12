@@ -1,6 +1,6 @@
 /**
  * Copy to `{id}.metric.js`, register in `./index.js`.
- * @see feature_modularity.md — Analytics metric registry (Category B).
+ * @see docs/feature_modularity.md — Analytics metric registry (Category B).
  */
 
 export default {

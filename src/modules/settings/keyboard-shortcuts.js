@@ -1,5 +1,5 @@
 /**
- * Category D — global keyboard shortcut catalog (feature_modularity.md).
+ * Category D — global keyboard shortcut catalog (docs/feature_modularity.md).
  * Single place to add rows shown in Settings → “Keyboard shortcuts” and to document combos.
  *
  * Note: actual shortcut dispatch may live in other modules (e.g. search); keep descriptions in sync.

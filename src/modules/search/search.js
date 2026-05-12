@@ -6,7 +6,7 @@ const SAVED_FILTERS_KEY = 'search_saved_filters';
 const GLOBAL_SHORTCUT_ATTR = 'data-macadam-search-shortcuts';
 
 /**
- * @typedef {'shift'|'expense'|'vehicle'|'platform'|'zone'} SearchResultType
+ * @typedef {'shift'|'expense'|'vehicle'|'platform'} SearchResultType
  */
 
 /**
@@ -25,7 +25,6 @@ const GLOBAL_SHORTCUT_ATTR = 'data-macadam-search-shortcuts';
  * @property {string} [endDate]
  * @property {string} [platformId]
  * @property {string} [vehicleId]
- * @property {string} [zoneTag]
  * @property {number} [minGross]
  * @property {number} [maxGross]
  * @property {number} [minHours]
@@ -54,6 +53,14 @@ const GLOBAL_SHORTCUT_ATTR = 'data-macadam-search-shortcuts';
 function num(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+/** Empty or whitespace-only inputs must not become `0` (that breaks min/max filters). */
+function optionalNumber(value) {
+  const raw = str(value).trim();
+  if (raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }
 
 function str(value) {
@@ -131,13 +138,13 @@ export async function filterShifts(filters = {}) {
     if (filters.endDate && str(row.date) > str(filters.endDate)) return false;
     if (filters.platformId && str(row.platformId) !== str(filters.platformId)) return false;
     if (filters.vehicleId && str(row.vehicleId) !== str(filters.vehicleId)) return false;
-    if (filters.zoneTag && !includesNorm(row.zoneTag, filters.zoneTag)) return false;
-    if (filters.minGross != null && num(row.gross ?? row.grossEarnings) < num(filters.minGross)) return false;
-    if (filters.maxGross != null && num(row.gross ?? row.grossEarnings) > num(filters.maxGross)) return false;
+    const gc = num(row.grossEarnings ?? row.gross);
+    if (filters.minGross != null && gc < num(filters.minGross) * 100) return false;
+    if (filters.maxGross != null && gc > num(filters.maxGross) * 100) return false;
     if (filters.minHours != null && calcShiftHours(row) < num(filters.minHours)) return false;
     if (filters.maxHours != null && calcShiftHours(row) > num(filters.maxHours)) return false;
-    if (filters.minOrders != null && num(row.orders) < num(filters.minOrders)) return false;
-    if (filters.maxOrders != null && num(row.orders) > num(filters.maxOrders)) return false;
+    if (filters.minOrders != null && num(row.deliveryCount ?? row.orders) < num(filters.minOrders)) return false;
+    if (filters.maxOrders != null && num(row.deliveryCount ?? row.orders) > num(filters.maxOrders)) return false;
     if (filters.notesQuery && !includesNorm(row.notes, filters.notesQuery)) return false;
     return true;
   });
@@ -153,8 +160,8 @@ export async function filterExpenses(filters = {}) {
     if (filters.endDate && str(row.date) > str(filters.endDate)) return false;
     if (filters.category && str(row.category) !== str(filters.category)) return false;
     if (filters.platformId && str(row.platformId) !== str(filters.platformId)) return false;
-    if (filters.minAmount != null && num(row.amount) < num(filters.minAmount)) return false;
-    if (filters.maxAmount != null && num(row.amount) > num(filters.maxAmount)) return false;
+    if (filters.minAmount != null && num(row.amount) < num(filters.minAmount) * 100) return false;
+    if (filters.maxAmount != null && num(row.amount) > num(filters.maxAmount) * 100) return false;
     if (filters.receiptOnly && !row.receiptData) return false;
     if (filters.notesQuery && !includesNorm(row.notes, filters.notesQuery)) return false;
     return true;
@@ -234,26 +241,12 @@ async function buildSearchDocuments(opts = {}) {
       entityId: str(shift.id),
       title: `Shift ${str(shift.date)}`,
       subtitle: getPlatformLabel(platform),
-      preview: str(shift.notes || shift.zoneTag || ''),
+      preview: str(shift.notes || ''),
       date: str(shift.date || ''),
       notes: str(shift.notes || ''),
-      zoneTag: str(shift.zoneTag || ''),
       platformName: getPlatformLabel(platform),
       vehicleName: getVehicleLabel(vehicle),
     });
-    if (str(shift.zoneTag).trim()) {
-      docs.push({
-        entityType: 'zone',
-        entityId: `shift-zone:${str(shift.id)}`,
-        title: str(shift.zoneTag),
-        subtitle: `Shift ${str(shift.date)}`,
-        preview: str(shift.notes || ''),
-        notes: str(shift.notes || ''),
-        zoneTag: str(shift.zoneTag || ''),
-        platformName: getPlatformLabel(platform),
-        vehicleName: getVehicleLabel(vehicle),
-      });
-    }
   }
 
   for (const expense of expenses) {
@@ -266,7 +259,6 @@ async function buildSearchDocuments(opts = {}) {
       preview: str(expense.notes || ''),
       date: str(expense.date || ''),
       notes: str(expense.notes || ''),
-      zoneTag: '',
       platformName: getPlatformLabel(platform),
       vehicleName: '',
     });
@@ -281,7 +273,6 @@ async function buildSearchDocuments(opts = {}) {
       preview: str(vehicle.notes || ''),
       date: '',
       notes: str(vehicle.notes || ''),
-      zoneTag: '',
       platformName: '',
       vehicleName: getVehicleLabel(vehicle),
     });
@@ -296,7 +287,6 @@ async function buildSearchDocuments(opts = {}) {
       preview: str(platform.notes || ''),
       date: '',
       notes: str(platform.notes || ''),
-      zoneTag: '',
       platformName: getPlatformLabel(platform),
       vehicleName: '',
     });
@@ -306,7 +296,7 @@ async function buildSearchDocuments(opts = {}) {
 }
 
 /**
- * Full-text + fuzzy search over shifts, expenses, vehicles, platforms, zone tags.
+ * Full-text + fuzzy search over shifts, expenses, vehicles, and platforms.
  * @param {string} query
  */
 /**
@@ -332,10 +322,8 @@ export async function runGlobalSearch(query, opts = {}) {
     ignoreLocation: true,
     keys: [
       { name: 'title', weight: 0.36 },
-      { name: 'notes', weight: 0.26 },
-      { name: 'zoneTag', weight: 0.12 },
       { name: 'vehicleName', weight: 0.12 },
-      { name: 'platformName', weight: 0.14 },
+      { name: 'platformName', weight: 0.26 },
     ],
   });
   const raw = fuse.search(q, { limit: 120 });
@@ -370,11 +358,10 @@ function groupResults(rows) {
 }
 
 function renderGroupCards(groups) {
-  const typeOrder = ['shift', 'expense', 'zone', 'vehicle', 'platform'];
+  const typeOrder = ['shift', 'expense', 'vehicle', 'platform'];
   const labels = {
     shift: 'Shifts',
     expense: 'Expenses',
-    zone: 'Zones',
     vehicle: 'Vehicles',
     platform: 'Platforms',
   };
@@ -413,64 +400,84 @@ function buildOverlayNode() {
   wrap.className = 'search-overlay';
   wrap.innerHTML = `
     <div class="search-overlay-layout">
-      <header>
-        <h2>Global Search</h2>
-        <p>Search notes, zones, vehicles, and platforms.</p>
+      <header class="search-overlay-header">
+        <p class="search-overlay-lead">Search shifts and expenses by notes, vehicles, and platforms.</p>
       </header>
-      <label class="field">
-        <span>Query</span>
-        <input type="search" class="input" name="query" placeholder="Type to search..." autocomplete="off" />
-      </label>
-      <details class="search-panel">
-        <summary>Shift filters</summary>
-        <div class="search-panel-grid">
-          <input class="input" type="date" name="shiftStartDate" />
-          <input class="input" type="date" name="shiftEndDate" />
-          <select class="select" name="shiftPlatform"><option value="">All platforms</option></select>
-          <input class="input" type="text" name="shiftZoneTag" placeholder="Zone tag" />
-          <input class="input" type="number" name="shiftMinGross" min="0" step="0.01" placeholder="Min gross" />
-          <input class="input" type="number" name="shiftMaxGross" min="0" step="0.01" placeholder="Max gross" />
-          <input class="input" type="text" name="shiftNotesQuery" placeholder="Shift notes full-text" />
+
+      <section class="search-overlay-section" aria-label="Search query">
+        <label class="field search-query-field">
+          <span class="input-label">Query</span>
+          <input type="search" class="input" name="query" placeholder="Type to search…" autocomplete="off" />
+        </label>
+      </section>
+
+      <section class="search-overlay-section" aria-label="Sort results">
+        <h3 class="search-overlay-section-title">Sort</h3>
+        <div class="search-sort-grid">
+          <select class="select" name="sortPrimary" aria-label="Primary sort">
+            <option value="score_asc">Relevance</option>
+            <option value="date_desc">Date (newest)</option>
+            <option value="date_asc">Date (oldest)</option>
+            <option value="title_asc">Title A–Z</option>
+            <option value="title_desc">Title Z–A</option>
+          </select>
+          <select class="select" name="sortSecondary" aria-label="Secondary sort">
+            <option value="">No secondary sort</option>
+            <option value="type_asc">Type A–Z</option>
+            <option value="type_desc">Type Z–A</option>
+            <option value="score_asc">Relevance</option>
+          </select>
         </div>
-      </details>
-      <details class="search-panel">
-        <summary>Expense filters</summary>
-        <div class="search-panel-grid">
-          <input class="input" type="date" name="expenseStartDate" />
-          <input class="input" type="date" name="expenseEndDate" />
-          <input class="input" type="text" name="expenseCategory" placeholder="Category" />
-          <select class="select" name="expensePlatform"><option value="">All platforms</option></select>
-          <input class="input" type="number" name="expenseMinAmount" min="0" step="0.01" placeholder="Min amount" />
-          <input class="input" type="number" name="expenseMaxAmount" min="0" step="0.01" placeholder="Max amount" />
-          <input class="input" type="text" name="expenseNotesQuery" placeholder="Expense notes full-text" />
-          <label><input type="checkbox" name="expenseReceiptOnly" /> Receipt only</label>
+      </section>
+
+      <section class="search-overlay-section" aria-label="Optional filters">
+        <h3 class="search-overlay-section-title">Narrow scope</h3>
+        <div class="search-filters-pair">
+          <details class="search-panel">
+            <summary>Shift filters</summary>
+            <div class="search-panel-grid">
+              <input class="input" type="date" name="shiftStartDate" aria-label="Shift start date" />
+              <input class="input" type="date" name="shiftEndDate" aria-label="Shift end date" />
+              <select class="select" name="shiftPlatform" aria-label="Shift platform"><option value="">All platforms</option></select>
+              <input class="input" type="number" name="shiftMinGross" min="0" step="0.01" placeholder="Min gross" />
+              <input class="input" type="number" name="shiftMaxGross" min="0" step="0.01" placeholder="Max gross" />
+              <input class="input search-panel-fullrow" type="text" name="shiftNotesQuery" placeholder="Notes contain…" />
+            </div>
+          </details>
+          <details class="search-panel">
+            <summary>Expense filters</summary>
+            <div class="search-panel-grid">
+              <input class="input" type="date" name="expenseStartDate" aria-label="Expense start date" />
+              <input class="input" type="date" name="expenseEndDate" aria-label="Expense end date" />
+              <input class="input" type="text" name="expenseCategory" placeholder="Category" />
+              <select class="select" name="expensePlatform" aria-label="Expense platform"><option value="">All platforms</option></select>
+              <input class="input" type="number" name="expenseMinAmount" min="0" step="0.01" placeholder="Min amount" />
+              <input class="input" type="number" name="expenseMaxAmount" min="0" step="0.01" placeholder="Max amount" />
+              <input class="input search-panel-fullrow" type="text" name="expenseNotesQuery" placeholder="Notes contain…" />
+              <label class="search-panel-checkbox"><input type="checkbox" name="expenseReceiptOnly" /> Receipt only</label>
+            </div>
+          </details>
         </div>
-      </details>
-      <div class="search-sort-controls row-inline">
-        <span>Sort</span>
-        <select class="select" name="sortPrimary">
-          <option value="score_asc">Relevance</option>
-          <option value="date_desc">Date (newest)</option>
-          <option value="date_asc">Date (oldest)</option>
-          <option value="title_asc">Title A-Z</option>
-          <option value="title_desc">Title Z-A</option>
-        </select>
-        <select class="select" name="sortSecondary">
-          <option value="">No secondary</option>
-          <option value="type_asc">Type A-Z</option>
-          <option value="type_desc">Type Z-A</option>
-          <option value="score_asc">Relevance</option>
-        </select>
-      </div>
-      <label class="field">
-        <span>Save current query as filter</span>
-        <div class="row-inline">
-          <input type="text" class="input" name="savedName" placeholder="e.g. weekend zones" />
-          <button type="button" class="btn btn-secondary" data-action="save-filter">Save</button>
+      </section>
+
+      <section class="search-overlay-section search-overlay-section--results" aria-label="Results">
+        <h3 class="search-overlay-section-title">Results</h3>
+        <div class="search-overlay-results" data-slot="results"></div>
+      </section>
+
+      <section class="search-overlay-section" aria-label="Saved filters">
+        <h3 class="search-overlay-section-title">Saved filters</h3>
+        <div class="search-overlay-saved" data-slot="saved"></div>
+        <div class="search-save-section">
+          <label class="field search-save-field">
+            <span class="input-label">Save current query</span>
+            <div class="search-save-row">
+              <input type="text" class="input" name="savedName" placeholder="e.g. weekend downtown" />
+              <button type="button" class="btn btn-secondary" data-action="save-filter">Save</button>
+            </div>
+          </label>
         </div>
-      </label>
-      <div class="search-overlay-saved" data-slot="saved"></div>
-      <div class="search-overlay-results" data-slot="results"></div>
+      </section>
     </div>
   `;
   return wrap;
@@ -571,9 +578,8 @@ export async function openGlobalSearchOverlay() {
         startDate: str((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="shiftStartDate"]')))?.value || ''),
         endDate: str((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="shiftEndDate"]')))?.value || ''),
         platformId: str((/** @type {HTMLSelectElement | null} */ (node.querySelector('[name="shiftPlatform"]')))?.value || ''),
-        zoneTag: str((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="shiftZoneTag"]')))?.value || ''),
-        minGross: num((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="shiftMinGross"]')))?.value, null),
-        maxGross: num((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="shiftMaxGross"]')))?.value, null),
+        minGross: optionalNumber((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="shiftMinGross"]')))?.value),
+        maxGross: optionalNumber((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="shiftMaxGross"]')))?.value),
         notesQuery: str((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="shiftNotesQuery"]')))?.value || ''),
       },
       expenseFilters: {
@@ -581,8 +587,8 @@ export async function openGlobalSearchOverlay() {
         endDate: str((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="expenseEndDate"]')))?.value || ''),
         platformId: str((/** @type {HTMLSelectElement | null} */ (node.querySelector('[name="expensePlatform"]')))?.value || ''),
         category: str((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="expenseCategory"]')))?.value || ''),
-        minAmount: num((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="expenseMinAmount"]')))?.value, null),
-        maxAmount: num((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="expenseMaxAmount"]')))?.value, null),
+        minAmount: optionalNumber((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="expenseMinAmount"]')))?.value),
+        maxAmount: optionalNumber((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="expenseMaxAmount"]')))?.value),
         notesQuery: str((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="expenseNotesQuery"]')))?.value || ''),
         receiptOnly: Boolean((/** @type {HTMLInputElement | null} */ (node.querySelector('[name="expenseReceiptOnly"]')))?.checked),
       },

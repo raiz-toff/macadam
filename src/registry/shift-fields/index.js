@@ -1,7 +1,7 @@
 /**
  * Global shift form fields (Category C). Platform-specific fields live on platform defs (`specificSchema`).
  * Metadata here drives documentation and future form generators; labels use `shifts.*` string keys.
- * @see feature_modularity.md
+ * @see docs/feature_modularity.md
  */
 
 /**
@@ -31,11 +31,11 @@ const GLOBAL_SHIFT_FIELDS = [
   { key: 'bonus', labelKey: 'shifts.bonus', input: 'currency', section: 'earnings', showInBasicMode: false, nameAttr: 'bonus' },
   { key: 'orders', labelKey: 'shifts.orders', input: 'number', section: 'details', showInBasicMode: false, nameAttr: 'orders' },
   { key: 'distanceKm', labelKey: 'shifts.distance', input: 'number', section: 'details', showInBasicMode: false, nameAttr: 'distance' },
+  { key: 'deadMilesKm', labelKey: 'shifts.deadMiles', input: 'number', section: 'details', showInBasicMode: false, nameAttr: 'deadMilesKm' },
   { key: 'onlineMinutes', labelKey: 'shifts.onlineMinutes', input: 'number', section: 'time', showInBasicMode: false, nameAttr: 'onlineMinutes' },
   { key: 'activeMinutes', labelKey: 'shifts.activeMinutes', input: 'number', section: 'time', showInBasicMode: false, nameAttr: 'activeMinutes' },
   { key: 'vehicleId', labelKey: 'shifts.vehicle', input: 'select', section: 'context', showInBasicMode: false, nameAttr: 'vehicleId' },
   { key: 'weather', labelKey: 'shifts.weather', input: 'select', section: 'context', showInBasicMode: false, nameAttr: 'weather' },
-  { key: 'zoneTag', labelKey: 'shifts.zone', input: 'text', section: 'context', showInBasicMode: false, nameAttr: 'zoneTag' },
   { key: 'platformSpecific', labelKey: 'shifts.platformExtras', input: 'platformExtras', section: 'details', showInBasicMode: false },
   { key: 'mood', labelKey: 'shifts.mood', input: 'hidden', section: 'context', showInBasicMode: false, nameAttr: 'mood' },
   { key: 'notes', labelKey: 'shifts.notes', input: 'textarea', section: 'context', showInBasicMode: false, nameAttr: 'notes' },

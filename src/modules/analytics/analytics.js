@@ -13,11 +13,16 @@ import {
   projectWeekEarnings,
 } from '../../utils/calculations.js';
 import { getTotalExpensesForPeriod } from '../expenses/expenses.js';
-import { platformAnalyticsEnabled } from '../platforms/platform-config.js';
+import { platformAnalyticsEnabled } from '../../registry/platforms/terminology.js';
 
 function num(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
+}
+
+/** Shift gross stored as integer cents (plan v3). */
+function grossCents(shift) {
+  return num(shift.grossEarnings ?? shift.gross);
 }
 
 function ymd(d) {
@@ -128,13 +133,15 @@ async function hydrateDerived(shifts) {
   if (!Array.isArray(shifts) || shifts.length === 0) return [];
   return Promise.all(
     shifts.map(async (shift) => {
-      const gross = num(shift.grossEarnings ?? shift.gross);
+      const gc = grossCents(shift);
+      const gross = gc / 100;
       const durationMinutes = getDurationMinutes(shift);
-      const tips = num(shift.tips);
-      const bonus = num(shift.bonusEarnings ?? shift.bonus);
+      const tips = num(shift.tips) / 100;
+      const bonus = num(shift.bonusEarnings ?? shift.bonus) / 100;
       const orders = num(shift.deliveryCount ?? shift.orders);
       const distanceKm = num(shift.distanceKm);
-      const expense = await getTotalExpensesForPeriod(shift.date, shift.date, shift.platformId || undefined);
+      const expenseCents = await getTotalExpensesForPeriod(shift.date, shift.date, shift.platformId || undefined);
+      const expense = expenseCents / 100;
       return {
         ...shift,
         gross,
@@ -222,14 +229,14 @@ export async function getRolling30DayTrend() {
   const shifts = await listShiftsBetween(ymd(start), ymd(today));
   const byDay = new Map();
   for (const s of shifts) {
-    byDay.set(s.date, (byDay.get(s.date) || 0) + num(s.grossEarnings ?? s.gross));
+    byDay.set(s.date, (byDay.get(s.date) || 0) + grossCents(s));
   }
   const points = [];
   for (let i = 0; i < 30; i += 1) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
     const date = ymd(d);
-    points.push({ x: i, y: num(byDay.get(date)) });
+    points.push({ x: i, y: num(byDay.get(date)) / 100 });
   }
   return { points, regression: calcLinearRegression(points) };
 }
@@ -241,7 +248,7 @@ export async function getBestDayOfWeek() {
     const d = new Date(`${s.date}T00:00:00`);
     const day = Number.isNaN(d.getTime()) ? 0 : d.getDay();
     const key = String(day);
-    buckets.set(key, (buckets.get(key) || 0) + num(s.grossEarnings ?? s.gross));
+    buckets.set(key, (buckets.get(key) || 0) + grossCents(s));
   }
   let best = { day: 0, gross: 0 };
   for (const [key, gross] of buckets.entries()) {
@@ -257,7 +264,7 @@ export async function getBestTimeOfDay() {
     const startTime = String(s.startTime || '');
     const hour = Number(startTime.slice(0, 2));
     if (!Number.isFinite(hour)) continue;
-    buckets.set(hour, (buckets.get(hour) || 0) + num(s.grossEarnings ?? s.gross));
+    buckets.set(hour, (buckets.get(hour) || 0) + grossCents(s));
   }
   let best = { hour: 0, gross: 0 };
   for (const [hour, gross] of buckets.entries()) {
@@ -266,18 +273,17 @@ export async function getBestTimeOfDay() {
   return best;
 }
 
-export async function getBestZone() {
-  const shifts = await db.shifts.filter((s) => s.deletedAt == null && s.zoneTag).toArray();
-  const buckets = new Map();
+export async function getDeadMilesSummary() {
+  const shifts = await db.shifts.filter((s) => s.deletedAt == null).toArray();
+  let deadKm = 0;
+  let businessKm = 0;
   for (const s of shifts) {
-    const zone = String(s.zoneTag || '').trim() || 'Unknown';
-    buckets.set(zone, (buckets.get(zone) || 0) + num(s.grossEarnings ?? s.gross));
+    deadKm += num(s.deadMilesKm);
+    businessKm += num(s.distanceKm);
   }
-  let best = { zone: 'Unknown', gross: 0 };
-  for (const [zone, gross] of buckets.entries()) {
-    if (gross > best.gross) best = { zone, gross };
-  }
-  return best;
+  const total = deadKm + businessKm;
+  const ratio = total > 0 ? deadKm / total : 0;
+  return { deadKm, businessKm, ratio };
 }
 
 export async function getPlatformComparison() {
@@ -312,24 +318,24 @@ export async function getPlatformComparison() {
 
 export async function getIncomeSourceBreakdown() {
   const shifts = await db.shifts.filter((s) => s.deletedAt == null).toArray();
-  let base = 0;
-  let tips = 0;
-  let bonus = 0;
+  let baseCents = 0;
+  let tipsCents = 0;
+  let bonusCents = 0;
   for (const s of shifts) {
-    const g = num(s.grossEarnings ?? s.gross);
+    const g = grossCents(s);
     const t = num(s.tips);
     const b = num(s.bonusEarnings ?? s.bonus);
-    tips += t;
-    bonus += b;
-    base += Math.max(0, g - t - b);
+    tipsCents += t;
+    bonusCents += b;
+    baseCents += Math.max(0, g - t - b);
   }
-  return { base, tips, bonus };
+  return { base: baseCents / 100, tips: tipsCents / 100, bonus: bonusCents / 100 };
 }
 
 export async function getPersonalRecords() {
   const shifts = await db.shifts.filter((s) => s.deletedAt == null).toArray();
   const normalized = shifts.map((s) => ({
-    gross: num(s.grossEarnings ?? s.gross),
+    gross: grossCents(s) / 100,
     durationMinutes: getDurationMinutes(s),
     orders: num(s.deliveryCount ?? s.orders),
   }));
@@ -352,9 +358,9 @@ export async function getZerodays(month, year) {
 
 export async function getEarningsPerKm(startDate, endDate) {
   const shifts = await listShiftsBetween(startDate, endDate);
-  const gross = shifts.reduce((sum, s) => sum + num(s.grossEarnings ?? s.gross), 0);
+  const gross = shifts.reduce((sum, s) => sum + grossCents(s), 0);
   const distance = shifts.reduce((sum, s) => sum + num(s.distanceKm), 0);
-  return calcEarningsPerKm(gross, distance);
+  return calcEarningsPerKm(gross / 100, distance);
 }
 
 export async function getWeeklyProjection() {
@@ -364,7 +370,7 @@ export async function getWeeklyProjection() {
   const shifts = await listShiftsBetween(ymd(start), ymd(end));
   const points = shifts.map((s) => ({
     startAt: `${s.date}T${String(s.startTime || '00:00')}:00`,
-    gross: num(s.grossEarnings ?? s.gross),
+    gross: grossCents(s) / 100,
   }));
   return projectWeekEarnings(points, today);
 }
@@ -376,7 +382,7 @@ export async function getTopEarningShifts(limit = 10) {
       id: s.id,
       date: s.date,
       platformId: s.platformId,
-      gross: num(s.grossEarnings ?? s.gross),
+      gross: grossCents(s) / 100,
       durationMinutes: getDurationMinutes(s),
     }))
     .sort((a, b) => b.gross - a.gross)
@@ -388,7 +394,7 @@ export async function getCumulativeYtdSeries(year = new Date().getFullYear()) {
   const shifts = await listShiftsBetween(start, end);
   const byDay = new Map();
   for (const s of shifts) {
-    byDay.set(s.date, (byDay.get(s.date) || 0) + num(s.grossEarnings ?? s.gross));
+    byDay.set(s.date, (byDay.get(s.date) || 0) + grossCents(s));
   }
   const startDate = new Date(`${start}T00:00:00`);
   const endDate = new Date(`${end}T00:00:00`);
@@ -399,7 +405,7 @@ export async function getCumulativeYtdSeries(year = new Date().getFullYear()) {
     const key = ymd(d);
     running += num(byDay.get(key));
     labels.push(key);
-    values.push(running);
+    values.push(running / 100);
   }
   return { labels, values };
 }
@@ -408,7 +414,7 @@ export async function getEarningsVsHoursScatter(startDate, endDate) {
   const shifts = await listShiftsBetween(startDate, endDate);
   return shifts.map((s) => ({
     x: getDurationMinutes(s) / 60,
-    y: num(s.grossEarnings ?? s.gross),
+    y: grossCents(s) / 100,
   }));
 }
 
@@ -424,9 +430,9 @@ export async function getWeekOverWeek() {
     listShiftsBetween(ymd(thisWeekStart), ymd(thisWeekEnd)),
     listShiftsBetween(ymd(lastWeekStart), ymd(lastWeekEnd)),
   ]);
-  const thisGross = thisWeek.reduce((sum, s) => sum + num(s.grossEarnings ?? s.gross), 0);
-  const lastGross = lastWeek.reduce((sum, s) => sum + num(s.grossEarnings ?? s.gross), 0);
-  return { thisGross, lastGross, delta: thisGross - lastGross };
+  const thisGross = thisWeek.reduce((sum, s) => sum + grossCents(s), 0);
+  const lastGross = lastWeek.reduce((sum, s) => sum + grossCents(s), 0);
+  return { thisGross: thisGross / 100, lastGross: lastGross / 100, delta: (thisGross - lastGross) / 100 };
 }
 
 export async function getRecentActivity(limit = 8) {
@@ -438,7 +444,7 @@ export async function getRecentActivity(limit = 8) {
       id: s.id,
       date: s.date,
       platformId: s.platformId,
-      gross: num(s.grossEarnings ?? s.gross),
+      gross: grossCents(s) / 100,
       orders: num(s.deliveryCount ?? s.orders),
     }));
 }
@@ -475,7 +481,7 @@ export async function getCohortFirstVsCurrentMonth() {
   let currentGross = 0;
   for (const s of shifts) {
     const k = monthKeyFromDateStr(s.date);
-    const gross = num(s.grossEarnings ?? s.gross);
+    const gross = grossCents(s);
     if (k === firstMonth) firstGross += gross;
     if (k === currentMonth) currentGross += gross;
   }
@@ -497,7 +503,7 @@ export async function getDiminishingReturnsByShiftPosition() {
     rows.sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
     rows.forEach((s, idx) => {
       const position = idx + 1;
-      const hourly = getDurationMinutes(s) > 0 ? calcHourlyRate(num(s.grossEarnings ?? s.gross), getDurationMinutes(s)) : 0;
+      const hourly = getDurationMinutes(s) > 0 ? calcHourlyRate(grossCents(s) / 100, getDurationMinutes(s)) : 0;
       if (!buckets.has(position)) buckets.set(position, []);
       buckets.get(position).push(hourly);
     });
@@ -531,7 +537,7 @@ export async function getDayPartAnalysisMatrix() {
     if (!d) continue;
     const day = dayKeys[d.getDay()];
     const slot = matrix[part][day];
-    slot.gross += num(s.grossEarnings ?? s.gross);
+    slot.gross += grossCents(s) / 100;
     slot.minutes += getDurationMinutes(s);
     slot.count += 1;
   }
@@ -554,7 +560,7 @@ export async function getHolidayVsRegularComparison(holidays = []) {
   let holidayCount = 0;
   let regularCount = 0;
   for (const s of shifts) {
-    const gross = num(s.grossEarnings ?? s.gross);
+    const gross = grossCents(s);
     const mins = getDurationMinutes(s);
     if (holidaySet.has(String(s.date))) {
       holidayGross += gross;
@@ -566,11 +572,11 @@ export async function getHolidayVsRegularComparison(holidays = []) {
       regularCount += 1;
     }
   }
-  const holidayHourly = calcHourlyRate(holidayGross, holidayMinutes);
-  const regularHourly = calcHourlyRate(regularGross, regularMinutes);
+  const holidayHourly = calcHourlyRate(holidayGross / 100, holidayMinutes);
+  const regularHourly = calcHourlyRate(regularGross / 100, regularMinutes);
   return {
-    holiday: { gross: holidayGross, count: holidayCount, hourlyRate: holidayHourly },
-    regular: { gross: regularGross, count: regularCount, hourlyRate: regularHourly },
+    holiday: { gross: holidayGross / 100, count: holidayCount, hourlyRate: holidayHourly },
+    regular: { gross: regularGross / 100, count: regularCount, hourlyRate: regularHourly },
     upliftPct: regularHourly > 0 ? ((holidayHourly - regularHourly) / regularHourly) * 100 : 0,
   };
 }
@@ -585,13 +591,13 @@ export async function getWeatherCorrelation() {
   }
   const rows = [];
   for (const [weather, items] of grouped.entries()) {
-    const gross = items.reduce((sum, s) => sum + num(s.grossEarnings ?? s.gross), 0);
+    const gross = items.reduce((sum, s) => sum + grossCents(s), 0);
     const minutes = items.reduce((sum, s) => sum + getDurationMinutes(s), 0);
     rows.push({
       weather,
       count: items.length,
-      gross,
-      hourlyRate: calcHourlyRate(gross, minutes),
+      gross: gross / 100,
+      hourlyRate: calcHourlyRate(gross / 100, minutes),
     });
   }
   rows.sort((a, b) => b.hourlyRate - a.hourlyRate);
@@ -630,9 +636,9 @@ export async function getSeasonalityHeatmap() {
   for (const s of shifts) {
     const key = monthKeyFromDateStr(s.date);
     if (!monthTotals.has(key)) continue;
-    monthTotals.set(key, monthTotals.get(key) + num(s.grossEarnings ?? s.gross));
+    monthTotals.set(key, monthTotals.get(key) + grossCents(s));
   }
-  return months.map((month) => ({ month, gross: monthTotals.get(month) || 0 }));
+  return months.map((month) => ({ month, gross: (monthTotals.get(month) || 0) / 100 }));
 }
 
 export async function getCompoundGrowthRate() {
@@ -648,7 +654,7 @@ export async function getCompoundGrowthRate() {
 
 export async function getBreakEvenAnalysis({ fixedCosts = 0, variableCostPct = 0 } = {}) {
   const shifts = await db.shifts.filter((s) => s.deletedAt == null).toArray();
-  const gross = shifts.reduce((sum, s) => sum + num(s.grossEarnings ?? s.gross), 0);
+  const gross = shifts.reduce((sum, s) => sum + grossCents(s), 0);
   const inferredVariable = Math.max(0, num(variableCostPct)) / 100;
   const contributionMargin = 1 - inferredVariable;
   const breakEvenRevenue = contributionMargin > 0 ? num(fixedCosts) / contributionMargin : 0;
@@ -657,8 +663,8 @@ export async function getBreakEvenAnalysis({ fixedCosts = 0, variableCostPct = 0
     variableCostPct: inferredVariable * 100,
     contributionMarginPct: contributionMargin * 100,
     breakEvenRevenue,
-    currentRevenue: gross,
-    marginToBreakEven: gross - breakEvenRevenue,
+    currentRevenue: gross / 100,
+    marginToBreakEven: gross / 100 - breakEvenRevenue,
   };
 }
 
@@ -670,7 +676,7 @@ export async function getNetWorthContribution(startDate, endDate) {
   const dates = shifts.map((s) => String(s.date)).sort();
   const rangeStart = startDate || dates[0];
   const rangeEnd = endDate || dates[dates.length - 1];
-  const gross = shifts.reduce((sum, s) => sum + num(s.grossEarnings ?? s.gross), 0);
+  const gross = shifts.reduce((sum, s) => sum + grossCents(s), 0);
   const expenses = await getTotalExpensesForPeriod(rangeStart, rangeEnd);
   const net = gross - expenses;
   return {
@@ -688,7 +694,7 @@ export async function getShiftEfficiencyQuartiles() {
       id: s.id,
       date: s.date,
       platformId: s.platformId,
-      efficiency: calcHourlyRate(num(s.grossEarnings ?? s.gross), getDurationMinutes(s)),
+      efficiency: calcHourlyRate(grossCents(s) / 100, getDurationMinutes(s)),
     }))
     .filter((row) => Number.isFinite(row.efficiency));
   const thresholds = quarterBuckets(scored.map((r) => r.efficiency));
@@ -707,7 +713,7 @@ export async function getPredictiveWeeklyEarnings() {
   const shifts = await db.shifts.filter((s) => s.deletedAt == null).toArray();
   const daily = new Map();
   for (const s of shifts) {
-    daily.set(s.date, (daily.get(s.date) || 0) + num(s.grossEarnings ?? s.gross));
+    daily.set(s.date, (daily.get(s.date) || 0) + grossCents(s));
   }
   const series = [...daily.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
@@ -730,7 +736,7 @@ export async function getPlatformShiftOfActivity() {
     if (!m) continue;
     const platformId = String(s.platformId || 'other');
     const key = `${m}::${platformId}`;
-    map.set(key, (map.get(key) || 0) + num(s.grossEarnings ?? s.gross));
+    map.set(key, (map.get(key) || 0) + grossCents(s));
   }
   const byMonth = [];
   for (const month of months) {
@@ -756,7 +762,7 @@ export async function getFatigueAlert() {
       id: s.id,
       date: s.date,
       durationMinutes: getDurationMinutes(s),
-      hourlyRate: calcHourlyRate(num(s.grossEarnings ?? s.gross), getDurationMinutes(s)),
+      hourlyRate: calcHourlyRate(grossCents(s) / 100, getDurationMinutes(s)),
     }))
     .filter((s) => s.durationMinutes >= 600 && s.hourlyRate < 15);
   return {
@@ -774,7 +780,7 @@ export async function getEarningsAnxietyPattern() {
     const mood = String(s.mood);
     if (!out[mood]) out[mood] = { count: 0, gross: 0, hourlyRates: [] };
     out[mood].count += 1;
-    const gross = num(s.grossEarnings ?? s.gross);
+    const gross = grossCents(s);
     const hourly = calcHourlyRate(gross, getDurationMinutes(s));
     out[mood].gross += gross;
     out[mood].hourlyRates.push(hourly);
@@ -798,7 +804,7 @@ export async function getIncomeStabilityScore() {
     if (!d) continue;
     const weekStart = startOfWeek(d, 1);
     const key = ymd(weekStart);
-    byWeek.set(key, (byWeek.get(key) || 0) + num(s.grossEarnings ?? s.gross));
+    byWeek.set(key, (byWeek.get(key) || 0) + grossCents(s));
   }
   const weeklyGross = [...byWeek.values()];
   const avg = mean(weeklyGross);
@@ -858,6 +864,7 @@ export function formatRegisteredMetricValue(def, raw, localeCountry, currency) {
     return formatCurrency(Number(raw) || 0, localeCountry, { currency });
   }
   if (f === 'number') return formatLargeNumber(Number(raw) || 0);
+  if (f === 'percent') return `${(Number(raw) || 0).toFixed(1)}%`;
   if (f === 'duration') return formatDurationMinutes(raw);
   return String(raw ?? '—');
 }

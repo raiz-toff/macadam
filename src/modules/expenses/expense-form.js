@@ -137,9 +137,15 @@ export function renderExpenseForm(options = {}) {
         </select>
       </label>
 
+      <label class="toggle" data-slot="confirmed-wrap" hidden>
+        <input type="checkbox" name="confirmedPaid" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span>${esc(t('expenses.confirmedPaid'))}</span>
+      </label>
+
       <label class="field" data-slot="hst-wrap" ${isHstRegistered ? '' : 'hidden'}>
         <span class="field-label">${esc(t('expenses.hstItc'))}</span>
-        <input class="input" type="number" name="hstItcAmount" min="0" step="0.01" inputmode="decimal" />
+        <input class="input" type="number" name="hstPaid" min="0" step="0.01" inputmode="decimal" />
       </label>
 
       <div class="shifts-form-actions">
@@ -153,6 +159,7 @@ export function renderExpenseForm(options = {}) {
   const cats = root.querySelector('[data-slot="categories"]');
   const pctLabel = root.querySelector('[data-slot="business-pct-label"]');
   const intervalWrap = root.querySelector('[data-slot="interval-wrap"]');
+  const confirmedWrap = root.querySelector('[data-slot="confirmed-wrap"]');
 
   let selectedCategory = String(initial.category || catRows[0]?.id || 'other');
   const customCategory = String(initial.customCategory || '');
@@ -176,20 +183,31 @@ export function renderExpenseForm(options = {}) {
 
   function syncRecurringVisibility() {
     if (!form || !intervalWrap) return;
-    intervalWrap.hidden = !form.isRecurring.checked;
+    const rec = form.isRecurring.checked;
+    intervalWrap.hidden = !rec;
+    if (confirmedWrap instanceof HTMLElement) confirmedWrap.hidden = !rec;
   }
 
   renderCategoryGrid();
 
   if (form) {
-    form.amount.value = initial.amount != null ? String(initial.amount) : '';
+    const amtCents = Number(initial.amount);
+    form.amount.value =
+      initial.amount != null && Number.isFinite(amtCents) ? String(Math.round(amtCents) / 100) : '';
     form.date.value = initial.date ? String(initial.date) : nowYmd();
     form.platformId.value = initial.platformId == null ? 'all' : String(initial.platformId || 'all');
     form.businessPct.value = initial.businessPct != null ? String(initial.businessPct) : '100';
     form.notes.value = initial.notes ? String(initial.notes) : '';
     form.isRecurring.checked = Boolean(initial.isRecurring);
     form.recurringInterval.value = String(initial.recurringInterval || 'monthly');
-    form.hstItcAmount.value = initial.hstItcAmount != null ? String(initial.hstItcAmount) : '';
+    const hstCents = Number(initial.hstPaid ?? initial.hstItcAmount ?? 0);
+    form.hstPaid.value = Number.isFinite(hstCents) && hstCents > 0 ? String(hstCents / 100) : '';
+    if (form.confirmedPaid instanceof HTMLInputElement) {
+      form.confirmedPaid.checked =
+        initial.id != null && initial.confirmedPaid != null
+          ? Boolean(initial.confirmedPaid)
+          : false;
+    }
     updateBusinessLabel();
     syncRecurringVisibility();
   }
@@ -204,8 +222,8 @@ export function renderExpenseForm(options = {}) {
     }
     if (action === 'keypad' && form) {
       showNumericKeypad({
-        value: form.amount.value,
         currency: currencySymbol,
+        value: form.amount.value,
         onConfirm: (val) => {
           form.amount.value = val;
         },
@@ -220,7 +238,12 @@ export function renderExpenseForm(options = {}) {
   });
 
   form?.businessPct.addEventListener('input', updateBusinessLabel);
-  form?.isRecurring.addEventListener('change', syncRecurringVisibility);
+  form?.isRecurring.addEventListener('change', () => {
+    syncRecurringVisibility();
+    if (form.isRecurring.checked && form.confirmedPaid instanceof HTMLInputElement && !initial.id) {
+      form.confirmedPaid.checked = false;
+    }
+  });
   form?.receiptFile.addEventListener('change', async () => {
     const file = form.receiptFile.files && form.receiptFile.files[0];
     if (!file) {
@@ -249,7 +272,8 @@ export function renderExpenseForm(options = {}) {
         receiptData,
         isRecurring: recurring,
         recurringInterval: recurring ? String(form.recurringInterval.value || 'monthly') : null,
-        hstItcAmount: isHstRegistered ? Number(form.hstItcAmount.value || 0) : 0,
+        hstPaid: isHstRegistered ? Number(form.hstPaid.value || 0) : 0,
+        confirmedPaid: recurring ? Boolean(form.confirmedPaid.checked) : true,
       };
     },
   };

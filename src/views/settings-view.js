@@ -1,7 +1,6 @@
 import { t } from '../utils/strings.js';
 import { mountSettings } from '../modules/settings/settings.js';
 import { mountPwaSettings } from '../modules/pwa/pwa-settings.js';
-import { mountZonesSettings } from '../modules/zones/zones-settings.js';
 
 /** @param {HTMLElement} root @param {Record<string, unknown>} ctx */
 export async function render(root, ctx) {
@@ -34,11 +33,6 @@ export async function render(root, ctx) {
   settingsHost.className = 'settings-view-section';
   wrap.appendChild(settingsHost);
 
-  /* P12 — Zone management (Features 190–194). */
-  const zonesHost = document.createElement('section');
-  zonesHost.className = 'settings-view-section card card-raised';
-  wrap.appendChild(zonesHost);
-
   /* P12 — PWA deep features (Features 241–249). */
   const pwaHost = document.createElement('section');
   pwaHost.className = 'settings-view-section card card-raised';
@@ -55,17 +49,6 @@ export async function render(root, ctx) {
     err.setAttribute('role', 'alert');
     err.textContent = t('errors.viewRender');
     settingsHost.appendChild(err);
-  }
-
-  try {
-    await mountZonesSettings(zonesHost);
-  } catch (e) {
-    console.error('[macadam] zones mount failed', e);
-    const err = document.createElement('p');
-    err.className = 'route-error';
-    err.setAttribute('role', 'alert');
-    err.textContent = t('errors.viewRender');
-    zonesHost.appendChild(err);
   }
 
   try {

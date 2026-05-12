@@ -16,6 +16,7 @@ import {
 import { t } from '../../utils/strings.js';
 import { getLocaleConfig } from '../../utils/locale.js';
 import { getCountryTaxProfile } from '../../registry/countries/index.js';
+import { ProvinceRegistry } from '../../registry/provinces/index.js';
 import { getDefaultSamplePlatformId } from '../../registry/platforms/index.js';
 import { showConfirm, showToast } from '../../ui/components.js';
 import {
@@ -24,11 +25,14 @@ import {
   renderStepInner,
   validateStep,
   applyTaxPreset,
+  normalizeTaxRegionForCountry,
+  filterPlatformRowsForOnboarding,
+  pruneSelectedPlatformsForRegion,
 } from './steps.js';
 
 /** @typedef {import('./steps.js').OnboardingDraft} OnboardingDraft */
 
-export const ONBOARDING_SESSION_KEY = 'macadam_onboarding_session_v1';
+export const ONBOARDING_SESSION_KEY = 'macadam_onboarding_session_v3';
 
 const SAMPLE_NOTE = '[Macadam sample data]';
 
@@ -82,6 +86,9 @@ function clearSession() {
  */
 export function buildOnboardingSetupExport(draft, user) {
   const u = user && typeof user === 'object' ? user : {};
+  const country = String(draft.country || 'CA').toUpperCase();
+  const cfg = getLocaleConfig(country);
+  const du = draft.distanceUnit === 'km' || draft.distanceUnit === 'mi' ? draft.distanceUnit : cfg.distanceUnit;
   return {
     exportKind: 'macadam_setup',
     version: 1,
@@ -92,14 +99,12 @@ export function buildOnboardingSetupExport(draft, user) {
     platforms: draft.selectedPlatforms,
     locale: {
       ...(typeof u.locale === 'object' && u.locale ? u.locale : {}),
-      country: draft.country,
-      ...(() => {
-        const c = getLocaleConfig(draft.country);
-        return { currency: c.currency, currencySymbol: c.symbol, distanceUnit: draft.distanceUnit };
-      })(),
+      country,
+      currency: cfg.currency,
+      currencySymbol: cfg.symbol,
+      distanceUnit: du,
     },
-    vehicles: draft.vehicles.filter((_, i) => i === 0 || draft.addSecondVehicle),
-    homeBase: { label: draft.homeBaseLabel },
+    vehicles: draft.vehicles.filter((_, i) => i === 0),
     workSchedule: { preset: draft.workSchedulePreset },
     weeklyGoal: draft.weeklyGoal,
     monthlyGoal: draft.monthlyGoal,
@@ -134,6 +139,11 @@ export async function loadSampleData() {
     (Array.isArray(user?.platforms) && user.platforms[0]) ||
     (await db.platforms.filter((p) => p.active).first())?.id ||
     getDefaultSamplePlatformId();
+  const countryId = typeof user?.countryId === 'string' && user.countryId ? String(user.countryId).toUpperCase() : 'CA';
+  const pList = ProvinceRegistry.getByCountry(countryId);
+  const sampleProvinceId =
+    (typeof user?.provinceId === 'string' && user.provinceId.trim() && String(user.provinceId).toUpperCase()) ||
+    (pList[0]?.id ?? 'ON');
   const t0 = nowIso();
   const rows = [];
   for (let d = 0; d < 14; d += 1) {
@@ -149,17 +159,18 @@ export async function loadSampleData() {
       startTime: '11:00',
       endTime: '15:00',
       durationMinutes: 240,
-      grossEarnings: 80 + d * 3,
-      tips: 12,
-      bonusEarnings: 5,
+      grossEarnings: Math.round((80 + d * 3) * 100),
+      tips: Math.round(12 * 100),
+      bonusEarnings: Math.round(5 * 100),
       deliveryCount: 8 + (d % 4),
       distanceKm: 40 + d,
+      deadMilesKm: 0,
+      provinceId: sampleProvinceId,
       onlineMinutes: 250,
       activeMinutes: 200,
       vehicleId: null,
       weather: 'Clear',
-      zoneTag: 'Downtown',
-      moodTag: '🙂',
+      mood: '🙂',
       notes: SAMPLE_NOTE,
       isTemplate: false,
       templateName: null,
@@ -249,7 +260,6 @@ async function applyPlatformsFromDraft(draft) {
 async function persistVehicles(draft) {
   const ts = nowIso();
   const toSave = [draft.vehicles[0]].filter(Boolean);
-  if (draft.addSecondVehicle && draft.vehicles[1]) toSave.push(draft.vehicles[1]);
   const existing = await db.vehicles.toArray();
   for (const e of existing) {
     if (e.id != null) await db.vehicles.delete(e.id);
@@ -285,7 +295,7 @@ async function persistWeeklyGoalRow(draft) {
   const row = await db.goals.filter((g) => g.scope === 'weekly' && g.type === 'earnings').first();
   if (row?.id != null) {
     await db.goals.update(row.id, {
-      target: Number(draft.weeklyGoal) || 0,
+      target: Math.max(0, Number(draft.weeklyGoal) || 0),
       active: true,
     });
   }
@@ -377,28 +387,41 @@ export async function mountOnboarding(root) {
    * @param {string} displayName
    */
   function buildCompletedUserPatch(d, displayName) {
-    const cfg = getLocaleConfig(d.country);
+    const country = String(d.country || 'CA').toUpperCase();
+    const cfg = getLocaleConfig(country);
+    const du = d.distanceUnit === 'km' || d.distanceUnit === 'mi' ? d.distanceUnit : cfg.distanceUnit;
+    const rawRegion = String(d.taxRegion || '').trim().toUpperCase();
+    const provList = ProvinceRegistry.getByCountry(country);
+    let provinceId = rawRegion;
+    if (provList.length) {
+      provinceId = provList.some((p) => p.id === rawRegion) ? rawRegion : provList[0].id;
+    } else if (!rawRegion && country === 'CA') {
+      provinceId = 'ON';
+    } else if (!rawRegion) {
+      provinceId = '';
+    }
     const workSchedule = { preset: d.workSchedulePreset, label: t(`onboarding.schedule.${d.workSchedulePreset}`) };
     return {
       displayName,
       avatarType: d.avatarType,
       avatarData: d.avatarData,
       locale: {
-        country: d.country,
+        country,
         currency: cfg.currency,
         currencySymbol: cfg.symbol,
-        distanceUnit: d.distanceUnit,
+        distanceUnit: du,
         dateFormat: 'YYYY-MM-DD',
         weekStartDay: 0,
         timeFormat: '12h',
       },
-      homeBase: { label: d.homeBaseLabel.trim() },
+      countryId: country,
+      provinceId,
       workSchedule,
-      weeklyGoal: d.weeklyGoal,
-      monthlyGoal: d.monthlyGoal,
-      annualGoal: d.annualGoal,
+      weeklyGoal: Math.round(Number(d.weeklyGoal || 0) * 100),
+      monthlyGoal: Math.round(Number(d.monthlyGoal || 0) * 100),
+      annualGoal: Math.round(Number(d.annualGoal || 0) * 100),
       taxWithholdingPct: d.taxWithholdingPct,
-      hstRegistered: getCountryTaxProfile(d.country).hstOnboarding ? d.hstRegistered : false,
+      hstRegistered: getCountryTaxProfile(country).hstOnboarding ? d.hstRegistered : false,
       theme: d.theme,
       notificationPrefs: { ...d.notificationPrefs },
       onboardingComplete: true,
@@ -553,8 +576,23 @@ export async function mountOnboarding(root) {
         draft.country = countrySel.value;
         const cfg = getLocaleConfig(draft.country);
         draft.distanceUnit = cfg.distanceUnit;
+        normalizeTaxRegionForCountry(draft);
+        pruneSelectedPlatformsForRegion(draft, platformRows);
         persistSession(draft);
       });
+    }
+
+    if (draft.step === 1) {
+      const tr = body.querySelector('[data-field="taxRegion"]');
+      if (tr instanceof HTMLSelectElement || tr instanceof HTMLInputElement) {
+        const syncRegion = () => {
+          readFormIntoDraft(el, draft);
+          pruneSelectedPlatformsForRegion(draft, platformRows);
+          persistSession(draft);
+        };
+        tr.addEventListener('change', syncRegion);
+        if (tr instanceof HTMLInputElement) tr.addEventListener('blur', syncRegion);
+      }
     }
 
     const taxPresetBtn = body.querySelector('[data-tax-preset]');
@@ -606,7 +644,8 @@ export async function mountOnboarding(root) {
       try {
         readFormIntoDraft(el, draft);
         if (!draft.selectedPlatforms.length) {
-          const fallback = platformRows[0]?.id || getDefaultSamplePlatformId();
+          const filtered = filterPlatformRowsForOnboarding(draft, platformRows);
+          const fallback = filtered[0]?.id || platformRows[0]?.id || getDefaultSamplePlatformId();
           draft.selectedPlatforms = [fallback];
         }
         await applyPlatformsFromDraft(draft);
@@ -641,16 +680,18 @@ export async function mountOnboarding(root) {
 
     el.querySelector('[data-next]')?.addEventListener('click', async () => {
       readFormIntoDraft(el, draft);
-      if (draft.step === 7) {
+      if (draft.step === 6) {
         draft.monthlyGoal = Math.round(draft.weeklyGoal * 4.33);
         draft.annualGoal = Math.round(draft.weeklyGoal * 52);
       }
-      const err = validateStep(draft.step, draft);
+      const err = validateStep(draft.step, draft, platformRows);
       if (err) {
         showToast({ type: 'warning', message: t(err) });
         return;
       }
-      if (draft.step === 0) await applyPlatformsFromDraft(draft);
+      if (draft.step === 0) normalizeTaxRegionForCountry(draft);
+      if (draft.step === 1) pruneSelectedPlatformsForRegion(draft, platformRows);
+      if (draft.step === 2) await applyPlatformsFromDraft(draft);
       if (draft.step < TOTAL_STEPS - 1) {
         draft.step += 1;
       }

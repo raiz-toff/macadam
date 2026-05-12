@@ -9,6 +9,7 @@ import { store } from './core/store.js';
 import { Router, updateOnboardingFocusClass } from './core/router.js';
 import { assertPlatformRegistryValid, PlatformRegistry } from './registry/platforms/index.js';
 import { assertCountryRegistryValid, CountryRegistry } from './registry/countries/index.js';
+import { assertProvinceRegistryValid, ProvinceRegistry } from './registry/provinces/index.js';
 import { assertWidgetRegistryValid, WidgetRegistry } from './registry/widgets/index.js';
 import { assertNotificationRegistryValid, NotificationRegistry } from './registry/notifications/index.js';
 import { assertBadgeRegistryValid, BadgeRegistry } from './registry/badges/index.js';
@@ -205,6 +206,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       assertPlatformRegistryValid();
       assertCountryRegistryValid();
+      assertProvinceRegistryValid();
       assertWidgetRegistryValid();
       assertNotificationRegistryValid();
       assertBadgeRegistryValid();
@@ -214,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       assertGoalTypeRegistryValid();
       assertShiftFieldRegistryValid();
       console.log(
-        `[macadam] Registry ok: ${PlatformRegistry.getAll().length} platforms, ${CountryRegistry.getAll().length} countries, ${WidgetRegistry.getAll().length} widgets, ${NotificationRegistry.getAll().length} notification defs, ${BadgeRegistry.getAll().length} badge defs, ${MetricRegistry.getAll().length} metrics, ${ReportRegistry.getAll().length} report sections, ${ExpenseCategoryRegistry.getAll().length} expense categories, ${GoalTypeRegistry.getAll().length} goal types (${GoalScopeRegistry.getAll().length} scopes), ${ShiftFieldRegistry.getAll().length} global shift fields`,
+        `[macadam] Registry ok: ${PlatformRegistry.getAll().length} platforms, ${CountryRegistry.getAll().length} countries, ${ProvinceRegistry.getAll().length} provinces, ${WidgetRegistry.getAll().length} widgets, ${NotificationRegistry.getAll().length} notification defs, ${BadgeRegistry.getAll().length} badge defs, ${MetricRegistry.getAll().length} metrics, ${ReportRegistry.getAll().length} report sections, ${ExpenseCategoryRegistry.getAll().length} expense categories, ${GoalTypeRegistry.getAll().length} goal types (${GoalScopeRegistry.getAll().length} scopes), ${ShiftFieldRegistry.getAll().length} global shift fields`,
       );
     } catch (regErr) {
       console.error('[macadam] registry validation failed', regErr);

@@ -1,8 +1,8 @@
 /**
  * F9 — Onboarding step bodies (plain HTML strings). Chrome lives in `onboarding.js`.
- * @see plan.md F9 — fifteen enumerated steps (platforms → completion).
+ * Plan v3: **11 steps** — country, province/state/region, **platforms (filtered by province `availablePlatforms`)**, profile, vehicle → complete.
  *
- * Category D (feature_modularity.md): a new **global** onboarding step still lands here —
+ * Category D (docs/feature_modularity.md): a new **global** onboarding step still lands here —
  * bump `TOTAL_STEPS`, extend `renderStepInner` / `validateStep`, and persist fields via `onboarding.js`.
  */
 
@@ -16,7 +16,6 @@
  * @property {string} country
  * @property {{ nickname: string; type: string; make: string; model: string; year: string }[]} vehicles
  * @property {boolean} addSecondVehicle
- * @property {string} homeBaseLabel
  * @property {string} workSchedulePreset
  * @property {number} weeklyGoal
  * @property {number} monthlyGoal
@@ -30,11 +29,13 @@
  */
 
 import { t } from '../../utils/strings.js';
-import { getLocaleConfig } from '../../utils/locale.js';
+import { getLocaleConfig, getProvinceDef, resolveProvinceDef } from '../../utils/locale.js';
 import { CountryRegistry, getCountryTaxProfile } from '../../registry/countries/index.js';
+import { ProvinceRegistry } from '../../registry/provinces/index.js';
+import { PlatformRegistry } from '../../registry/platforms/index.js';
 import { getPlatformColor, renderPlatformBadge } from '../../ui/components.js';
 
-export const TOTAL_STEPS = 15;
+export const TOTAL_STEPS = 11;
 
 const VEHICLE_TYPES = ['gas', 'hybrid', 'ev', 'motorcycle', 'bicycle', 'ebike', 'scooter', 'walking'];
 
@@ -72,6 +73,13 @@ function esc(s) {
     .replace(/"/g, '&quot;');
 }
 
+/** @param {unknown} cents @param {number} fallbackDollars */
+function goalDollarsFromCents(cents, fallbackDollars) {
+  const c = Number(cents);
+  if (!Number.isFinite(c) || c <= 0) return fallbackDollars;
+  return Math.round(c / 100);
+}
+
 /**
  * @param {Record<string, unknown>} user
  * @returns {OnboardingDraft}
@@ -79,29 +87,46 @@ function esc(s) {
 export function defaultDraftFromUser(user) {
   const u = user && typeof user === 'object' ? user : {};
   const loc = /** @type {Record<string, unknown>} */ (u.locale || {});
+  const wkDef = goalDollarsFromCents(u.weeklyGoal, 500);
+  const locCountry = typeof loc.country === 'string' ? String(loc.country).toUpperCase() : '';
+  const fromUser = typeof u.countryId === 'string' && u.countryId ? String(u.countryId).toUpperCase() : locCountry;
+  const country = CountryRegistry.getAll().some((c) => c.id === fromUser) ? fromUser : 'CA';
+  const cfg = getLocaleConfig(country);
+  const taxProf = getCountryTaxProfile(country);
+  const provs = ProvinceRegistry.getByCountry(country);
+  let taxRegion = typeof u.provinceId === 'string' && u.provinceId ? String(u.provinceId).toUpperCase() : '';
+  if (provs.length) {
+    if (!taxRegion || !provs.some((p) => p.id === taxRegion)) taxRegion = provs[0].id;
+  } else if (taxProf.regionPresetType === 'US') {
+    const keys = Object.keys(TAX_PRESET_US).filter((k) => k !== 'default');
+    if (!keys.includes(taxRegion)) taxRegion = String(taxProf.defaultRegionCode || keys[0] || 'NY').toUpperCase();
+  } else {
+    taxRegion = String(taxProf.defaultRegionCode || '').toUpperCase();
+  }
+  const distanceUnit =
+    loc.distanceUnit === 'km' || loc.distanceUnit === 'mi' ? /** @type {'km'|'mi'} */ (loc.distanceUnit) : cfg.distanceUnit;
   return {
     step: 0,
     selectedPlatforms: Array.isArray(u.platforms) ? [.../** @type {string[]} */ (u.platforms)] : [],
     displayName: typeof u.displayName === 'string' ? u.displayName : '',
     avatarType: typeof u.avatarType === 'string' ? u.avatarType : 'emoji',
     avatarData: typeof u.avatarData === 'string' ? u.avatarData : '🚗',
-    country: typeof loc.country === 'string' && loc.country ? loc.country : 'US',
+    country,
     vehicles: [
       { nickname: '', type: 'gas', make: '', model: '', year: '' },
       { nickname: '', type: 'gas', make: '', model: '', year: '' },
     ],
     addSecondVehicle: false,
-    homeBaseLabel: typeof u.homeBase === 'object' && u.homeBase && typeof /** @type {{ label?: unknown }} */ (u.homeBase).label === 'string'
-      ? /** @type {{ label: string }} */ (u.homeBase).label
-      : '',
     workSchedulePreset: 'flexible',
-    weeklyGoal: Number(u.weeklyGoal) > 0 ? Number(u.weeklyGoal) : 500,
-    monthlyGoal: Number(u.monthlyGoal) > 0 ? Number(u.monthlyGoal) : Math.round(Number(u.weeklyGoal || 500) * 4.33),
-    annualGoal: Number(u.annualGoal) > 0 ? Number(u.annualGoal) : Math.round(Number(u.weeklyGoal || 500) * 52),
-    taxRegion: '',
+    weeklyGoal: wkDef,
+    monthlyGoal:
+      Number(u.monthlyGoal) > 0 ? goalDollarsFromCents(u.monthlyGoal, Math.round(wkDef * 4.33)) : Math.round(wkDef * 4.33),
+    annualGoal:
+      Number(u.annualGoal) > 0 ? goalDollarsFromCents(u.annualGoal, Math.round(wkDef * 52)) : Math.round(wkDef * 52),
+    taxRegion,
     taxWithholdingPct: Number(u.taxWithholdingPct) >= 0 ? Number(u.taxWithholdingPct) : 25,
     hstRegistered: Boolean(u.hstRegistered),
-    distanceUnit: loc.distanceUnit === 'mi' || loc.distanceUnit === 'km' ? loc.distanceUnit : 'km',
+    distanceUnit,
     theme: u.theme === 'light' || u.theme === 'dark' || u.theme === 'auto' ? u.theme : 'auto',
     notificationPrefs: {
       shiftReminders: true,
@@ -118,19 +143,158 @@ function whyBlock(summaryKey, bodyKey) {
 }
 
 /**
+ * After `country` changes, keep `taxRegion` consistent with the next step (province list or US presets).
+ * @param {OnboardingDraft} draft
+ */
+export function normalizeTaxRegionForCountry(draft) {
+  const country = String(draft.country || 'CA').toUpperCase();
+  draft.country = country;
+  const provs = ProvinceRegistry.getByCountry(country);
+  if (provs.length === 1) {
+    draft.taxRegion = provs[0].id;
+    return;
+  }
+  if (provs.length > 1) {
+    const r = String(draft.taxRegion || '').toUpperCase();
+    draft.taxRegion = provs.some((p) => p.id === r) ? r : '';
+    return;
+  }
+  const tax = getCountryTaxProfile(country);
+  if (tax.regionPresetType === 'US') {
+    const keys = Object.keys(TAX_PRESET_US).filter((k) => k !== 'default');
+    const r = String(draft.taxRegion || '').toUpperCase();
+    draft.taxRegion = keys.includes(r) ? r : '';
+    return;
+  }
+  draft.taxRegion = String(draft.taxRegion || '').trim().toUpperCase();
+}
+
+/**
+ * DB platform rows shown on onboarding after country/region (province `availablePlatforms`, else union for country, else catalog ∩ DB).
+ * @param {OnboardingDraft} draft
+ * @param {Array<{ id: string; name: string; color?: string }>} platformRows
+ */
+export function filterPlatformRowsForOnboarding(draft, platformRows) {
+  const country = String(draft.country || 'CA').toUpperCase();
+  const region = String(draft.taxRegion || '').trim().toUpperCase();
+  const provDef = resolveProvinceDef(country, region);
+  const fromIds = (/** @type {readonly string[] | undefined} */ ids) => {
+    if (!Array.isArray(ids) || ids.length === 0) return null;
+    const set = new Set(ids.map((id) => String(id).toLowerCase()));
+    const out = platformRows.filter((row) => set.has(String(row.id).toLowerCase()));
+    return out.length ? out : null;
+  };
+  const exact = fromIds(provDef?.availablePlatforms);
+  if (exact) return exact;
+  const provinces = ProvinceRegistry.getByCountry(country);
+  if (provinces.length) {
+    const set = new Set();
+    for (const p of provinces) {
+      for (const id of p.availablePlatforms || []) set.add(String(id).toLowerCase());
+    }
+    if (set.size) return platformRows.filter((row) => set.has(String(row.id).toLowerCase()));
+  }
+  const catalogIds = new Set(PlatformRegistry.getAll().map((p) => String(p.id).toLowerCase()));
+  return platformRows.filter((row) => catalogIds.has(String(row.id).toLowerCase()));
+}
+
+/**
+ * Drop selections that are not allowed for the current country/region.
+ * @param {OnboardingDraft} draft
+ * @param {Array<{ id: string; name: string; color?: string }>} platformRows
+ */
+export function pruneSelectedPlatformsForRegion(draft, platformRows) {
+  const allowed = new Set(filterPlatformRowsForOnboarding(draft, platformRows).map((r) => String(r.id).toLowerCase()));
+  draft.selectedPlatforms = draft.selectedPlatforms.filter((id) => allowed.has(String(id).toLowerCase()));
+}
+
+/**
  * @param {number} step 0..TOTAL_STEPS-1
  * @param {OnboardingDraft} draft
  * @param {Array<{ id: string; name: string; color?: string }>} platformRows
  */
 export function renderStepInner(step, draft, platformRows) {
   switch (step) {
-    case 0:
+    case 0: {
+      const cfg = getLocaleConfig(draft.country);
+      const countries = CountryRegistry.getAll();
+      return `
+        <h1 class="onboarding-step-title">${esc(t('onboarding.steps.chooseCountryTitle'))}</h1>
+        <p class="onboarding-step-lead">${esc(t('onboarding.steps.chooseCountryLead'))}</p>
+        ${whyBlock('onboarding.why.regionSummary', 'onboarding.why.regionBody')}
+        <div class="input-group">
+          <label class="input-label" for="ob-country">${esc(t('onboarding.steps.country'))}</label>
+          <select id="ob-country" class="input" data-field="country">
+            ${countries
+              .map(
+                (c) =>
+                  `<option value="${esc(c.id)}" ${String(draft.country).toUpperCase() === c.id ? 'selected' : ''}>${esc(t(c.labelKey))}</option>`,
+              )
+              .join('')}
+          </select>
+        </div>
+        <p class="onboarding-hint">${esc(t('onboarding.steps.currencyHint'))}: <strong>${esc(cfg.currency)}</strong> (${esc(cfg.symbol)}) · ${
+          cfg.distanceUnit === 'mi' ? esc(t('onboarding.steps.unitMi')) : esc(t('onboarding.steps.unitKm'))
+        }</p>`;
+    }
+
+    case 1: {
+      const country = String(draft.country || 'CA').toUpperCase();
+      const provs = ProvinceRegistry.getByCountry(country);
+      const tax = getCountryTaxProfile(country);
+      const regionLabel =
+        tax.regionLabel === 'province'
+          ? t('onboarding.steps.province')
+          : tax.regionLabel === 'state'
+            ? t('onboarding.steps.state')
+            : t('onboarding.steps.regionShortLabel');
+      let control = '';
+      if (provs.length) {
+        control = `<select id="ob-region-input" class="input" data-field="taxRegion" aria-label="${esc(regionLabel)}">
+          ${provs
+            .map((p) => {
+              const def = getProvinceDef(p.id);
+              const lab = typeof def?.labelKey === 'string' ? t(def.labelKey) : p.id;
+              const sel = String(draft.taxRegion || '').toUpperCase() === p.id ? 'selected' : '';
+              return `<option value="${esc(p.id)}" ${sel}>${esc(lab)}</option>`;
+            })
+            .join('')}
+        </select>`;
+      } else if (tax.regionPresetType === 'US') {
+        const keys = Object.keys(TAX_PRESET_US).filter((k) => k !== 'default');
+        const cur = String(draft.taxRegion || '').toUpperCase();
+        control = `<select id="ob-region-input" class="input" data-field="taxRegion" aria-label="${esc(regionLabel)}">
+          <option value="">${esc(t('onboarding.steps.taxRegionPlaceholder'))}</option>
+          ${keys.map((k) => `<option value="${esc(k)}" ${cur === k ? 'selected' : ''}>${esc(k)}</option>`).join('')}
+        </select>`;
+      } else {
+        control = `
+          <p class="onboarding-hint">${esc(t('onboarding.steps.regionOptionalLead'))}</p>
+          <input id="ob-region-input" class="input" type="text" maxlength="12" data-field="taxRegion" value="${esc(draft.taxRegion)}" autocomplete="off" />`;
+      }
+      return `
+        <h1 class="onboarding-step-title">${esc(t('onboarding.steps.chooseRegionTitle'))}</h1>
+        <p class="onboarding-step-lead">${esc(t('onboarding.steps.chooseRegionLead'))}</p>
+        ${whyBlock('onboarding.why.regionSummary', 'onboarding.why.regionBody')}
+        <div class="input-group">
+          <label class="input-label" for="ob-region-input">${esc(regionLabel)}</label>
+          ${control}
+        </div>`;
+    }
+
+    case 2: {
+      const filtered = filterPlatformRowsForOnboarding(draft, platformRows);
+      if (!filtered.length) {
+        return `
+        <h1 class="onboarding-step-title">${esc(t('onboarding.steps.platformsTitle'))}</h1>
+        <p class="onboarding-step-lead">${esc(t('onboarding.steps.noPlatformsForRegion'))}</p>`;
+      }
       return `
         <h1 class="onboarding-step-title">${esc(t('onboarding.steps.platformsTitle'))}</h1>
-        <p class="onboarding-step-lead">${esc(t('onboarding.steps.platformsLead'))}</p>
+        <p class="onboarding-step-lead">${esc(t('onboarding.steps.platformsLeadFiltered'))}</p>
         ${whyBlock('onboarding.why.platformsSummary', 'onboarding.why.platformsBody')}
         <div class="onboarding-platform-grid" role="group" aria-label="${esc(t('onboarding.steps.platformsTitle'))}">
-          ${platformRows
+          ${filtered
             .map((p) => {
               const sel = draft.selectedPlatforms.includes(p.id);
               const col = getPlatformColor(p.id);
@@ -141,8 +305,9 @@ export function renderStepInner(step, draft, platformRows) {
             })
             .join('')}
         </div>`;
+    }
 
-    case 1:
+    case 3:
       return `
         <h1 class="onboarding-step-title">${esc(t('onboarding.steps.profileTitle'))}</h1>
         <p class="onboarding-step-lead">${esc(t('onboarding.steps.profileLead'))}</p>
@@ -171,28 +336,7 @@ export function renderStepInner(step, draft, platformRows) {
           </div>
         </fieldset>`;
 
-    case 2: {
-      const cfg = getLocaleConfig(draft.country);
-      return `
-        <h1 class="onboarding-step-title">${esc(t('onboarding.steps.regionTitle'))}</h1>
-        <p class="onboarding-step-lead">${esc(t('onboarding.steps.regionLead'))}</p>
-        ${whyBlock('onboarding.why.regionSummary', 'onboarding.why.regionBody')}
-        <div class="input-group">
-          <label class="input-label" for="ob-country">${esc(t('onboarding.steps.country'))}</label>
-          <select id="ob-country" class="input" data-field="country">
-            ${CountryRegistry.getAll()
-              .map((c) => {
-                const label = typeof c.labelKey === 'string' ? t(c.labelKey) : c.id;
-                const sel = draft.country === c.id ? 'selected' : '';
-                return `<option value="${esc(c.id)}" ${sel}>${esc(label)}</option>`;
-              })
-              .join('')}
-          </select>
-        </div>
-        <p class="onboarding-hint">${esc(t('onboarding.steps.currencyHint'))}: <strong>${esc(cfg.currency)}</strong> (${esc(cfg.symbol)})</p>`;
-    }
-
-    case 3: {
+    case 4: {
       const v = draft.vehicles[0] || { nickname: '', type: 'gas', make: '', model: '', year: '' };
       return `
         <h1 class="onboarding-step-title">${esc(t('onboarding.steps.vehicleTitle'))}</h1>
@@ -224,43 +368,7 @@ export function renderStepInner(step, draft, platformRows) {
         </div>`;
     }
 
-    case 4:
-      return `
-        <h1 class="onboarding-step-title">${esc(t('onboarding.steps.secondVehicleTitle'))}</h1>
-        <p class="onboarding-step-lead">${esc(t('onboarding.steps.secondVehicleLead'))}</p>
-        ${whyBlock('onboarding.why.secondVehicleSummary', 'onboarding.why.secondVehicleBody')}
-        <label class="onboarding-check card card-raised">
-          <input type="checkbox" data-field="addSecondVehicle" ${draft.addSecondVehicle ? 'checked' : ''} />
-          <span>${esc(t('onboarding.steps.addAnotherVehicle'))}</span>
-        </label>
-        <div class="onboarding-second-vehicle" ${draft.addSecondVehicle ? '' : 'hidden'}>
-          ${(() => {
-            const v = draft.vehicles[1] || { nickname: '', type: 'gas', make: '', model: '', year: '' };
-            return `
-            <div class="input-group">
-              <label class="input-label" for="ob-v1-nick">${esc(t('onboarding.steps.vehicleNickname'))}</label>
-              <input id="ob-v1-nick" class="input" type="text" data-vehicle-idx="1" data-vehicle-field="nickname" value="${esc(v.nickname)}" maxlength="60" />
-            </div>
-            <div class="input-group">
-              <label class="input-label" for="ob-v1-type">${esc(t('onboarding.steps.vehicleType'))}</label>
-              <select id="ob-v1-type" class="input" data-vehicle-idx="1" data-vehicle-field="type">
-                ${VEHICLE_TYPES.map((ty) => `<option value="${ty}" ${v.type === ty ? 'selected' : ''}>${esc(t(`onboarding.vehicleTypes.${ty}`))}</option>`).join('')}
-              </select>
-            </div>`;
-          })()}
-        </div>`;
-
     case 5:
-      return `
-        <h1 class="onboarding-step-title">${esc(t('onboarding.steps.homeBaseTitle'))}</h1>
-        <p class="onboarding-step-lead">${esc(t('onboarding.steps.homeBaseLead'))}</p>
-        ${whyBlock('onboarding.why.homeBaseSummary', 'onboarding.why.homeBaseBody')}
-        <div class="input-group">
-          <label class="input-label" for="ob-home">${esc(t('onboarding.steps.homeBaseLabel'))}</label>
-          <input id="ob-home" class="input" type="text" data-field="homeBaseLabel" value="${esc(draft.homeBaseLabel)}" maxlength="120" placeholder="${esc(t('onboarding.steps.homeBasePlaceholder'))}" />
-        </div>`;
-
-    case 6:
       return `
         <h1 class="onboarding-step-title">${esc(t('onboarding.steps.scheduleTitle'))}</h1>
         <p class="onboarding-step-lead">${esc(t('onboarding.steps.scheduleLead'))}</p>
@@ -274,7 +382,7 @@ export function renderStepInner(step, draft, platformRows) {
             .join('')}
         </div>`;
 
-    case 7: {
+    case 6: {
       const w = draft.weeklyGoal || 0;
       const labelKey =
         w >= 800 ? 'onboarding.motivation.high' : w >= 400 ? 'onboarding.motivation.mid' : w >= 200 ? 'onboarding.motivation.low' : 'onboarding.motivation.start';
@@ -289,7 +397,7 @@ export function renderStepInner(step, draft, platformRows) {
         <p class="onboarding-motivation" data-motivation>${esc(t(labelKey))}</p>`;
     }
 
-    case 8:
+    case 7:
       return `
         <h1 class="onboarding-step-title">${esc(t('onboarding.steps.longTermGoalsTitle'))}</h1>
         <p class="onboarding-step-lead">${esc(t('onboarding.steps.longTermGoalsLead'))}</p>
@@ -303,28 +411,18 @@ export function renderStepInner(step, draft, platformRows) {
           <input id="ob-annual" class="input" type="number" min="0" step="100" data-field="annualGoal" value="${esc(draft.annualGoal)}" />
         </div>`;
 
-    case 9: {
+    case 8: {
       const tax = getCountryTaxProfile(draft.country);
-      const isCA = tax.regionPresetType === 'CA';
-      const isUS = tax.regionPresetType === 'US';
-      const regions = isCA
-        ? Object.keys(TAX_PRESET_CA)
-        : isUS
-          ? [...new Set([...Object.keys(TAX_PRESET_US).filter((k) => k !== 'default'), 'WA', 'OR', 'OH', 'GA'])].sort()
-          : ['—'];
       const regionLabel = tax.regionLabel === 'province' ? t('onboarding.steps.province') : t('onboarding.steps.state');
+      const regionCode = String(draft.taxRegion || '').trim() || '—';
       return `
         <h1 class="onboarding-step-title">${esc(t('onboarding.steps.taxTitle'))}</h1>
         <p class="onboarding-step-lead">${esc(t('onboarding.steps.taxLead'))}</p>
         ${whyBlock('onboarding.why.taxSummary', 'onboarding.why.taxBody')}
+        <input type="hidden" data-field="taxRegion" value="${esc(String(draft.taxRegion || '').trim())}" />
         <div class="input-group">
-          <label class="input-label" for="ob-tax-region">${esc(regionLabel)}</label>
-          <select id="ob-tax-region" class="input" data-field="taxRegion">
-            <option value="">${esc(t('onboarding.steps.taxRegionPlaceholder'))}</option>
-            ${regions
-              .map((r) => `<option value="${esc(r)}" ${draft.taxRegion === r ? 'selected' : ''}>${esc(r)}</option>`)
-              .join('')}
-          </select>
+          <label class="input-label">${esc(regionLabel)}</label>
+          <p class="onboarding-hint"><strong>${esc(regionCode)}</strong></p>
         </div>
         <div class="input-group">
           <label class="input-label" for="ob-tax-pct">${esc(t('onboarding.steps.taxWithholding'))}</label>
@@ -333,7 +431,7 @@ export function renderStepInner(step, draft, platformRows) {
         <button type="button" class="btn btn-secondary btn-sm" data-tax-preset>${esc(t('onboarding.steps.applyPreset'))}</button>`;
     }
 
-    case 10:
+    case 9:
       if (!getCountryTaxProfile(draft.country).hstOnboarding) {
         return `<p class="onboarding-step-lead">${esc(t('onboarding.steps.hstSkip'))}</p>`;
       }
@@ -346,41 +444,7 @@ export function renderStepInner(step, draft, platformRows) {
           <span>${esc(t('onboarding.steps.hstToggle'))}</span>
         </label>`;
 
-    case 11:
-      return `
-        <h1 class="onboarding-step-title">${esc(t('onboarding.steps.distanceTitle'))}</h1>
-        <p class="onboarding-step-lead">${esc(t('onboarding.steps.distanceLead'))}</p>
-        ${whyBlock('onboarding.why.distanceSummary', 'onboarding.why.distanceBody')}
-        <div class="onboarding-choice-grid" role="radiogroup">
-          <button type="button" class="onboarding-choice card${draft.distanceUnit === 'km' ? ' is-selected' : ''}" data-distance="km">${esc(t('onboarding.steps.unitKm'))}</button>
-          <button type="button" class="onboarding-choice card${draft.distanceUnit === 'mi' ? ' is-selected' : ''}" data-distance="mi">${esc(t('onboarding.steps.unitMi'))}</button>
-        </div>`;
-
-    case 12:
-      return `
-        <h1 class="onboarding-step-title">${esc(t('onboarding.steps.themeTitle'))}</h1>
-        <p class="onboarding-step-lead">${esc(t('onboarding.steps.themeLead'))}</p>
-        ${whyBlock('onboarding.why.themeSummary', 'onboarding.why.themeBody')}
-        <div class="onboarding-choice-grid" role="radiogroup">
-          ${['light', 'dark', 'auto']
-            .map(
-              (th) =>
-                `<button type="button" class="onboarding-choice card${draft.theme === th ? ' is-selected' : ''}" data-theme="${esc(th)}">${esc(t(`onboarding.theme.${th}`))}</button>`,
-            )
-            .join('')}
-        </div>`;
-
-    case 13:
-      return `
-        <h1 class="onboarding-step-title">${esc(t('onboarding.steps.notifyTitle'))}</h1>
-        <p class="onboarding-step-lead">${esc(t('onboarding.steps.notifyLead'))}</p>
-        ${whyBlock('onboarding.why.notifySummary', 'onboarding.why.notifyBody')}
-        <label class="onboarding-check card card-raised"><input type="checkbox" data-np="shiftReminders" ${draft.notificationPrefs.shiftReminders ? 'checked' : ''} /> ${esc(t('onboarding.notify.shiftReminders'))}</label>
-        <label class="onboarding-check card card-raised"><input type="checkbox" data-np="goalAlerts" ${draft.notificationPrefs.goalAlerts ? 'checked' : ''} /> ${esc(t('onboarding.notify.goalAlerts'))}</label>
-        <label class="onboarding-check card card-raised"><input type="checkbox" data-np="taxReminders" ${draft.notificationPrefs.taxReminders ? 'checked' : ''} /> ${esc(t('onboarding.notify.taxReminders'))}</label>
-        <label class="onboarding-check card card-raised"><input type="checkbox" data-np="weeklyDigest" ${draft.notificationPrefs.weeklyDigest ? 'checked' : ''} /> ${esc(t('onboarding.notify.weeklyDigest'))}</label>`;
-
-    case 14:
+    case 10:
       return `
         <div class="onboarding-completion ${'onboarding-completion--celebrate'}">
           <div class="onboarding-confetti" aria-hidden="true"></div>
@@ -401,27 +465,45 @@ export function renderStepInner(step, draft, platformRows) {
 /**
  * @param {number} step
  * @param {OnboardingDraft} draft
+ * @param {Array<{ id: string; name: string; color?: string }>} [platformRows]
  * @returns {string | null} i18n key for validation message
  */
-export function validateStep(step, draft) {
+export function validateStep(step, draft, platformRows = []) {
   switch (step) {
-    case 0:
-      return draft.selectedPlatforms.length ? null : 'onboarding.validation.platforms';
-    case 1:
+    case 0: {
+      const c = String(draft.country || '').trim().toUpperCase();
+      return CountryRegistry.getAll().some((x) => x.id === c) ? null : 'onboarding.validation.country';
+    }
+    case 1: {
+      const country = String(draft.country || '').toUpperCase();
+      const provs = ProvinceRegistry.getByCountry(country);
+      if (provs.length) {
+        const r = String(draft.taxRegion || '').toUpperCase();
+        return provs.some((p) => p.id === r) ? null : 'onboarding.validation.region';
+      }
+      const tax = getCountryTaxProfile(country);
+      if (tax.regionPresetType === 'US') {
+        const keys = Object.keys(TAX_PRESET_US).filter((k) => k !== 'default');
+        const r = String(draft.taxRegion || '').toUpperCase();
+        return keys.includes(r) ? null : 'onboarding.validation.region';
+      }
+      return null;
+    }
+    case 2: {
+      const filtered = filterPlatformRowsForOnboarding(draft, platformRows);
+      if (!filtered.length) return 'onboarding.validation.platformsNone';
+      if (!draft.selectedPlatforms.length) return 'onboarding.validation.platforms';
+      const allow = new Set(filtered.map((r) => String(r.id).toLowerCase()));
+      const ok = draft.selectedPlatforms.every((id) => allow.has(String(id).toLowerCase()));
+      return ok ? null : 'onboarding.validation.platforms';
+    }
+    case 3:
       return draft.displayName.trim() ? null : 'onboarding.validation.name';
-    case 2:
-      return draft.country ? null : 'onboarding.validation.country';
-    case 3: {
+    case 4: {
       const v = draft.vehicles[0];
       return v && v.nickname.trim() && v.type ? null : 'onboarding.validation.vehicle';
     }
-    case 4:
-      if (draft.addSecondVehicle) {
-        const v = draft.vehicles[1];
-        return v && v.nickname.trim() && v.type ? null : 'onboarding.validation.secondVehicle';
-      }
-      return null;
-    case 9: {
+    case 8: {
       const n = Number(draft.taxWithholdingPct);
       return Number.isFinite(n) && n >= 0 && n <= 80 ? null : 'onboarding.validation.tax';
     }
@@ -434,7 +516,7 @@ export function validateStep(step, draft) {
  * @param {OnboardingDraft} draft
  */
 export function applyTaxPreset(draft) {
-  const r = draft.taxRegion;
+  const r = String(draft.taxRegion || '').trim().toUpperCase();
   if (!r || r === '—') return draft.taxWithholdingPct;
   const tax = getCountryTaxProfile(draft.country);
   if (tax.regionPresetType === 'CA' && TAX_PRESET_CA[r] != null) return TAX_PRESET_CA[r];

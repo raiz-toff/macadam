@@ -1,6 +1,6 @@
 /**
  * Copy to `{id}.report-section.js`, register in `./index.js`.
- * @see feature_modularity.md — Report section registry (Category B).
+ * @see docs/feature_modularity.md — Report section registry (Category B).
  */
 
 export default {

@@ -3,7 +3,7 @@
  *
  * F7 structure: app, common, onboarding, shifts, analytics, notifications, errors,
  * vehicles, expenses, platforms, tax, goals, settings, reports, schedule, search,
- * plus `modules` / `views` / `ui` placeholders aligned to `plan.md` file tree and F8 shell.
+ * plus `modules` / `views` / `ui` placeholders aligned to `docs/plan.md` file tree and F8 shell.
  * Leaf values are always strings so `t('a.b.c')` resolves to a string (fallback: English, then key).
  * Module-specific marketing copy and long-form help: Phase 2+ modules will replace placeholder text.
  */
@@ -55,6 +55,9 @@ export const strings = {
       copy: 'Copy',
       share: 'Share',
       retry: 'Retry',
+    },
+    provinces: {
+      on: 'Ontario',
     },
     onboarding: {
       title: 'Welcome to Macadam',
@@ -112,6 +115,8 @@ export const strings = {
         platformsTitle: 'Which platforms do you use?',
         platformsLead:
           'Select every gig or delivery app you earn through—including if you walk or bike. You can change this anytime in Settings.',
+        platformsLeadFiltered: 'Only platforms available for your region are shown (from the province registry).',
+        noPlatformsForRegion: 'No platforms are registered for this region yet. Try another region or contact support.',
         profileTitle: 'How should we greet you?',
         profileLead: 'This name appears on your dashboard and exports.',
         driverName: 'Your name',
@@ -121,6 +126,14 @@ export const strings = {
         avatarUpload: 'Choose image',
         regionTitle: 'Country or region',
         regionLead: 'We set currency, distance defaults, and tax hints from here.',
+        chooseCountryTitle: 'Which country do you drive in?',
+        chooseCountryLead: 'Currency and distance units follow your market.',
+        chooseRegionTitle: 'Province, state, or region',
+        chooseRegionLead: 'Tax presets and catalog data use this where your country is supported.',
+        regionShortLabel: 'Region',
+        regionOptionalLead: 'Optional — a short code is enough if you want it on exports.',
+        ontarioTitle: 'Ontario, Canada',
+        ontarioLead: 'Macadam v3 is built for Ontario gig drivers first — CAD, kilometres, and provincial tax defaults.',
         country: 'Country',
         countryCA: 'Canada',
         countryUS: 'United States',
@@ -213,8 +226,10 @@ export const strings = {
       },
       validation: {
         platforms: 'Pick at least one platform.',
+        platformsNone: 'No platforms are available for this region in the catalog.',
         name: 'Please enter your name.',
         country: 'Choose a country.',
+        region: 'Choose a province, state, or region.',
         vehicle: 'Add a nickname and vehicle type.',
         secondVehicle: 'Fill in the second vehicle or turn off “add another”.',
         tax: 'Enter a withholding percentage between 0 and 80.',
@@ -260,6 +275,7 @@ export const strings = {
       tips: 'Tips',
       bonus: 'Bonus',
       distance: 'Distance',
+      deadMiles: 'Dead miles (km)',
       unitKm: 'km',
       unitMiles: 'miles',
       date: 'Date',
@@ -332,7 +348,10 @@ export const strings = {
       bestWindow: 'Best windows',
       bestDay: 'Best day',
       bestHour: 'Best hour',
-      bestZone: 'Best zone',
+      deadMilesSummary: 'Dead miles',
+      deadKmOfTotal: 'of distance',
+      deadKmUnits: 'km dead-head',
+      deadMilesRatio: 'Dead miles % of trip',
       lastPeriod: 'Last week',
       thisPeriod: 'This week',
       baseIncome: 'Base',
@@ -415,6 +434,7 @@ export const strings = {
       recurringMonthly: 'Monthly',
       recurringAnnual: 'Annual',
       hstItc: 'HST / ITC amount',
+      confirmedPaid: 'I already paid this recurring expense',
       savedToast: 'Expense saved',
       deletedToast: 'Expense deleted',
       autoExpenseTitle: 'Auto fuel expense',
@@ -497,9 +517,9 @@ export const strings = {
       totalDistance: 'Business distance',
       standardMileage: 'Standard mileage method',
       actualCost: 'Actual cost method',
-      recommendedMethod: 'Higher deduction this year',
-      methodActual: 'Actual cost',
-      methodStandard: 'Standard mileage',
+      vehicleActualCosts: 'Vehicle actual costs',
+      actualCostsNote:
+        'Self-employed gig income in Canada uses actual vehicle expenses (fuel, maintenance, insurance, etc.) with business-use percentage — not the CRA standard mileage rate.',
       kilometres: 'km',
       miles: 'mi',
       cppEstimator: 'CPP estimator (Canada)',
@@ -868,6 +888,9 @@ export const strings = {
       share: 'Partager',
       retry: 'Réessayer',
     },
+    provinces: {
+      on: 'Ontario',
+    },
     onboarding: {
       title: 'Bienvenue sur Macadam',
       subtitle: 'Suivez vos gains dans une seule app',
@@ -924,6 +947,8 @@ export const strings = {
         platformsTitle: 'Quelles plateformes utilisez-vous ?',
         platformsLead:
           'Sélectionnez chaque appli de gig ou de livraison avec laquelle vous gagnez de l’argent, y compris à pied ou à vélo. Modifiable à tout moment dans Paramètres.',
+        platformsLeadFiltered: 'Seules les plateformes disponibles pour votre région sont affichées (registre des provinces).',
+        noPlatformsForRegion: 'Aucune plateforme n’est enregistrée pour cette région. Essayez une autre région ou contactez le support.',
         profileTitle: 'Comment vous saluer ?',
         profileLead: 'Ce nom apparaît sur le tableau de bord et les exports.',
         driverName: 'Votre nom',
@@ -933,6 +958,14 @@ export const strings = {
         avatarUpload: 'Choisir une image',
         regionTitle: 'Pays ou région',
         regionLead: 'Devise, distance et repères fiscaux en découlent.',
+        chooseCountryTitle: 'Dans quel pays conduisez-vous ?',
+        chooseCountryLead: 'La devise et les unités de distance suivent votre marché.',
+        chooseRegionTitle: 'Province, état ou région',
+        chooseRegionLead: 'Les préréglages fiscaux et le catalogue s’appuient là-dessus lorsque le pays est pris en charge.',
+        regionShortLabel: 'Région',
+        regionOptionalLead: 'Facultatif — un court code suffit si vous voulez l’afficher sur les exports.',
+        ontarioTitle: 'Ontario (Canada)',
+        ontarioLead: 'Macadam v3 cible d’abord les livreurs en Ontario — CAD, kilomètres et repères fiscaux provinciaux.',
         country: 'Pays',
         countryCA: 'Canada',
         countryUS: 'États-Unis',
@@ -1025,8 +1058,10 @@ export const strings = {
       },
       validation: {
         platforms: 'Choisissez au moins une plateforme.',
+        platformsNone: 'Aucune plateforme du catalogue n’est disponible pour cette région.',
         name: 'Entrez votre nom.',
         country: 'Choisissez un pays.',
+        region: 'Choisissez une province, un état ou une région.',
         vehicle: 'Ajoutez un surnom et un type de véhicule.',
         secondVehicle: 'Remplissez le 2e véhicule ou décochez l’option.',
         tax: 'Indiquez un pourcentage entre 0 et 80.',
@@ -1227,6 +1262,7 @@ export const strings = {
       recurringMonthly: 'Mensuel',
       recurringAnnual: 'Annuel',
       hstItc: 'Montant TPS/TVH / CTI',
+      confirmedPaid: 'J’ai déjà payé cette dépense récurrente',
       savedToast: 'Dépense enregistrée',
       deletedToast: 'Dépense supprimée',
       autoExpenseTitle: 'Dépense carburant automatique',

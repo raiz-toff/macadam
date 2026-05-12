@@ -1,6 +1,6 @@
 /**
  * Badge / achievement registry (Category B).
- * @see feature_modularity.md
+ * @see docs/feature_modularity.md
  */
 
 import bonusHunter from './bonus_hunter.badge.js';

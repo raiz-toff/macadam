@@ -1,6 +1,6 @@
 /**
  * Copy to `{id}.notification.js`, register in `./index.js`.
- * @see feature_modularity.md — Notification registry (Category B).
+ * @see docs/feature_modularity.md — Notification registry (Category B).
  */
 
 export default {

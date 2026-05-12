@@ -1,6 +1,6 @@
 /**
  * Analytics metric registry (Category B).
- * @see feature_modularity.md
+ * @see docs/feature_modularity.md
  */
 
 import monthGross from './month_gross.metric.js';
@@ -11,7 +11,7 @@ import placeholder from './placeholder.metric.js';
 import shiftDuration from './shift_duration.metric.js';
 import shiftGross from './shift_gross.metric.js';
 import shiftHourly from './shift_hourly.metric.js';
-import shiftZone from './shift_zone.metric.js';
+import deadMilesRatio from './dead_miles_ratio.metric.js';
 
 /** @typedef {typeof placeholder} MetricDefinition */
 
@@ -31,7 +31,7 @@ const METRICS = [
   shiftGross,
   shiftHourly,
   shiftDuration,
-  shiftZone,
+  deadMilesRatio,
   monthGross,
   monthHourly,
   monthOrders,

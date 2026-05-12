@@ -12,7 +12,7 @@ import { render as renderVehicles } from '../views/vehicles-view.js';
 import { render as renderSchedule } from '../views/schedule-view.js';
 import { render as renderGoals } from '../views/goals-view.js';
 import { render as renderReports } from '../views/reports-view.js';
-import { render as renderSearch } from '../views/search-view.js';
+import { openGlobalSearchOverlay } from '../modules/search/search.js';
 import { render as renderSettings } from '../views/settings-view.js';
 import { render as renderOnboarding } from '../views/onboarding-view.js';
 import { render as renderAbout } from '../views/about-view.js';
@@ -47,7 +47,6 @@ function resolveRouteDef(hash) {
     { hash: '#/schedule', name: 'schedule', render: renderSchedule },
     { hash: '#/goals', name: 'goals', render: renderGoals },
     { hash: '#/reports', name: 'reports', render: renderReports },
-    { hash: '#/search', name: 'search', render: renderSearch },
     { hash: '#/settings', name: 'settings', render: renderSettings },
     { hash: '#/onboarding', name: 'onboarding', render: renderOnboarding },
     { hash: '#/about', name: 'about', render: renderAbout },
@@ -134,6 +133,17 @@ function handleRoute() {
     return;
   }
 
+  if (hash === '#/search' && user?.onboardingComplete) {
+    void openGlobalSearchOverlay();
+    try {
+      const base = `${window.location.pathname}${window.location.search}`;
+      window.history.replaceState(null, '', `${base}#/dashboard`);
+    } catch {
+      /* ignore */
+    }
+    hash = '#/dashboard';
+  }
+
   let def = resolveRouteDef(hash);
   if (!def) {
     updateOnboardingFocusClass(false);
@@ -166,6 +176,10 @@ export const Router = {
   navigate(path) {
     const h = path.startsWith('#') ? path : `#/${path.replace(/^\//, '')}`;
     const navUser = /** @type {{ onboardingComplete?: boolean } | null} */ (store.get('user'));
+    if (h === '#/search' && navUser?.onboardingComplete) {
+      void openGlobalSearchOverlay();
+      return;
+    }
     if (!navUser?.onboardingComplete && h !== '#/onboarding') {
       if (window.location.hash !== '#/onboarding') window.location.hash = '#/onboarding';
       else handleRoute();

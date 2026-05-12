@@ -1,6 +1,6 @@
 /**
  * Platform registry — one module per platform; engine imports this instead of scattered defs.
- * @see Registry_arch.md
+ * @see docs/Registry_arch.md
  */
 
 /** @typedef {import('../types.js').PlatformCatalogEntry} PlatformCatalogEntry */

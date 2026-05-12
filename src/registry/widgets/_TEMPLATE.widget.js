@@ -1,6 +1,6 @@
 /**
  * Copy to `{id}.widget.js`, register in `./index.js`.
- * @see feature_modularity.md — Widget registry (Category B).
+ * @see docs/feature_modularity.md — Widget registry (Category B).
  */
 
 export default {

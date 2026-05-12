@@ -3,7 +3,7 @@ import relativeTime from '../libs/dayjs.relativeTime.min.js';
 import durationPlugin from '../libs/dayjs.duration.min.js';
 import { getLocaleConfig } from './locale.js';
 import { CountryRegistry } from '../registry/countries/index.js';
-import { getTerminology } from '../modules/platforms/platform-config.js';
+import { getTerminology } from '../registry/platforms/terminology.js';
 import { store } from '../core/store.js';
 
 dayjs.extend(relativeTime);

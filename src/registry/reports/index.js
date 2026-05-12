@@ -1,6 +1,6 @@
 /**
  * Report section registry (Category B).
- * @see feature_modularity.md
+ * @see docs/feature_modularity.md
  */
 
 import chart from './chart.report-section.js';

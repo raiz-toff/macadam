@@ -1,7 +1,7 @@
 import {
   getBestDayOfWeek,
   getBestTimeOfDay,
-  getBestZone,
+  getDeadMilesSummary,
   getEarningsVsHoursScatter,
   getMonthlySummary,
   getRegisteredMetricDisplay,
@@ -33,12 +33,12 @@ export async function render(root, ctx) {
   const now = new Date();
   const user = store.get('user');
   const localeCountry = user?.locale?.country || 'US';
-  const [monthSummary, rolling, bestDay, bestHour, bestZone, zeroDays, scatter] = await Promise.all([
+  const [monthSummary, rolling, bestDay, bestHour, deadMiles, zeroDays, scatter] = await Promise.all([
     getMonthlySummary(now.getMonth() + 1, now.getFullYear()),
     getRolling30DayTrend(),
     getBestDayOfWeek(),
     getBestTimeOfDay(),
-    getBestZone(),
+    getDeadMilesSummary(),
     getZerodays(now.getMonth() + 1, now.getFullYear()),
     getEarningsVsHoursScatter(`${now.getFullYear()}-01-01`, `${now.getFullYear()}-12-31`),
   ]);
@@ -83,7 +83,7 @@ export async function render(root, ctx) {
           <h2>${esc(t('analytics.bestWindow'))}</h2>
           <p>${esc(t('analytics.bestDay'))}: ${esc(DOW[bestDay.day] || 'Sun')}</p>
           <p>${esc(t('analytics.bestHour'))}: ${esc(String(bestHour.hour).padStart(2, '0'))}:00</p>
-          <p>${esc(t('analytics.bestZone'))}: ${esc(bestZone.zone)}</p>
+          <p>${esc(t('analytics.deadMilesSummary'))}: ${esc((deadMiles.ratio * 100).toFixed(1))}% ${esc(t('analytics.deadKmOfTotal'))} · ${esc(deadMiles.deadKm.toFixed(1))} ${esc(t('analytics.deadKmUnits'))}</p>
         </article>
       </section>
     </section>

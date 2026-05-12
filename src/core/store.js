@@ -25,7 +25,8 @@ import {
   XP_EARNED,
 } from './events.js';
 import { t } from '../utils/strings.js';
-import { syncPlatformTerminologyFromRows } from '../modules/platforms/platform-config.js';
+import { getCountryDef, resolveProvinceDef } from '../utils/locale.js';
+import { syncPlatformTerminologyFromRows } from '../registry/platforms/terminology.js';
 
 const THEME_KEY = 'macadam-theme';
 const ALLOWED_THEMES = new Set(['light', 'dark', 'auto']);
@@ -34,6 +35,8 @@ const ALLOWED_THEMES = new Set(['light', 'dark', 'auto']);
 
 const STATE_KEYS = [
   'user',
+  'countryDef',
+  'provinceDef',
   'activePlatformId',
   'platforms',
   'activeShiftTimer',
@@ -51,6 +54,8 @@ const STATE_KEYS = [
 /** @type {Record<string, unknown>} */
 const state = {
   user: null,
+  countryDef: null,
+  provinceDef: null,
   activePlatformId: 'all',
   platforms: [],
   /** @type {ActiveShiftTimer} */
@@ -144,6 +149,27 @@ function num(x, fallback = 0) {
 /**
  * @param {unknown} user
  */
+function syncLocaleDefsFromUser(user) {
+  if (!user || typeof user !== 'object') {
+    state.countryDef = null;
+    state.provinceDef = null;
+    return;
+  }
+  const u = /** @type {Record<string, unknown>} */ (user);
+  const countryId =
+    typeof u.countryId === 'string' && u.countryId
+      ? u.countryId
+      : typeof /** @type {{ country?: unknown }} */ (u.locale)?.country === 'string'
+        ? String(u.locale.country)
+        : 'CA';
+  const provinceId = typeof u.provinceId === 'string' && u.provinceId ? u.provinceId : 'ON';
+  state.countryDef = getCountryDef(countryId);
+  state.provinceDef = resolveProvinceDef(countryId, provinceId);
+}
+
+/**
+ * @param {unknown} user
+ */
 async function fetchWeeklyGoalTarget(user) {
   try {
     const row = await db.goals
@@ -153,7 +179,9 @@ async function fetchWeeklyGoalTarget(user) {
   } catch {
     /* ignore */
   }
-  return num(/** @type {{ weeklyGoal?: unknown }} */ (user)?.weeklyGoal);
+  const wg = num(/** @type {{ weeklyGoal?: unknown }} */ (user)?.weeklyGoal);
+  if (wg > 0) return wg / 100;
+  return 0;
 }
 
 /**
@@ -172,8 +200,9 @@ async function computeCurrentWeekEarnings(user) {
       .toArray();
     let sum = 0;
     for (const s of shifts) {
-      const g = s?.grossEarnings ?? s?.gross;
-      sum += num(g);
+      const raw = s?.grossEarnings ?? s?.gross;
+      const dollars = s?.grossEarnings != null ? num(raw) / 100 : num(raw);
+      sum += dollars;
     }
     return sum;
   } catch {
@@ -277,9 +306,12 @@ export const store = {
     if (key === 'user') {
       state.user = /** @type {typeof state.user} */ (value);
       if (!state.user) {
+        state.countryDef = null;
+        state.provinceDef = null;
         state.theme = 'auto';
         applyUserTheme('auto');
       } else {
+        syncLocaleDefsFromUser(state.user);
         const th = state.user?.theme;
         if (typeof th === 'string' && ALLOWED_THEMES.has(th)) {
           state.theme = th;
@@ -300,6 +332,10 @@ export const store = {
       state.isOnline = Boolean(value);
     } else {
       /** @type {Record<string, unknown>} */ (state)[key] = value;
+    }
+    if (key === 'user') {
+      notify('countryDef', state.countryDef, old);
+      notify('provinceDef', state.provinceDef, old);
     }
     notify(key, state[key], old);
   },

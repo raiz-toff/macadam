@@ -1,6 +1,6 @@
 /**
  * Goal metric types + scopes (Category C). Dexie `goals.type` / `goals.scope` must match these keys.
- * @see feature_modularity.md
+ * @see docs/feature_modularity.md
  */
 
 /** @typedef {{ key: string; unit: 'currency' | 'count' | 'hours' | 'km' | 'currency_net' | 'currency_tips' }} GoalTypeDef */

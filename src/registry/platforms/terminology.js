@@ -1,11 +1,9 @@
 /**
- * Static platform catalog + terminology helpers (F10).
- * `PLATFORM_TERMINOLOGY` is synced from Dexie active rows for F7 `platformLabel`.
- *
- * Catalog data lives in `src/registry/platforms/*`; this file is the stable import surface.
+ * Platform terminology + Dexie row sync (plan v3 F11 — lives with PlatformRegistry).
+ * @see `PlatformRegistry` in `./index.js`
  */
 
-import { PlatformRegistry } from '../../registry/platforms/index.js';
+import { PlatformRegistry } from './index.js';
 
 /**
  * @typedef {{ driver?: string; delivery?: string; bonus?: string; surge?: string }} PlatformTerms
@@ -39,17 +37,6 @@ import { PlatformRegistry } from '../../registry/platforms/index.js';
  * }} PlatformCatalogEntry
  */
 
-/** @type {Record<string, PlatformCatalogEntry>} */
-export const PLATFORM_CONFIGS = (() => {
-  /** @type {Record<string, PlatformCatalogEntry>} */
-  const out = {};
-  for (const p of PlatformRegistry.getAll()) {
-    out[p.id] = p;
-  }
-  return out;
-})();
-
-/** Neutral copy when multiple gig apps are active (Feature 2). */
 const NEUTRAL_TERMS = {
   driver: 'Driver',
   delivery: 'Delivery',
@@ -60,9 +47,6 @@ const NEUTRAL_TERMS = {
 /** @type {Record<string, Record<string, string>>} */
 export const PLATFORM_TERMINOLOGY = {};
 
-/**
- * @param {string} term
- */
 function titleishFallback(term) {
   const key = String(term ?? '');
   if (!key) return '';
@@ -82,7 +66,6 @@ export function getPlatformConfig(platformId) {
 }
 
 /**
- * Registry-driven analytics flags (Registry_arch.md).
  * @param {string} platformId
  * @param {string} module
  */

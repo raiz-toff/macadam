@@ -8,6 +8,7 @@ import { t } from '../utils/strings.js';
 import { store } from './store.js';
 import { initFAB, showDrawer, showModal, showToast } from '../ui/components.js';
 import { mountPlatformSwitcher } from '../modules/platforms/platforms.js';
+import { openGlobalSearchOverlay } from '../modules/search/search.js';
 import { renderShiftForm } from '../modules/shifts/shift-form.js';
 import { restoreShiftTimerFromLocalStorage, saveShift, stopShiftTimer, startShiftTimer } from '../modules/shifts/shifts.js';
 
@@ -85,6 +86,9 @@ export async function renderAppShell(root) {
         <div class="app-header-spacer"></div>
         <time id="header-clock" class="app-header-clock"></time>
         <span id="offline-indicator" class="offline-pill" role="status" aria-live="polite" data-online="true"></span>
+        <button type="button" class="app-header-search" data-open-global-search aria-label="${escapeAttr(t('app.navSearch'))}">
+          ${getIcon('search', 22, 'header-search-icon')}
+        </button>
         <a href="#/settings" class="app-header-settings" data-nav-route="#/settings" aria-label="${escapeAttr(t('app.navSettings'))}">
           ${getIcon('settings', 22, 'header-settings-icon')}
         </a>
@@ -99,7 +103,6 @@ export async function renderAppShell(root) {
           ${navLink('#/schedule', 'calendar', 'app.navSchedule')}
           ${navLink('#/goals', 'trophy', 'app.navGoals')}
           ${navLink('#/reports', 'bag', 'app.navReports')}
-          ${navLink('#/search', 'search', 'app.navSearch')}
           ${navLink('#/settings', 'settings', 'app.navSettings')}
         </nav>
         <main class="app-main" role="main" id="app-main">
@@ -138,6 +141,9 @@ export async function renderAppShell(root) {
   }
 
   bindOfflineIndicator();
+  root.querySelector('[data-open-global-search]')?.addEventListener('click', () => {
+    void openGlobalSearchOverlay();
+  });
   mountPlatformSwitcher(root.querySelector('#platform-tabs-slot'));
   await hydrateShiftTimerBar(root.querySelector('#shift-timer-bar'));
 

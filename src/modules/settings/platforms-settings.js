@@ -6,7 +6,7 @@ import { db, saveUser, getUser } from '../../core/db.js';
 import { store } from '../../core/store.js';
 import { t } from '../../utils/strings.js';
 import { showConfirm, showToast } from '../../ui/components.js';
-import { getPlatformConfig } from '../platforms/platform-config.js';
+import { getPlatformConfig } from '../../registry/platforms/terminology.js';
 import {
   addPlatform,
   deactivatePlatform,

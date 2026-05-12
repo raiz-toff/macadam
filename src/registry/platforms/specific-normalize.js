@@ -1,5 +1,5 @@
 /**
- * Registry-driven `platformSpecific` payload coercion (Registry_arch.md).
+ * Registry-driven `platformSpecific` payload coercion (docs/Registry_arch.md).
  * @see ../types.js — `PlatformSpecificFieldDef`
  */
 

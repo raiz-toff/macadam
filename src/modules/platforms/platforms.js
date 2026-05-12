@@ -7,7 +7,7 @@ import { db, saveUser, getUser } from '../../core/db.js';
 import { store } from '../../core/store.js';
 import { bus, PLATFORM_CHANGED } from '../../core/events.js';
 import { t } from '../../utils/strings.js';
-import { getPlatformConfig } from './platform-config.js';
+import { getPlatformConfig } from '../../registry/platforms/terminology.js';
 import { showModal } from '../../ui/components.js';
 
 const Sortable = /** @type {any} */ (SortableMod).default || SortableMod;

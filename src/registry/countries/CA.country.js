@@ -12,7 +12,6 @@ export default {
   ],
   hasCPP: true,
   hasHST: true,
-  mileageRateSource: 'CRA',
   tax: {
     taxInstallmentReminderDays: 10,
     hstOnboarding: true,
@@ -23,7 +22,6 @@ export default {
     hstRateWhenRegistered: 0.13,
     calcCpp: true,
     calcSeTax: false,
-    stdMileageChoice: 'CRA',
     regionLabel: 'province',
     secondaryEstimator: 'cpp',
     footnote: 'canada',

@@ -1,6 +1,6 @@
 /**
  * Notification type registry (Category B).
- * @see feature_modularity.md
+ * @see docs/feature_modularity.md
  */
 
 import backupOverdue from './backup_overdue.notification.js';
