@@ -26,6 +26,7 @@
  * @property {'km'|'mi'} distanceUnit
  * @property {'light'|'dark'|'auto'} theme
  * @property {{ shiftReminders: boolean; goalAlerts: boolean; taxReminders: boolean; weeklyDigest: boolean }} notificationPrefs
+ * @property {boolean} landingComplete After the welcome hero, step 0 shows country selection.
  */
 
 import { t } from '../../utils/strings.js';
@@ -35,6 +36,7 @@ import { ProvinceRegistry } from '../../registry/provinces/index.js';
 import { getWithholdingPresetPct } from '../../registry/tax/withholding-presets.js';
 import { resolveAvailablePlatformIds } from '../../registry/market/resolve.js';
 import { getPlatformColor, renderPlatformBadge } from '../../ui/components.js';
+import { getIcon } from '../../ui/icons.js';
 
 export const TOTAL_STEPS = 11;
 
@@ -125,11 +127,58 @@ export function defaultDraftFromUser(user) {
       weeklyDigest: false,
       ...(typeof u.notificationPrefs === 'object' && u.notificationPrefs ? /** @type {object} */ (u.notificationPrefs) : {}),
     },
+    landingComplete: false,
   };
 }
 
 function whyBlock(summaryKey, bodyKey) {
   return `<details class="onboarding-why"><summary class="onboarding-why-summary">${esc(t(summaryKey))}</summary><p class="onboarding-why-body">${esc(t(bodyKey))}</p></details>`;
+}
+
+/** @param {string} name @param {number} [size] */
+function landingIcon(name, size = 22) {
+  return getIcon(name, size, 'onboarding-landing-icon');
+}
+
+function renderOnboardingLanding() {
+  return `
+    <div class="onboarding-landing">
+      <header class="onboarding-landing-hero">
+        <p class="onboarding-landing-kicker">${esc(t('onboarding.landing.kicker'))}</p>
+        <h1 class="onboarding-landing-title">${esc(t('onboarding.landing.heroTitle'))}</h1>
+        <p class="onboarding-landing-lead">${esc(t('onboarding.landing.heroLead'))}</p>
+        <div class="onboarding-landing-actions">
+          <button type="button" class="btn btn-primary btn-lg onboarding-landing-primary" data-start-onboarding>${esc(t('onboarding.landing.startCta'))}</button>
+          <button type="button" class="btn btn-secondary btn-lg" data-demo>${esc(t('onboarding.tryDemo'))}</button>
+        </div>
+      </header>
+      <section class="onboarding-landing-section" aria-labelledby="ob-landing-how">
+        <h2 id="ob-landing-how" class="onboarding-landing-section-title">${esc(t('onboarding.landing.sectionTitle'))}</h2>
+        <ul class="onboarding-landing-grid">
+          <li class="onboarding-landing-card card card-raised">
+            <span class="onboarding-landing-card-icon" aria-hidden="true">${landingIcon('shield', 24)}</span>
+            <h3 class="onboarding-landing-card-title">${esc(t('onboarding.landing.featVaultTitle'))}</h3>
+            <p class="onboarding-landing-card-body">${esc(t('onboarding.landing.featVaultBody'))}</p>
+          </li>
+          <li class="onboarding-landing-card card card-raised">
+            <span class="onboarding-landing-card-icon" aria-hidden="true">${landingIcon('clock', 24)}</span>
+            <h3 class="onboarding-landing-card-title">${esc(t('onboarding.landing.featShiftsTitle'))}</h3>
+            <p class="onboarding-landing-card-body">${esc(t('onboarding.landing.featShiftsBody'))}</p>
+          </li>
+          <li class="onboarding-landing-card card card-raised">
+            <span class="onboarding-landing-card-icon" aria-hidden="true">${landingIcon('percent', 24)}</span>
+            <h3 class="onboarding-landing-card-title">${esc(t('onboarding.landing.featTaxTitle'))}</h3>
+            <p class="onboarding-landing-card-body">${esc(t('onboarding.landing.featTaxBody'))}</p>
+          </li>
+          <li class="onboarding-landing-card card card-raised">
+            <span class="onboarding-landing-card-icon" aria-hidden="true">${landingIcon('trophy', 24)}</span>
+            <h3 class="onboarding-landing-card-title">${esc(t('onboarding.landing.featGoalsTitle'))}</h3>
+            <p class="onboarding-landing-card-body">${esc(t('onboarding.landing.featGoalsBody'))}</p>
+          </li>
+        </ul>
+        <p class="onboarding-landing-footnote">${esc(t('onboarding.landing.footnote'))}</p>
+      </section>
+    </div>`;
 }
 
 /**
@@ -182,6 +231,9 @@ export function pruneSelectedPlatformsForRegion(draft, platformRows) {
 export function renderStepInner(step, draft, platformRows) {
   switch (step) {
     case 0: {
+      if (!draft.landingComplete) {
+        return renderOnboardingLanding();
+      }
       const cfg = getLocaleConfig(draft.country);
       const countries = CountryRegistry.getAll();
       return `
@@ -429,6 +481,7 @@ export function renderStepInner(step, draft, platformRows) {
 export function validateStep(step, draft, platformRows = []) {
   switch (step) {
     case 0: {
+      if (!draft.landingComplete) return null;
       const c = String(draft.country || '').trim().toUpperCase();
       return CountryRegistry.getAll().some((x) => x.id === c) ? null : 'onboarding.validation.country';
     }

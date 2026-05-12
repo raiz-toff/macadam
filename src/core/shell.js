@@ -86,7 +86,6 @@ function bindDemoModeBar(root) {
   bar.querySelector('[data-exit-demo]')?.addEventListener('click', async () => {
     try {
       await exitDemoToOnboardingStart();
-      showToast({ type: 'success', message: t('app.exitDemoToast'), duration: 4500 });
     } catch (e) {
       console.error('[macadam shell] exit demo failed', e);
       showToast({ type: 'error', message: t('errors.generic'), duration: 2800 });

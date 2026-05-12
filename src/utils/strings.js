@@ -36,7 +36,7 @@ export const strings = {
       skipToContent: 'Skip to main content',
       demoModeBanner: 'Demo mode — 2025 sample shifts and expenses (three platforms), not your real data.',
       exitDemo: 'Exit demo',
-      exitDemoToast: 'Demo ended. Sample shifts were removed — finish setup from the beginning to use Macadam with your own data.',
+      exitDemoToast: 'Vault cleared — reloading so you can set up Macadam from scratch.',
     },
     common: {
       save: 'Save',
@@ -80,6 +80,27 @@ export const strings = {
       placeholderBody:
         'Onboarding step copy is finalized in Phase 2 (orchestrator + steps.js). Keys exist so `t()` stays stable.',
       tryDemo: 'Try demo first',
+      landing: {
+        kicker: 'Local-first gig earnings',
+        heroTitle: 'Welcome to Macadam',
+        heroLead:
+          'Log shifts, watch your week, and get tax-ready snapshots — built for drivers who run multiple apps. Your vault lives on this device.',
+        startCta: 'Start onboarding',
+        sectionTitle: 'What Macadam does for you',
+        featVaultTitle: 'Private vault',
+        featVaultBody:
+          'No cloud login to get started. Your earnings history and exports stay in your browser until you choose to back them up.',
+        featShiftsTitle: 'Shift timeline',
+        featShiftsBody:
+          'Capture platforms, hours, distance, tips, and bonuses in one place so nothing slips through the cracks.',
+        featTaxTitle: 'Tax-minded totals',
+        featTaxBody:
+          'Set a withholding habit and see rough net figures so April does not feel like a surprise.',
+        featGoalsTitle: 'Goals & momentum',
+        featGoalsBody:
+          'Weekly targets, streaks, and simple charts help you pace yourself without spreadsheet fatigue.',
+        footnote: 'Setup takes a few minutes. Prefer a tour first? Try the demo — a full sample year you can clear anytime.',
+      },
       demoEnabled:
         'Demo vault opened — 2025 sample year: three platforms, weekday shifts, and expenses. Explore the app; adjust anything later in Settings.',
       resumeTitle: 'Continue setup?',
@@ -877,7 +898,7 @@ export const strings = {
         'Mode démo — quarts et dépenses fictifs pour 2025 (trois plateformes), pas vos vraies données.',
       exitDemo: 'Quitter la démo',
       exitDemoToast:
-        'Fin de la démo. Les quarts fictifs ont été supprimés — terminez la configuration depuis le début pour utiliser Macadam avec vos données.',
+        'Coffre effacé — rechargement pour recommencer la configuration de Macadam depuis le début.',
     },
     common: {
       save: 'Enregistrer',
@@ -921,6 +942,28 @@ export const strings = {
       placeholderBody:
         'Le texte détaillé de l’accueil arrive en phase 2 (orchestrateur + steps.js). Les clés restent stables pour `t()`.',
       tryDemo: 'Essayer la démo',
+      landing: {
+        kicker: 'Gains de gig, local d’abord',
+        heroTitle: 'Bienvenue sur Macadam',
+        heroLead:
+          'Enregistrez vos quarts, suivez la semaine et préparez vos totaux fiscaux — pensé pour les chauffeurs multi-applis. Votre coffre reste sur cet appareil.',
+        startCta: 'Commencer la configuration',
+        sectionTitle: 'Ce que Macadam vous apporte',
+        featVaultTitle: 'Coffre privé',
+        featVaultBody:
+          'Pas de compte cloud pour démarrer. Historique et exports restent dans le navigateur jusqu’à ce que vous sauvegardiez.',
+        featShiftsTitle: 'Fil des quarts',
+        featShiftsBody:
+          'Plateformes, heures, distance, pourboires et primes au même endroit pour ne rien oublier.',
+        featTaxTitle: 'Vision « impôts »',
+        featTaxBody:
+          'Un pourcentage de retenue à respecter et des indications de net pour éviter les mauvaises surprises.',
+        featGoalsTitle: 'Objectifs et régularité',
+        featGoalsBody:
+          'Cibles hebdomadaires, séries et graphiques simples pour tenir le rythme sans tableur.',
+        footnote:
+          'Quelques minutes pour tout régler. Envie d’un tour d’horizon ? Essayez la démo — une année d’exemple effaçable quand vous voulez.',
+      },
       demoEnabled:
         'Coffre démo ouvert — année 2025 fictive : trois plateformes, quarts en semaine et dépenses. Explorez l’app ; modifiez tout cela plus tard dans Paramètres.',
       resumeTitle: 'Poursuivre la configuration ?',

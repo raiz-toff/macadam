@@ -4,7 +4,7 @@
 
 import { db, saveUser, getUser, getAppState, setAppState } from '../../core/db.js';
 import { store } from '../../core/store.js';
-import { Router, updateOnboardingFocusClass } from '../../core/router.js';
+import { Router } from '../../core/router.js';
 import {
   bus,
   ONBOARDING_COMPLETE,
@@ -277,18 +277,20 @@ export async function clearSampleData() {
 }
 
 /**
- * Leave demo: remove sample shifts, discard onboarding session progress, mark setup incomplete, go to step 1.
+ * Leave demo: wipe the local IndexedDB vault, then hard-reload. Startup re-seeds a first-run DB and opens onboarding.
  */
 export async function exitDemoToOnboardingStart() {
-  await clearSampleData();
   clearSession();
-  await saveUser({ onboardingComplete: false, onboardingStep: 0 });
-  await store.refresh('user');
-  await store.refresh('demoMode');
-  await store.refresh('currentWeekEarnings');
-  await store.refresh('currentWeekGoal');
-  updateOnboardingFocusClass(true);
-  Router.navigate('#/onboarding');
+  try {
+    sessionStorage.clear();
+  } catch {
+    /* ignore */
+  }
+  await db.delete();
+  showToast({ type: 'success', message: t('app.exitDemoToast'), duration: 2600 });
+  window.location.hash = '#/onboarding';
+  await new Promise((r) => setTimeout(r, 400));
+  window.location.reload();
 }
 
 /**
@@ -411,17 +413,20 @@ async function persistWeeklyGoalRow(draft) {
  */
 function mergeDraft(saved, base) {
   if (!saved) return { ...base, step: 0 };
-  const { step, vehicles: sv, notificationPrefs: np, ...rest } = saved;
+  const { step, vehicles: sv, notificationPrefs: np, landingComplete: lc, ...rest } = saved;
   const vehicles = [
     { ...base.vehicles[0], ...(sv && sv[0] && typeof sv[0] === 'object' ? sv[0] : {}) },
     { ...base.vehicles[1], ...(sv && sv[1] && typeof sv[1] === 'object' ? sv[1] : {}) },
   ];
+  const st = typeof step === 'number' && step >= 0 && step < TOTAL_STEPS ? step : 0;
+  const landingDone = typeof lc === 'boolean' ? lc : st > 0;
   return {
     ...base,
     ...rest,
     vehicles,
     notificationPrefs: { ...base.notificationPrefs, ...(np && typeof np === 'object' ? np : {}) },
-    step: typeof step === 'number' && step >= 0 && step < TOTAL_STEPS ? step : 0,
+    step: st,
+    landingComplete: landingDone,
   };
 }
 
@@ -534,23 +539,30 @@ export async function mountOnboarding(root) {
   const render = () => {
     const step = draft.step;
     const inner = renderStepInner(step, draft, platformRows);
-    const isFirst = step === 0;
     const isLast = step === TOTAL_STEPS - 1;
+    const isLanding = step === 0 && !draft.landingComplete;
     const dots = Array.from({ length: TOTAL_STEPS }, (_, i) => `<span class="onboarding-dot${i === step ? ' is-active' : i < step ? ' is-done' : ''}" aria-hidden="true"></span>`).join('');
     const progressLabel = interpolate(t('onboarding.stepProgress'), { current: String(step + 1), total: String(TOTAL_STEPS) });
-
-    root.innerHTML = `
-      <div class="onboarding-flow" role="region" aria-label="${escAttr(t('views.onboarding.title'))}">
-        <div class="onboarding-top">
+    const topHtml = isLanding
+      ? ''
+      : `<div class="onboarding-top">
           <div class="onboarding-progress" aria-label="${escAttr(progressLabel)}">${dots}</div>
           <p class="onboarding-progress-text">${escHtml(progressLabel)}</p>
           <button type="button" class="btn btn-ghost btn-sm onboarding-demo" data-demo>${escHtml(t('onboarding.tryDemo'))}</button>
-        </div>
-        <div class="onboarding-body card card-raised" data-step-body>${inner}</div>
-        <div class="onboarding-nav" ${isLast ? 'hidden' : ''}>
-          <button type="button" class="btn btn-secondary" data-back ${isFirst ? 'disabled' : ''}>${escHtml(t('common.back'))}</button>
+        </div>`;
+    const navHtml =
+      isLanding || isLast
+        ? ''
+        : `<div class="onboarding-nav">
+          <button type="button" class="btn btn-secondary" data-back>${escHtml(t('common.back'))}</button>
           <button type="button" class="btn btn-primary" data-next>${escHtml(t('common.next'))}</button>
-        </div>
+        </div>`;
+
+    root.innerHTML = `
+      <div class="onboarding-flow${isLanding ? ' onboarding-flow--landing' : ''}" role="region" aria-label="${escAttr(t('views.onboarding.title'))}">
+        ${topHtml}
+        <div class="onboarding-body${isLanding ? ' onboarding-body--landing' : ' card card-raised'}" data-step-body>${inner}</div>
+        ${navHtml}
       </div>`;
 
     bindStep(root);
@@ -743,37 +755,53 @@ export async function mountOnboarding(root) {
       });
     }
 
-    el.querySelector('[data-demo]')?.addEventListener('click', async () => {
-      try {
-        readFormIntoDraft(el, draft);
-        if (!draft.selectedPlatforms.length) {
-          const filtered = filterPlatformRowsForOnboarding(draft, platformRows);
-          const fallback = filtered[0]?.id || platformRows[0]?.id || getDefaultSamplePlatformId();
-          draft.selectedPlatforms = [fallback];
+    body.querySelector('[data-start-onboarding]')?.addEventListener('click', () => {
+      draft.landingComplete = true;
+      persistSession(draft);
+      void saveUser({ onboardingStep: draft.step });
+      render();
+    });
+
+    el.querySelectorAll('[data-demo]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          readFormIntoDraft(el, draft);
+          if (!draft.selectedPlatforms.length) {
+            const filtered = filterPlatformRowsForOnboarding(draft, platformRows);
+            const fallback = filtered[0]?.id || platformRows[0]?.id || getDefaultSamplePlatformId();
+            draft.selectedPlatforms = [fallback];
+          }
+          await applyPlatformsFromDraft(draft);
+          await clearSampleData();
+          await loadSampleData();
+          await persistVehicles(draft);
+          await persistWeeklyGoalRow(draft);
+          const displayName = draft.displayName.trim() || t('onboarding.steps.completeFallbackName');
+          await saveUser(buildCompletedUserPatch(draft, displayName));
+          clearSession();
+          await store.refresh('user');
+          await store.refresh('platforms');
+          await store.refresh('currentWeekEarnings');
+          await store.refresh('currentWeekGoal');
+          bus.emit(ONBOARDING_COMPLETE, { displayName, demo: true });
+          showToast({ type: 'info', message: t('onboarding.demoEnabled'), duration: 5000 });
+          Router.navigate('#/dashboard');
+        } catch (e) {
+          console.error(e);
+          showToast({ type: 'error', message: t('errors.generic') });
         }
-        await applyPlatformsFromDraft(draft);
-        await clearSampleData();
-        await loadSampleData();
-        await persistVehicles(draft);
-        await persistWeeklyGoalRow(draft);
-        const displayName = draft.displayName.trim() || t('onboarding.steps.completeFallbackName');
-        await saveUser(buildCompletedUserPatch(draft, displayName));
-        clearSession();
-        await store.refresh('user');
-        await store.refresh('platforms');
-        await store.refresh('currentWeekEarnings');
-        await store.refresh('currentWeekGoal');
-        bus.emit(ONBOARDING_COMPLETE, { displayName, demo: true });
-        showToast({ type: 'info', message: t('onboarding.demoEnabled'), duration: 5000 });
-        Router.navigate('#/dashboard');
-      } catch (e) {
-        console.error(e);
-        showToast({ type: 'error', message: t('errors.generic') });
-      }
+      });
     });
 
     el.querySelector('[data-back]')?.addEventListener('click', () => {
       readFormIntoDraft(el, draft);
+      if (draft.step === 0 && draft.landingComplete) {
+        draft.landingComplete = false;
+        persistSession(draft);
+        void saveUser({ onboardingStep: draft.step });
+        render();
+        return;
+      }
       if (draft.step <= 0) return;
       draft.step -= 1;
       persistSession(draft);
@@ -783,6 +811,9 @@ export async function mountOnboarding(root) {
 
     el.querySelector('[data-next]')?.addEventListener('click', async () => {
       readFormIntoDraft(el, draft);
+      if (draft.step === 0 && !draft.landingComplete) {
+        return;
+      }
       if (draft.step === 6) {
         draft.monthlyGoal = Math.round(draft.weeklyGoal * 4.33);
         draft.annualGoal = Math.round(draft.weeklyGoal * 52);
