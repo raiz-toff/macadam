@@ -190,9 +190,13 @@ samp {
 /* Platform switcher tab bar */
 .platform-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: var(--space-1);
+  min-width: 0;
   padding: var(--space-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
   background: var(--color-surface-raised);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
@@ -281,7 +285,8 @@ samp {
 
 .platform-switcher--tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
   gap: var(--space-1);
   align-items: center;
 }
@@ -440,7 +445,22 @@ samp {
   /* Content-sized — avoid a stretched “empty” pill when only tabs on the left need width */
   flex: 0 1 auto;
   min-width: 0;
-  max-width: min(360px, 50vw);
+  max-width: min(480px, 55vw);
+}
+
+.app-header .platform-tabs {
+  padding-block: var(--space-1);
+}
+
+.app-header .platform-switcher--dropdown {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.app-header .platform-switcher-select {
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 100%;
 }
 
 .app-header-clock {

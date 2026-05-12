@@ -493,6 +493,8 @@ export const strings = {
       switcherMode: 'Header switcher style',
       switcherTabs: 'Tabs',
       switcherDropdown: 'Dropdown',
+      switcherTabsCompactHint:
+        'Tabs stay on one row (scroll sideways if needed). On narrow screens they switch to a dropdown automatically.',
       switcherModeSaved: 'Switcher preference saved.',
       weeklyGoal: 'Weekly goal ($)',
       monthlyGoal: 'Monthly goal ($)',
@@ -1352,6 +1354,8 @@ export const strings = {
       switcherMode: 'Style du sélecteur (en-tête)',
       switcherTabs: 'Onglets',
       switcherDropdown: 'Menu déroulant',
+      switcherTabsCompactHint:
+        'Les onglets restent sur une ligne (défilement horizontal si besoin). Sur petit écran, un menu déroulant s’affiche automatiquement.',
       switcherModeSaved: 'Préférence du sélecteur enregistrée.',
       weeklyGoal: 'Objectif hebdomadaire ($)',
       monthlyGoal: 'Objectif mensuel ($)',

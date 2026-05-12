@@ -55,6 +55,9 @@ export async function initPlatforms() {
   await store.refresh('platforms');
 }
 
+/** Viewport width at or below which “tabs” preference renders as the compact dropdown. */
+const PLATFORM_SWITCHER_COMPACT_MQ = '(max-width: 720px)';
+
 /**
  * @param {'tabs'|'dropdown'} mode
  * @param {{ activeRows: PlatformRow[]; selectedId: string }} opts
@@ -121,6 +124,14 @@ export function mountPlatformSwitcher(slot) {
   /** @type {{ destroy: () => void } | null} */
   let sortableInst = null;
 
+  /** @type {() => void} */
+  let removeMediaListener = () => {};
+
+  const mq =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia(PLATFORM_SWITCHER_COMPACT_MQ)
+      : null;
+
   const render = async () => {
     if (sortableInst) {
       try {
@@ -134,6 +145,7 @@ export function mountPlatformSwitcher(slot) {
     const user = store.get('user');
     const modeRaw = user && typeof user.platformSwitcherMode === 'string' ? user.platformSwitcherMode : 'tabs';
     const mode = modeRaw === 'dropdown' ? 'dropdown' : 'tabs';
+    const displayMode = mode === 'dropdown' || (mq && mq.matches) ? 'dropdown' : 'tabs';
     const activeRows = /** @type {PlatformRow[]} */ (store.get('platforms') || []);
     const count = activeRows.length;
 
@@ -151,7 +163,7 @@ export function mountPlatformSwitcher(slot) {
     const ids = new Set(activeRows.map((r) => String(r.id)));
     const selectedId = selectedRaw !== 'all' && !ids.has(selectedRaw) ? 'all' : selectedRaw === 'all' ? 'all' : selectedRaw;
 
-    slot.innerHTML = renderPlatformSwitcher(mode, { activeRows, selectedId });
+    slot.innerHTML = renderPlatformSwitcher(displayMode, { activeRows, selectedId });
 
     const applySelectionVisual = (id) => {
       slot.querySelectorAll('.platform-tab').forEach((el) => {
@@ -167,7 +179,7 @@ export function mountPlatformSwitcher(slot) {
       applySelectionVisual(next);
     };
 
-    if (mode === 'dropdown') {
+    if (displayMode === 'dropdown') {
       const sel = slot.querySelector('select');
       if (sel) {
         sel.addEventListener('change', () => {
@@ -214,12 +226,26 @@ export function mountPlatformSwitcher(slot) {
     void render();
   };
 
+  const onMediaChange = () => run();
+  if (mq && typeof mq.addEventListener === 'function') {
+    mq.addEventListener('change', onMediaChange);
+    removeMediaListener = () => {
+      mq.removeEventListener('change', onMediaChange);
+    };
+  } else if (mq && typeof mq.addListener === 'function') {
+    mq.addListener(onMediaChange);
+    removeMediaListener = () => {
+      mq.removeListener(onMediaChange);
+    };
+  }
+
   run();
   store.subscribe('platforms', run);
   store.subscribe('user', run);
   const off = bus.on(PLATFORM_CHANGED, run);
 
   const teardown = () => {
+    removeMediaListener();
     off();
     store.unsubscribe('platforms', run);
     store.unsubscribe('user', run);

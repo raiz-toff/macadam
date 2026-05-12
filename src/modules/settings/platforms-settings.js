@@ -48,6 +48,7 @@ export async function mountSettingsPlatforms(root) {
         <option value="tabs">${esc(t('platforms.switcherTabs'))}</option>
         <option value="dropdown">${esc(t('platforms.switcherDropdown'))}</option>
       </select>
+      <span class="text-xs text-secondary" style="margin-top:var(--space-1);display:block">${esc(t('platforms.switcherTabsCompactHint'))}</span>
     </label>`;
   root.appendChild(switcherRow);
 
