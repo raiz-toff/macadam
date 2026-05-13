@@ -10,16 +10,33 @@ function esc(v) {
     .replace(/"/g, '&quot;');
 }
 
+function stripFabQueryFromHash() {
+  try {
+    const raw = window.location.hash || '';
+    const qi = raw.indexOf('?');
+    if (qi === -1) return;
+    const base = raw.slice(0, qi);
+    const params = new URLSearchParams(raw.slice(qi + 1));
+    if (!params.has('fab')) return;
+    params.delete('fab');
+    const qs = params.toString();
+    const next = qs ? `${base}?${qs}` : base;
+    const path = `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState(null, '', `${path}${next}`);
+  } catch {
+    /* ignore */
+  }
+}
+
 /** @param {HTMLElement} root @param {Record<string, unknown>} ctx */
 export async function render(root, ctx) {
-  void ctx;
   const data = await getGoalDashboardData();
   const unlockedBadges = data.badges.filter((b) => b.unlockedAt);
   const activeChallenges = data.challenges.filter((c) => c.active);
   const goals = data.goals.filter((g) => g.active);
 
   root.innerHTML = `
-    <section class="goals-view">
+    <section class="goals-view" data-goals-root>
       <header class="card card-raised">
         <h1>${esc(t('goals.title'))}</h1>
         <p>${esc(t('goals.weeklyTarget'))}: ${esc(formatCurrency(data.thermometer.target))}</p>
@@ -97,4 +114,11 @@ export async function render(root, ctx) {
       </section>
     </section>
   `;
+
+  if (ctx && /** @type {{ fabQuickGoals?: boolean }} */ (ctx).fabQuickGoals) {
+    queueMicrotask(() => {
+      stripFabQueryFromHash();
+      root.querySelector('[data-goals-root]')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+  }
 }

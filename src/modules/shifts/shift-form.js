@@ -7,6 +7,7 @@ import { t } from '../../utils/strings.js';
 import { store } from '../../core/store.js';
 import { showNumericKeypad } from '../../ui/components.js';
 import { calcHourlyRate } from '../../utils/calculations.js';
+import { enumerateWeekDates } from '../../utils/date-range-presets.js';
 import { getPlatformConfig } from '../../registry/platforms/terminology.js';
 import { ShiftFieldRegistry } from '../../registry/shift-fields/index.js';
 
@@ -75,15 +76,17 @@ function distanceUnit() {
  * @property {Record<string, unknown>} [initial]
  * @property {string} [submitLabel]
  * @property {() => void} [onCancel]
+ * @property {boolean} [allowWeeklyEntry] When false, hides multi-day entry (e.g. edit mode).
  */
 
 /**
  * @returns {{ el: HTMLElement, getValue: () => Record<string, unknown>, setValue: (patch: Record<string, unknown>) => void }}
  * */
 export function renderShiftForm(opts = {}) {
-  const { mode = 'full', initial = {}, submitLabel = t('common.save'), onCancel } = opts;
+  const { mode = 'full', initial = {}, submitLabel = t('common.save'), onCancel, allowWeeklyEntry = true } = opts;
 
   const user = store.get('user');
+  const weekStartDay = Number(user?.locale?.weekStartDay ?? 0);
   const activePlatforms = /** @type {Array<{ id: string, name?: string, active?: boolean }>} */ (store.get('platforms') || []);
   const primary = user && typeof user.primaryPlatform === 'string' ? user.primaryPlatform : null;
   const defaultPlatformId =
@@ -94,6 +97,7 @@ export function renderShiftForm(opts = {}) {
         : activePlatforms[0]?.id || 'other';
 
   const dateVal = typeof initial.date === 'string' && initial.date ? String(initial.date) : ymdToday();
+  const weekAnchorSeed = dateVal;
   const startTimeVal = typeof initial.startTime === 'string' ? String(initial.startTime) : '';
   const endTimeVal = typeof initial.endTime === 'string' ? String(initial.endTime) : '';
 
@@ -111,7 +115,27 @@ export function renderShiftForm(opts = {}) {
       </div>
 
       <div class="shifts-form-grid">
-        <label class="field">
+        ${
+          allowWeeklyEntry
+            ? `<div class="field field--span2 shifts-entry-scope" role="radiogroup" aria-label="${escapeAttr(t('shifts.entryScopeLabel'))}">
+          <span class="field-label">${escapeHtml(t('shifts.entryScopeLabel'))}</span>
+          <div class="shifts-segmented">
+            <label class="shifts-segmented-item"><input type="radio" name="entryScope" value="day" checked /><span>${escapeHtml(t('shifts.entryOneDay'))}</span></label>
+            <label class="shifts-segmented-item"><input type="radio" name="entryScope" value="week" /><span>${escapeHtml(t('shifts.entryWeekDays'))}</span></label>
+          </div>
+        </div>
+        <div class="field field--span2 shifts-week-panel is-hidden" data-week-panel>
+          <label class="field">
+            <span class="field-label">${escapeHtml(t('shifts.weekContaining'))}</span>
+            <input class="input" name="weekAnchor" type="date" value="${escapeAttr(weekAnchorSeed)}" />
+          </label>
+          <div class="shifts-weekday-row" data-week-day-row role="group" aria-label="${escapeAttr(t('shifts.weekDaysHint'))}"></div>
+          <p class="field-hint">${escapeHtml(t('shifts.weekSaveHint'))}</p>
+        </div>`
+            : ''
+        }
+
+        <label class="field" data-day-date-wrap>
           <span class="field-label">${escapeHtml(t('shifts.platform'))}</span>
           <select class="input" name="platformId" required>
             ${activePlatforms
@@ -266,6 +290,10 @@ export function renderShiftForm(opts = {}) {
 
   const platformSel = /** @type {HTMLSelectElement | null} */ (wrapper.querySelector('select[name="platformId"]'));
   const dateEl = /** @type {HTMLInputElement | null} */ (wrapper.querySelector('input[name="date"]'));
+  const weekAnchorEl = /** @type {HTMLInputElement | null} */ (
+    allowWeeklyEntry ? wrapper.querySelector('input[name="weekAnchor"]') : null
+  );
+  const weekRow = /** @type {HTMLElement | null} */ (allowWeeklyEntry ? wrapper.querySelector('[data-week-day-row]') : null);
   const startEl = /** @type {HTMLInputElement | null} */ (wrapper.querySelector('input[name="startTime"]'));
   const endEl = /** @type {HTMLInputElement | null} */ (wrapper.querySelector('input[name="endTime"]'));
   const grossEl = /** @type {HTMLInputElement | null} */ (wrapper.querySelector('input[name="gross"]'));
@@ -295,6 +323,41 @@ export function renderShiftForm(opts = {}) {
   const liveDuration = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-live-duration]'));
   const liveHourly = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-live-hourly]'));
   const liveVehicle = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-live-vehicle]'));
+
+  function renderWeekToggles() {
+    if (!weekRow || !allowWeeklyEntry) return;
+    const anchor = weekAnchorEl?.value || ymdToday();
+    const dates = enumerateWeekDates(anchor, weekStartDay);
+    weekRow.innerHTML = dates
+      .map((iso, i) => {
+        const d = new Date(`${iso}T12:00:00`);
+        const shortDow = d.toLocaleDateString(undefined, { weekday: 'short' });
+        return `<label class="shifts-weekday-chk"><input type="checkbox" data-week-day-index="${i}" checked aria-label="${escapeAttr(iso)}" /><span class="shifts-weekday-chk-dow">${escapeHtml(shortDow)}</span><span class="shifts-weekday-chk-date">${escapeHtml(iso.slice(5))}</span></label>`;
+      })
+      .join('');
+    weekRow.querySelectorAll('input[type="checkbox"]').forEach((el) => el.addEventListener('change', () => recomputeLive()));
+  }
+
+  function applyEntryScope() {
+    if (!allowWeeklyEntry || !dateEl) return;
+    const scope = wrapper.querySelector('input[name="entryScope"]:checked')?.value || 'day';
+    const weekPanel = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-week-panel]'));
+    const dayWrap = /** @type {HTMLElement | null} */ (wrapper.querySelector('[data-day-date-wrap]'));
+    if (scope === 'week') {
+      weekPanel?.classList.remove('is-hidden');
+      dayWrap?.classList.add('is-hidden');
+      dateEl.removeAttribute('required');
+      if (weekAnchorEl && !weekAnchorEl.value) weekAnchorEl.value = dateEl.value || ymdToday();
+      weekAnchorEl?.setAttribute('required', '');
+      renderWeekToggles();
+    } else {
+      weekPanel?.classList.add('is-hidden');
+      dayWrap?.classList.remove('is-hidden');
+      dateEl.setAttribute('required', '');
+      weekAnchorEl?.removeAttribute('required');
+    }
+    recomputeLive();
+  }
 
   const unit = distanceUnit();
   if (distanceHint) distanceHint.textContent = unit === 'mi' ? t('shifts.unitMiles') : t('shifts.unitKm');
@@ -337,7 +400,15 @@ export function renderShiftForm(opts = {}) {
   }
 
   function recomputeLive() {
-    const date = dateEl?.value || ymdToday();
+    let date = dateEl?.value || ymdToday();
+    if (allowWeeklyEntry) {
+      const scope = wrapper.querySelector('input[name="entryScope"]:checked')?.value;
+      if (scope === 'week') {
+        const anchor = weekAnchorEl?.value || '';
+        const dates = anchor ? enumerateWeekDates(anchor, weekStartDay) : [];
+        date = dates[0] || ymdToday();
+      }
+    }
     const start = startEl?.value || '';
     const end = endEl?.value || '';
     const minutesFromFields = minutesFromTimes(date, start, end);
@@ -389,7 +460,25 @@ export function renderShiftForm(opts = {}) {
   wireKeypad('tips', tipsEl);
   wireKeypad('bonus', bonusEl);
 
-  const onInput = () => recomputeLive();
+  const onInput = () => {
+    if (allowWeeklyEntry && dateEl && weekAnchorEl) {
+      const scope = wrapper.querySelector('input[name="entryScope"]:checked')?.value;
+      if (scope === 'day' && dateEl.value) weekAnchorEl.value = dateEl.value;
+    }
+    recomputeLive();
+  };
+
+  if (allowWeeklyEntry) {
+    renderWeekToggles();
+    weekAnchorEl?.addEventListener('input', () => {
+      renderWeekToggles();
+      recomputeLive();
+    });
+    wrapper.addEventListener('change', (e) => {
+      const tg = /** @type {HTMLElement | null} */ (e.target);
+      if (tg && tg.matches && tg.matches('input[name="entryScope"]')) applyEntryScope();
+    });
+  }
 
   function renderPlatformSpecificFields(pid) {
     if (!psFields || !psWrap) return;
@@ -612,9 +701,24 @@ export function renderShiftForm(opts = {}) {
     recomputeLive();
   };
 
+  const getWeekSaveDates = () => {
+    if (!allowWeeklyEntry) return null;
+    const scope = wrapper.querySelector('input[name="entryScope"]:checked')?.value;
+    if (scope !== 'week') return null;
+    const anchor = weekAnchorEl?.value || '';
+    if (!anchor) return [];
+    const dates = enumerateWeekDates(anchor, weekStartDay);
+    const out = [];
+    dates.forEach((iso, i) => {
+      const cb = weekRow?.querySelector(`input[data-week-day-index="${i}"]`);
+      if (cb && /** @type {HTMLInputElement} */ (cb).checked) out.push(iso);
+    });
+    return out;
+  };
+
   // Leave submit handling to parent (view) — it can attach listener on `form`.
   if (form) form.noValidate = false;
 
-  return { el: wrapper, getValue, setValue };
+  return { el: wrapper, getValue, setValue, getWeekSaveDates };
 }
 

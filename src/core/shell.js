@@ -5,6 +5,7 @@
 import { getIcon } from '../ui/icons.js';
 import { t } from '../utils/strings.js';
 import { store } from './store.js';
+import { Router } from './router.js';
 import { initFAB, showDrawer, showModal, showToast } from '../ui/components.js';
 import { mountPlatformSwitcher } from '../modules/platforms/platforms.js';
 import { openGlobalSearchOverlay } from '../modules/search/search.js';
@@ -194,36 +195,64 @@ export async function renderAppShell(root) {
     if (av) av.textContent = initialsFromUser(store.get('user'));
   });
 
-  /* F11: mount FAB with real shift handlers (quick-add + end shift timer). */
+  function openQuickShiftDrawer() {
+    const drawer = showDrawer({
+      title: t('shifts.addShift'),
+      content: '',
+      snapPoints: [0.65, 0.95],
+    });
+    const formApi = renderShiftForm({
+      mode: 'quick',
+      initial: {},
+      onCancel: () => drawer.close(),
+    });
+    drawer.body.textContent = '';
+    drawer.body.appendChild(formApi.el);
+    const formEl = formApi.el.querySelector('form');
+    if (formEl) {
+      formEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          await saveShift(formApi.getValue());
+          showToast({ type: 'success', message: t('shifts.savedToast'), duration: 1800 });
+          drawer.close();
+        } catch (err) {
+          console.warn('[macadam shifts] FAB save failed', err);
+          showToast({ type: 'error', message: t('errors.generic'), duration: 2200 });
+        }
+      });
+    }
+  }
+
+  /* F11: mount FAB — speed dial (shift / expense / goals / schedule) + end-shift timer. */
   initFAB({
-    onAdd: () => {
-      const drawer = showDrawer({
-        title: t('shifts.addShift'),
-        content: '',
-        snapPoints: [0.65, 0.95],
-      });
-      const formApi = renderShiftForm({
-        mode: 'quick',
-        initial: {},
-        onCancel: () => drawer.close(),
-      });
-      drawer.body.textContent = '';
-      drawer.body.appendChild(formApi.el);
-      const formEl = formApi.el.querySelector('form');
-      if (formEl) {
-        formEl.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          try {
-            await saveShift(formApi.getValue());
-            showToast({ type: 'success', message: t('shifts.savedToast'), duration: 1800 });
-            drawer.close();
-          } catch (err) {
-            console.warn('[macadam shifts] FAB save failed', err);
-            showToast({ type: 'error', message: t('errors.generic'), duration: 2200 });
-          }
-        });
-      }
-    },
+    addMenu: [
+      {
+        id: 'shift',
+        labelKey: 'ui.fab.addShift',
+        icon: 'calendar',
+        onSelect: () => openQuickShiftDrawer(),
+      },
+      {
+        id: 'expense',
+        labelKey: 'ui.fab.addExpense',
+        icon: 'receipt',
+        onSelect: () => Router.navigate('expenses?fab=expense'),
+      },
+      {
+        id: 'goals',
+        labelKey: 'ui.fab.addGoals',
+        icon: 'goal',
+        onSelect: () => Router.navigate('goals?fab=goals'),
+      },
+      {
+        id: 'schedule',
+        labelKey: 'ui.fab.addSchedule',
+        icon: 'clock',
+        onSelect: () => Router.navigate('schedule?fab=schedule'),
+      },
+    ],
+    onAdd: () => openQuickShiftDrawer(),
     onEndShift: async () => {
       try {
         const prefill = await stopShiftTimer();

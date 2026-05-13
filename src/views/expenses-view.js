@@ -10,7 +10,8 @@ function isExpensesRouteHash(h) {
 
 /** @param {HTMLElement} root @param {Record<string, unknown>} ctx */
 export async function render(root, ctx) {
-  void ctx;
+  let pendingFabExpense = Boolean(ctx && /** @type {{ fabQuickExpense?: boolean }} */ (ctx).fabQuickExpense);
+
   const prev = teardownByRoot.get(root);
   if (typeof prev === 'function') prev();
 
@@ -24,7 +25,9 @@ export async function render(root, ctx) {
       destroyLedger();
       destroyLedger = null;
     }
-    destroyLedger = await renderExpensesView(root);
+    const passCtx = pendingFabExpense ? { fabQuickExpense: true } : {};
+    pendingFabExpense = false;
+    destroyLedger = await renderExpensesView(root, passCtx);
   };
 
   await runLedger();

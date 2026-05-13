@@ -11,3 +11,14 @@ export const DEMO_SAMPLE_DATA_YEAR = 2025;
 export function getDemoAnalyticsAnchorDate() {
   return new Date(DEMO_SAMPLE_DATA_YEAR, 9, 15, 12, 0, 0, 0);
 }
+
+/**
+ * True when [start, end] overlaps the demo sample calendar year (inclusive on YYYY-MM-DD strings).
+ * @param {string} start
+ * @param {string} end
+ */
+export function demoSampleRangeOverlaps(start, end) {
+  const sy = `${DEMO_SAMPLE_DATA_YEAR}-01-01`;
+  const ey = `${DEMO_SAMPLE_DATA_YEAR}-12-31`;
+  return !(String(end) < sy || String(start) > ey);
+}

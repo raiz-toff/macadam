@@ -600,10 +600,18 @@ samp {
   font-size: var(--text-sm);
 }
 
-.toast-host,
-.modal-host {
+.toast-host {
   position: relative;
   z-index: 1;
+}
+
+/*
+ * Above `.drawer-panel` (calc(var(--z-modal) + 1)) so `showModal` — e.g. numeric keypad
+ * from the FAB (+) quick-add drawer — stacks on top of the drawer, not behind it.
+ */
+.modal-host {
+  position: relative;
+  z-index: calc(var(--z-modal) + 20);
 }
 
 .route-placeholder {
@@ -622,7 +630,7 @@ body.macadam-onboarding-focus .bottom-nav {
   display: none !important;
 }
 
-body.macadam-onboarding-focus #macadam-fab {
+body.macadam-onboarding-focus #macadam-fab-stack {
   display: none !important;
 }
 

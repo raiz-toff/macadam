@@ -379,6 +379,106 @@ export async function getFinancialOverviewForRange(startDate, endDate, activePla
   };
 }
 
+/**
+ * Per-calendar-month totals within [startDate, endDate], matching dashboard platform scope.
+ * @param {string} startDate YYYY-MM-DD
+ * @param {string} endDate YYYY-MM-DD
+ * @param {string} [activePlatformId='all']
+ * @returns {Promise<{ rows: { period: string; earnings: number; expenses: number; outOfPocket: number; net: number; hours: number; efficiency: number }[]; totals: { earnings: number; expenses: number; outOfPocket: number; net: number; hours: number; avgPerHr: number; effectivePerHr: number } }>}
+ */
+export async function getFinancialMonthlyBreakdown(startDate, endDate, activePlatformId = 'all') {
+  const emptyTotals = { earnings: 0, expenses: 0, outOfPocket: 0, net: 0, hours: 0, avgPerHr: 0, effectivePerHr: 0 };
+  if (!startDate || !endDate || String(startDate) > String(endDate)) {
+    return { rows: [], totals: emptyTotals };
+  }
+
+  const pid = String(activePlatformId ?? 'all') === 'all' ? undefined : String(activePlatformId);
+  const shifts = filterShiftsByActivePlatform(await listShiftsBetween(startDate, endDate), activePlatformId);
+  const expenseRows = await db.expenses
+    .filter(
+      (e) =>
+        e.deletedAt == null &&
+        String(e.date || '') >= startDate &&
+        String(e.date || '') <= endDate &&
+        (pid ? String(e.platformId || '') === pid : true),
+    )
+    .toArray();
+
+  /** @type {Map<string, Record<string, unknown>[]>} */
+  const shiftsByMonth = new Map();
+  for (const s of shifts) {
+    const d = String(s.date || '');
+    if (d.length < 7) continue;
+    const key = d.slice(0, 7);
+    if (!shiftsByMonth.has(key)) shiftsByMonth.set(key, []);
+    shiftsByMonth.get(key)?.push(s);
+  }
+
+  /** @type {Map<string, { biz: number; oop: number }>} */
+  const expenseByMonth = new Map();
+  for (const e of expenseRows) {
+    const d = String(e.date || '');
+    if (d.length < 7) continue;
+    const key = d.slice(0, 7);
+    const amt = num(e.amount);
+    const bp = num(e.businessPct, 100);
+    const cur = expenseByMonth.get(key) || { biz: 0, oop: 0 };
+    cur.biz += amt * (bp / 100);
+    cur.oop += amt * ((100 - bp) / 100);
+    expenseByMonth.set(key, cur);
+  }
+
+  /** @type {string[]} */
+  const monthKeys = [];
+  const start = new Date(`${String(startDate).slice(0, 7)}-01T12:00:00`);
+  const endCap = new Date(`${String(endDate).slice(0, 7)}-01T12:00:00`);
+  for (let d = new Date(start); d <= endCap; d.setMonth(d.getMonth() + 1)) {
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    monthKeys.push(`${y}-${String(m).padStart(2, '0')}`);
+  }
+
+  /** @type {{ period: string; earnings: number; expenses: number; outOfPocket: number; net: number; hours: number; efficiency: number }[]} */
+  const rows = [];
+  let sumEarn = 0;
+  let sumExp = 0;
+  let sumOop = 0;
+  let sumNet = 0;
+  let sumHours = 0;
+
+  for (const period of monthKeys) {
+    const seg = aggregateShiftsLight(shiftsByMonth.get(period) || []);
+    const ex = expenseByMonth.get(period) || { biz: 0, oop: 0 };
+    const earnings = seg.gross;
+    const expenses = ex.biz / 100;
+    const outOfPocket = ex.oop / 100;
+    const net = earnings - expenses;
+    const hours = seg.minutes / 60;
+    const efficiency = hours > 0 ? net / hours : 0;
+    rows.push({ period, earnings, expenses, outOfPocket, net, hours, efficiency });
+    sumEarn += earnings;
+    sumExp += expenses;
+    sumOop += outOfPocket;
+    sumNet += net;
+    sumHours += hours;
+  }
+
+  const avgPerHr = sumHours > 0 ? sumEarn / sumHours : 0;
+  const effectivePerHr = sumHours > 0 ? sumNet / sumHours : 0;
+  return {
+    rows,
+    totals: {
+      earnings: sumEarn,
+      expenses: sumExp,
+      outOfPocket: sumOop,
+      net: sumNet,
+      hours: sumHours,
+      avgPerHr,
+      effectivePerHr,
+    },
+  };
+}
+
 export async function getDailySummary(date) {
   const shifts = await listShiftsBetween(date, date);
   const rows = await hydrateDerived(shifts);

@@ -23,6 +23,24 @@ function ymd(d) {
   return `${y}-${m}-${day}`;
 }
 
+function stripFabQueryFromHash() {
+  try {
+    const raw = window.location.hash || '';
+    const qi = raw.indexOf('?');
+    if (qi === -1) return;
+    const base = raw.slice(0, qi);
+    const params = new URLSearchParams(raw.slice(qi + 1));
+    if (!params.has('fab')) return;
+    params.delete('fab');
+    const qs = params.toString();
+    const next = qs ? `${base}?${qs}` : base;
+    const path = `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState(null, '', `${path}${next}`);
+  } catch {
+    /* ignore */
+  }
+}
+
 function parseYmd(s) {
   if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
   const d = new Date(`${s}T00:00:00`);
@@ -366,8 +384,9 @@ function renderScatter(model) {
 
 /**
  * @param {HTMLElement} root
+ * @param {Record<string, unknown>} [ctx]
  */
-export async function renderScheduleModule(root) {
+export async function renderScheduleModule(root, ctx = {}) {
   const model = await loadScheduleModel(new Date());
   root.innerHTML = `
     <section class="schedule-view">
@@ -413,7 +432,7 @@ export async function renderScheduleModule(root) {
     const next = Array.isArray(raw) ? [...raw] : [];
     next.push({ date, startTime, endTime, platformId });
     await setAppState(APP_STATE_KEYS.planning, next.slice(-60));
-    await renderScheduleModule(root);
+    await renderScheduleModule(root, {});
   });
 
   root.querySelector('[data-action="mark-off-day"]')?.addEventListener('click', async () => {
@@ -424,6 +443,15 @@ export async function renderScheduleModule(root) {
     if (set.has(date)) set.delete(date);
     else set.add(date);
     await setAppState(APP_STATE_KEYS.offDays, [...set].sort());
-    await renderScheduleModule(root);
+    await renderScheduleModule(root, {});
   });
+
+  if (ctx && /** @type {{ fabQuickSchedule?: boolean }} */ (ctx).fabQuickSchedule) {
+    queueMicrotask(() => {
+      stripFabQueryFromHash();
+      const btn = root.querySelector('[data-action="add-plan"]');
+      btn?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      btn?.focus({ preventScroll: true });
+    });
+  }
 }

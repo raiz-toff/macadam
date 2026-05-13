@@ -66,6 +66,18 @@ function buildContext(row) {
   if (row.hash === '#/shifts/new') ctx.openNew = true;
   if (row.hash === '#/analytics/week') ctx.analyticsPeriod = 'week';
   if (row.hash === '#/settings/about') ctx.settingsTab = 'about';
+  try {
+    const raw = window.location.hash || '';
+    const qi = raw.indexOf('?');
+    if (qi === -1) return ctx;
+    const params = new URLSearchParams(raw.slice(qi + 1));
+    const fab = params.get('fab');
+    if (fab === 'expense') ctx.fabQuickExpense = true;
+    if (fab === 'schedule') ctx.fabQuickSchedule = true;
+    if (fab === 'goals') ctx.fabQuickGoals = true;
+  } catch {
+    /* ignore malformed query */
+  }
   return ctx;
 }
 

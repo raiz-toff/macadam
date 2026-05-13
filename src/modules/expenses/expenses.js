@@ -66,6 +66,25 @@ function categoryPillTone(catId) {
   return Math.abs(h) % 6;
 }
 
+/** Remove `fab` query flag from the current hash (used after FAB deep-links). */
+function stripFabQueryFromHash() {
+  try {
+    const raw = window.location.hash || '';
+    const qi = raw.indexOf('?');
+    if (qi === -1) return;
+    const base = raw.slice(0, qi);
+    const params = new URLSearchParams(raw.slice(qi + 1));
+    if (!params.has('fab')) return;
+    params.delete('fab');
+    const qs = params.toString();
+    const next = qs ? `${base}?${qs}` : base;
+    const path = `${window.location.pathname}${window.location.search}`;
+    window.history.replaceState(null, '', `${path}${next}`);
+  } catch {
+    /* ignore */
+  }
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -621,9 +640,10 @@ async function listExpenses(filters = {}, sort = { key: 'date', dir: 'desc' }) {
  * Full-screen expense ledger (filters + table + modals). Caller must invoke the returned
  * teardown when the host `root` is reused (e.g. route change) so listeners and bus subs are removed.
  * @param {HTMLElement} root
+ * @param {Record<string, unknown>} [ctx]
  * @returns {Promise<() => void>}
  */
-export async function renderExpensesView(root) {
+export async function renderExpensesView(root, ctx = {}) {
   const categories = await getAllCategories();
   const user = store.get('user');
   const platformRows = (store.get('platforms') || []).map((p) => ({ id: String(p.id), name: String(p.name || p.id) }));
@@ -1053,6 +1073,25 @@ export async function renderExpensesView(root) {
     await refreshRecurringRows();
   }
 
+  async function runFabQuickExpenseFlow() {
+    stripFabQueryFromHash();
+    try {
+      const u = store.get('user');
+      const pr = (store.get('platforms') || []).map((p) => ({ id: String(p.id), name: String(p.name || p.id) }));
+      const cat = await getAllCategories();
+      await openExpenseEditor({
+        categories: cat,
+        platformRows: pr,
+        isHstRegistered: Boolean(u?.hstRegistered),
+        currencySymbol: u?.locale?.currencySymbol || '$',
+        onSave: saveExpense,
+      });
+      await refreshAllPanels();
+    } catch (err) {
+      console.warn('[macadam expenses] quick add from FAB failed', err);
+    }
+  }
+
   const ac = new AbortController();
   const { signal } = ac;
 
@@ -1161,6 +1200,10 @@ export async function renderExpensesView(root) {
   });
 
   await refreshAllPanels();
+
+  if (ctx && /** @type {{ fabQuickExpense?: boolean }} */ (ctx).fabQuickExpense) {
+    queueMicrotask(() => void runFabQuickExpenseFlow());
+  }
 
   return () => {
     destroyChart(/** @type {HTMLCanvasElement | null} */ (root.querySelector('[data-chart="by-category"]')));

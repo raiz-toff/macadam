@@ -75,6 +75,14 @@ function getToastHost() {
   return document.getElementById('toast-container') || document.body;
 }
 
+/** @param {string} name CSS custom property including leading `--` */
+function parseCssIntCustomProp(name, fallback) {
+  if (typeof document === 'undefined') return fallback;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function reducedMotionEnabled() {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -221,6 +229,9 @@ export function showModal(opts = {}) {
   }
 
   backdrop.appendChild(dialog);
+  const zModalBase = parseCssIntCustomProp('--z-modal', 200);
+  backdrop.style.zIndex = String(zModalBase + modalStack.length);
+
   host.appendChild(backdrop);
 
   if (modalStack.length === 0) {
@@ -669,41 +680,155 @@ export function showNotifyCard(opts) {
 }
 
 /* ------------------------------------------------------------------------- */
-/* FAB                                                                       */
+/* FAB + speed-dial quick actions                                            */
 /* ------------------------------------------------------------------------- */
 
 /**
+ * @typedef {Object} FabMenuItem
+ * @property {string} id
+ * @property {string} [labelKey] i18n key (passed to `t()`)
+ * @property {string} [label] literal label (overrides labelKey)
+ * @property {string} icon icon name for `getIcon`
+ * @property {() => void} onSelect
+ */
+
+/**
  * @typedef {Object} FabOptions
- * @property {() => void} [onAdd]
+ * @property {() => void} [onAdd] legacy single-tap when `addMenu` is empty
  * @property {() => void} [onEndShift]
+ * @property {FabMenuItem[]} [addMenu] when non-empty, + opens a vertical speed dial
  */
 
 /** @type {HTMLButtonElement | null} */
 let fabEl = null;
+/** @type {HTMLElement | null} */
+let fabStackEl = null;
+/** @type {HTMLDivElement | null} */
+let fabBackdropEl = null;
+/** @type {HTMLDivElement | null} */
+let fabMenuEl = null;
 let fabState = /** @type {'add' | 'end'} */ ('add');
 /** @type {FabOptions} */
 let fabHandlers = {};
+/** @type {FabMenuItem[]} */
+let fabAddMenu = [];
+let fabMenuOpen = false;
+/** @type {((ev: KeyboardEvent) => void) | null} */
+let fabMenuKeyHandler = null;
+
+function closeFabMenu() {
+  if (!fabMenuOpen) return;
+  fabMenuOpen = false;
+  if (fabBackdropEl) {
+    fabBackdropEl.hidden = true;
+    fabBackdropEl.setAttribute('aria-hidden', 'true');
+  }
+  if (fabMenuEl) {
+    fabMenuEl.hidden = true;
+    fabMenuEl.classList.remove('is-open');
+  }
+  if (fabEl && fabState === 'add') {
+    fabEl.setAttribute('aria-expanded', 'false');
+  }
+  if (fabMenuKeyHandler && typeof document !== 'undefined') {
+    document.removeEventListener('keydown', fabMenuKeyHandler);
+    fabMenuKeyHandler = null;
+  }
+}
+
+function toggleFabMenu() {
+  if (!fabMenuEl || !fabBackdropEl || fabState !== 'add') return;
+  if (!fabAddMenu.length) {
+    fabHandlers.onAdd?.();
+    return;
+  }
+  fabMenuOpen = !fabMenuOpen;
+  if (fabMenuOpen) {
+    fabBackdropEl.hidden = false;
+    fabBackdropEl.setAttribute('aria-hidden', 'false');
+    fabMenuEl.hidden = false;
+    fabMenuEl.classList.add('is-open');
+    if (fabEl) fabEl.setAttribute('aria-expanded', 'true');
+    if (typeof document !== 'undefined') {
+      fabMenuKeyHandler = (ev) => {
+        if (ev.key === 'Escape') {
+          ev.preventDefault();
+          closeFabMenu();
+        }
+      };
+      document.addEventListener('keydown', fabMenuKeyHandler);
+    }
+  } else {
+    closeFabMenu();
+  }
+}
+
+function rebuildFabMenu() {
+  if (!fabMenuEl) return;
+  fabMenuEl.textContent = '';
+  for (let i = 0; i < fabAddMenu.length; i++) {
+    const item = fabAddMenu[i];
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'macadam-fab-menu-item';
+    btn.dataset.fabMenuItem = item.id;
+    btn.setAttribute('role', 'menuitem');
+    btn.style.setProperty('--fab-i', String(i));
+    const lab = item.label || (item.labelKey ? t(item.labelKey) : item.id);
+    btn.setAttribute('aria-label', lab);
+    btn.innerHTML = `${getIcon(item.icon, 20, 'macadam-fab-menu-item-icon')}<span class="macadam-fab-menu-item-label">${escapeHtml(lab)}</span>`;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeFabMenu();
+      try {
+        item.onSelect?.();
+      } catch (err) {
+        console.error('[macadam fab] menu item failed', err);
+      }
+    });
+    fabMenuEl.appendChild(btn);
+  }
+}
 
 function applyFabMode(mode) {
   if (!fabEl) return;
+  closeFabMenu();
   fabState = mode;
   if (mode === 'end') {
     fabEl.dataset.mode = 'end';
     fabEl.classList.add('macadam-fab--end');
     fabEl.setAttribute('aria-label', t('ui.fab.endShift'));
+    fabEl.removeAttribute('aria-haspopup');
+    fabEl.setAttribute('aria-expanded', 'false');
     fabEl.innerHTML = getIcon('clock', 22, 'macadam-fab-icon') + `<span class="macadam-fab-label">${escapeHtml(t('ui.fab.endShift'))}</span>`;
   } else {
     fabEl.dataset.mode = 'add';
     fabEl.classList.remove('macadam-fab--end');
-    fabEl.setAttribute('aria-label', t('ui.fab.addShift'));
+    fabEl.setAttribute('aria-label', fabAddMenu.length ? t('ui.fab.openQuickActions') : t('ui.fab.addShift'));
+    if (fabAddMenu.length) {
+      fabEl.setAttribute('aria-haspopup', 'true');
+      fabEl.setAttribute('aria-expanded', 'false');
+      fabEl.setAttribute('aria-controls', 'macadam-fab-menu');
+    } else {
+      fabEl.removeAttribute('aria-haspopup');
+      fabEl.removeAttribute('aria-expanded');
+      fabEl.removeAttribute('aria-controls');
+    }
     fabEl.innerHTML = getIcon('plus', 22, 'macadam-fab-icon');
   }
 }
 
-function fabOnClick() {
+function fabOnClick(ev) {
   try {
-    if (fabState === 'end') fabHandlers.onEndShift?.();
-    else fabHandlers.onAdd?.();
+    if (fabState === 'end') {
+      closeFabMenu();
+      fabHandlers.onEndShift?.();
+    } else if (fabAddMenu.length) {
+      ev.stopPropagation();
+      toggleFabMenu();
+    } else {
+      fabHandlers.onAdd?.();
+    }
   } catch (err) {
     console.error('[macadam fab] click handler failed', err);
   }
@@ -720,6 +845,7 @@ function wireFabKeyboardVisibility() {
     const ratio = vv.height / window.innerHeight;
     const keyboardOpen = ratio < 0.7;
     fabEl.classList.toggle('macadam-fab--hidden', keyboardOpen);
+    if (keyboardOpen) closeFabMenu();
   };
   vv.addEventListener('resize', onResize);
   fabKeyboardHandler = () => vv.removeEventListener('resize', onResize);
@@ -732,16 +858,40 @@ function wireFabKeyboardVisibility() {
  */
 export function initFAB(opts = {}) {
   fabHandlers = { ...fabHandlers, ...opts };
+  fabAddMenu = Array.isArray(opts.addMenu) ? opts.addMenu : [];
 
-  if (!fabEl) {
+  if (!fabStackEl) {
+    fabStackEl = document.createElement('div');
+    fabStackEl.id = 'macadam-fab-stack';
+    fabStackEl.className = 'macadam-fab-stack';
+
+    fabBackdropEl = document.createElement('div');
+    fabBackdropEl.className = 'macadam-fab-backdrop';
+    fabBackdropEl.hidden = true;
+    fabBackdropEl.setAttribute('aria-hidden', 'true');
+    fabBackdropEl.addEventListener('click', () => closeFabMenu());
+
+    fabMenuEl = document.createElement('div');
+    fabMenuEl.id = 'macadam-fab-menu';
+    fabMenuEl.className = 'macadam-fab-menu';
+    fabMenuEl.setAttribute('role', 'menu');
+    fabMenuEl.hidden = true;
+    fabMenuEl.setAttribute('aria-label', t('ui.fab.quickActionsMenu'));
+
     fabEl = document.createElement('button');
     fabEl.type = 'button';
     fabEl.id = 'macadam-fab';
     fabEl.className = 'macadam-fab';
-    document.body.appendChild(fabEl);
     fabEl.addEventListener('click', fabOnClick);
+
+    fabStackEl.appendChild(fabBackdropEl);
+    fabStackEl.appendChild(fabMenuEl);
+    fabStackEl.appendChild(fabEl);
+    document.body.appendChild(fabStackEl);
     wireFabKeyboardVisibility();
   }
+
+  rebuildFabMenu();
 
   const timer = store.get('activeShiftTimer');
   applyFabMode(timer ? 'end' : 'add');
@@ -753,8 +903,13 @@ export function initFAB(opts = {}) {
   return {
     setMode: (mode) => applyFabMode(mode),
     destroy: () => {
-      if (fabEl && fabEl.parentElement) fabEl.parentElement.removeChild(fabEl);
+      closeFabMenu();
+      if (fabStackEl && fabStackEl.parentElement) fabStackEl.parentElement.removeChild(fabStackEl);
+      fabStackEl = null;
+      fabBackdropEl = null;
+      fabMenuEl = null;
       fabEl = null;
+      fabAddMenu = [];
       if (fabKeyboardHandler) {
         fabKeyboardHandler();
         fabKeyboardHandler = null;
