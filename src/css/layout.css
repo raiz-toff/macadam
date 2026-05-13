@@ -630,7 +630,8 @@ body.macadam-onboarding-focus .bottom-nav {
   display: none !important;
 }
 
-body.macadam-onboarding-focus #macadam-fab-stack {
+body.macadam-onboarding-focus .macadam-fab,
+body.macadam-onboarding-focus .macadam-fab-menu {
   display: none !important;
 }
 

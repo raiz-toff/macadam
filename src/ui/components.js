@@ -860,10 +860,7 @@ export function initFAB(opts = {}) {
   fabHandlers = { ...fabHandlers, ...opts };
   fabAddMenu = Array.isArray(opts.addMenu) ? opts.addMenu : [];
 
-  if (!fabStackEl) {
-    fabStackEl = document.createElement('div');
-    fabStackEl.id = 'macadam-fab-stack';
-    fabStackEl.className = 'macadam-fab-stack';
+  if (!fabEl) {
 
     fabBackdropEl = document.createElement('div');
     fabBackdropEl.className = 'macadam-fab-backdrop';
@@ -884,10 +881,9 @@ export function initFAB(opts = {}) {
     fabEl.className = 'macadam-fab';
     fabEl.addEventListener('click', fabOnClick);
 
-    fabStackEl.appendChild(fabBackdropEl);
-    fabStackEl.appendChild(fabMenuEl);
-    fabStackEl.appendChild(fabEl);
-    document.body.appendChild(fabStackEl);
+    document.body.appendChild(fabBackdropEl);
+    document.body.appendChild(fabMenuEl);
+    document.body.appendChild(fabEl);
     wireFabKeyboardVisibility();
   }
 
@@ -904,8 +900,9 @@ export function initFAB(opts = {}) {
     setMode: (mode) => applyFabMode(mode),
     destroy: () => {
       closeFabMenu();
-      if (fabStackEl && fabStackEl.parentElement) fabStackEl.parentElement.removeChild(fabStackEl);
-      fabStackEl = null;
+      if (fabBackdropEl && fabBackdropEl.parentElement) fabBackdropEl.parentElement.removeChild(fabBackdropEl);
+      if (fabMenuEl && fabMenuEl.parentElement) fabMenuEl.parentElement.removeChild(fabMenuEl);
+      if (fabEl && fabEl.parentElement) fabEl.parentElement.removeChild(fabEl);
       fabBackdropEl = null;
       fabMenuEl = null;
       fabEl = null;

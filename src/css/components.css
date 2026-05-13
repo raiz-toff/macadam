@@ -924,22 +924,6 @@
 }
 
 /* FAB (Floating Action Button) — F8 layer */
-.macadam-fab-stack {
-  position: fixed;
-  right: var(--space-4);
-  bottom: calc(var(--space-16) + env(safe-area-inset-bottom, 0));
-  z-index: 160;
-  isolation: isolate;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-2);
-  pointer-events: none;
-}
-
-.macadam-fab-stack > * {
-  pointer-events: auto;
-}
 
 .macadam-fab-backdrop {
   position: fixed;
@@ -954,8 +938,10 @@
 }
 
 .macadam-fab-menu {
-  position: relative;
-  z-index: 1;
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--space-16) + 56px + var(--space-2) + env(safe-area-inset-bottom, 0));
+  z-index: 159;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -963,6 +949,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
+  pointer-events: none;
 }
 
 .macadam-fab-menu-item {
@@ -1017,8 +1004,10 @@
 }
 
 .macadam-fab {
-  position: relative;
-  z-index: 1;
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--space-16) + env(safe-area-inset-bottom, 0));
+  z-index: 160;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1071,8 +1060,11 @@
 }
 
 @media (min-width: 1024px) {
-  .macadam-fab-stack {
+  .macadam-fab {
     bottom: calc(var(--space-8) + env(safe-area-inset-bottom, 0));
+  }
+  .macadam-fab-menu {
+    bottom: calc(var(--space-8) + 56px + var(--space-2) + env(safe-area-inset-bottom, 0));
   }
 }
 
@@ -1407,7 +1399,8 @@
 body.zen-mode .app-header,
 body.zen-mode .app-sidebar,
 body.zen-mode .bottom-nav,
-body.zen-mode #macadam-fab-stack {
+body.zen-mode .macadam-fab,
+body.zen-mode .macadam-fab-menu {
   opacity: 0.08;
 }
 
