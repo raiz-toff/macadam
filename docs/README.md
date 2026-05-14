@@ -13,3 +13,6 @@ All project specification and architecture docs live in this folder.
 | [`market_resolution.md`](market_resolution.md) | Country-first / province-override resolution, presets, identity, money boundaries. |
 
 Source code `@see` comments use paths like `docs/Registry_arch.md` relative to the **repository root**.
+
+
+
