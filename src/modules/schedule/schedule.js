@@ -1,7 +1,10 @@
 import { db, getAppState, setAppState } from '../../core/db.js';
 import { store } from '../../core/store.js';
+import { bus, PLATFORM_CHANGED } from '../../core/events.js';
 import { formatCurrency } from '../../utils/formatters.js';
 import { t } from '../../utils/strings.js';
+import { showModal } from '../../ui/components.js';
+import { getIcon } from '../../ui/icons.js';
 
 const APP_STATE_KEYS = {
   planning: 'schedule_planning_shifts',
@@ -78,7 +81,10 @@ function minutesFromShift(shift) {
 }
 
 function grossFromShift(shift) {
-  return num(shift.grossEarnings ?? shift.gross);
+  // All shift earnings are stored as integer cents in the DB.
+  // We must divide by 100 to get the dollar value for display/math.
+  const valCents = num(shift.grossEarnings ?? shift.gross);
+  return valCents / 100;
 }
 
 function shiftStartDateTime(shift) {
@@ -171,12 +177,19 @@ async function loadScheduleModel(referenceDate = new Date()) {
   weekEndDate.setDate(weekEndDate.getDate() + 6);
   const monthStart = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
   const monthEnd = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
-  const [weekRows, monthRows, allRows, state] = await Promise.all([
+  const activePlatformId = String(store.get('activePlatformId') || 'all');
+  const [weekRowsRaw, monthRowsRaw, allRowsRaw, state] = await Promise.all([
     db.shifts.where('date').between(ymd(weekStartDate), ymd(weekEndDate), true, true).filter((s) => s.deletedAt == null).toArray(),
     listShiftsForMonth(referenceDate.getFullYear(), referenceDate.getMonth()),
     db.shifts.filter((s) => s.deletedAt == null).toArray(),
     getScheduleState(),
   ]);
+
+  const filterFn = (s) => activePlatformId === 'all' || String(s.platformId) === activePlatformId;
+  const weekRows = weekRowsRaw.filter(filterFn);
+  const monthRows = monthRowsRaw.filter(filterFn);
+  const allRows = allRowsRaw.filter(filterFn);
+  const planning = state.planning.filter(filterFn);
 
   const weekTotals = new Map();
   for (let i = 0; i < 7; i += 1) {
@@ -192,7 +205,7 @@ async function loadScheduleModel(referenceDate = new Date()) {
     cell.minutes += minutesFromShift(shift);
     cell.shifts.push(shift);
   }
-  for (const plan of state.planning) {
+  for (const plan of planning) {
     if (!weekTotals.has(plan.date)) continue;
     weekTotals.get(plan.date).plan.push(plan);
   }
@@ -261,6 +274,7 @@ async function loadScheduleModel(referenceDate = new Date()) {
     weekTotals,
     monthByDate,
     offDays: state.offDays,
+    planning,
     weekHours,
     weekGross,
     weekGoal,
@@ -283,8 +297,9 @@ function renderWeekGrid(model) {
     const key = ymd(day);
     const bucket = model.weekTotals.get(key) || { gross: 0, minutes: 0, shifts: [], plan: [] };
     const hours = bucket.minutes / 60;
+    const hasData = bucket.shifts.length > 0 || bucket.plan.length > 0;
     days.push(`
-      <article class="schedule-week-cell ${model.offDays.has(key) ? 'is-off-day' : ''}">
+      <article class="schedule-week-cell ${model.offDays.has(key) ? 'is-off-day' : ''} ${hasData ? 'is-clickable' : ''}" data-date="${esc(key)}">
         <header>
           <strong>${esc(dayName(day.getDay()))}</strong>
           <span>${esc(day.getDate())}</span>
@@ -325,10 +340,11 @@ function renderMonthGrid(model) {
     const key = ymd(d);
     const inMonth = d.getMonth() === model.monthStart.getMonth();
     const entry = model.monthByDate.get(key) || { gross: 0, platforms: new Set() };
+    const hasData = entry.platforms.size > 0; // Plans aren't in monthByDate yet, but shifts are.
     const bucket = bucketForHeat(entry.gross);
     const dots = [...entry.platforms].slice(0, 4);
     cells.push(`
-      <div class="schedule-month-cell ${inMonth ? '' : 'is-outside'} heat-${bucket} ${model.offDays.has(key) ? 'is-off-day' : ''}">
+      <div class="schedule-month-cell ${inMonth ? '' : 'is-outside'} heat-${bucket} ${model.offDays.has(key) ? 'is-off-day' : ''} ${hasData ? 'is-clickable' : ''}" data-date="${esc(key)}">
         <div class="schedule-month-day">${esc(d.getDate())}</div>
         <div class="schedule-month-earn">${entry.gross > 0 ? esc(formatCurrency(entry.gross, model.localeCountry, { currency: model.currency })) : ''}</div>
         <div class="schedule-platform-dots">${dots.map((pid) => `<span class="dot dot-${esc(pid)}"></span>`).join('')}</div>
@@ -349,15 +365,21 @@ function renderStats(model) {
   const worstRate = model.scatter.length ? Math.min(...model.scatter.map((p) => p.rate)) : 0;
   return `
     <section class="schedule-metrics card">
-      <h2>Hours tracker</h2>
+      <div class="card-header" style="padding:0; margin-bottom: var(--space-4);">
+        <h2 style="font-size: var(--text-lg); font-weight: 800; display: flex; align-items: center; gap: var(--space-2);">
+          ${getIcon('rollingTrend', 20)} Hours Tracker
+        </h2>
+      </div>
       <div class="schedule-hours-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${esc(weekPct.toFixed(0))}">
         <span style="width:${esc(weekPct.toFixed(2))}%"></span>
       </div>
-      <p>${esc(model.weekHours.toFixed(1))}h logged this week${model.optimalHours > 0 ? ` · target pace ${esc(model.optimalHours.toFixed(1))}h` : ''}</p>
-      <p>${model.remainingHours > 0 ? `${esc(model.remainingHours.toFixed(1))}h remaining to hit weekly goal pace` : 'Goal pace reached for this week'}</p>
-      <p>Efficiency spread: best ${esc(formatCurrency(bestRate, model.localeCountry, { currency: model.currency }))}/h · lowest ${esc(formatCurrency(worstRate, model.localeCountry, { currency: model.currency }))}/h</p>
-      <p>Peak earning hours: ${peakHours.length ? esc(peakHours.join(', ')) : 'Not enough history yet'}</p>
-      <p>Rest tracker: minimum gap ${esc(model.minRest.toFixed(1))}h · short gaps (&lt;8h): ${esc(model.shortRests.length)}</p>
+      <div style="display: grid; gap: var(--space-2); margin-top: var(--space-2);">
+        <p>${esc(model.weekHours.toFixed(1))}h logged this week${model.optimalHours > 0 ? ` · target pace ${esc(model.optimalHours.toFixed(1))}h` : ''}</p>
+        <p>${model.remainingHours > 0 ? `${esc(model.remainingHours.toFixed(1))}h remaining to hit weekly goal pace` : 'Goal pace reached for this week'}</p>
+        <p>Efficiency spread: best ${esc(formatCurrency(bestRate, model.localeCountry, { currency: model.currency }))}/h · lowest ${esc(formatCurrency(worstRate, model.localeCountry, { currency: model.currency }))}/h</p>
+        <p>Peak earning hours: ${peakHours.length ? esc(peakHours.join(', ')) : 'Not enough history yet'}</p>
+        <p>Rest tracker: minimum gap ${esc(model.minRest.toFixed(1))}h · short gaps (&lt;8h): ${esc(model.shortRests.length)}</p>
+      </div>
     </section>
   `;
 }
@@ -366,20 +388,259 @@ function renderScatter(model) {
   if (model.scatter.length === 0) {
     return '<p class="schedule-empty">No shifts in this month yet.</p>';
   }
+
   const maxHours = Math.max(...model.scatter.map((p) => p.hours), 1);
   const maxGross = Math.max(...model.scatter.map((p) => p.gross), 1);
+
+  // Linear regression for trend line
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+  const n = model.scatter.length;
+  model.scatter.forEach(p => {
+    sumX += p.hours;
+    sumY += p.gross;
+    sumXY += p.hours * p.gross;
+    sumXX += p.hours * p.hours;
+  });
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX || 1);
+  const intercept = (sumY - slope * sumX) / n;
+
+  const trendX1 = 0;
+  const trendY1 = 100 - ((intercept / maxGross) * 100);
+  const trendX2 = 100;
+  const trendY2 = 100 - (((slope * maxHours + intercept) / maxGross) * 100);
+
   return `
-    <div class="schedule-scatter">
-      ${model.scatter
-        .map((point) => {
-          const x = (point.hours / maxHours) * 100;
-          const y = 100 - (point.gross / maxGross) * 100;
-          const nightTag = point.date ? '' : '';
-          return `<span class="schedule-point" style="left:${esc(x.toFixed(2))}%;top:${esc(y.toFixed(2))}%;" title="${esc(`${point.date}: ${point.hours.toFixed(1)}h / ${formatCurrency(point.gross, model.localeCountry, { currency: model.currency })}${nightTag}`)}"></span>`;
-        })
-        .join('')}
+    <div class="schedule-scatter-container">
+      <div class="schedule-scatter-axis-y">
+        <span>${esc(formatCurrency(maxGross, model.localeCountry, { currency: model.currency }))}</span>
+        <span>${esc(formatCurrency(maxGross / 2, model.localeCountry, { currency: model.currency }))}</span>
+        <span>0</span>
+      </div>
+      
+      <div class="schedule-scatter-wrapper">
+        <div class="schedule-scatter">
+          <svg class="schedule-scatter-trend" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <line x1="${trendX1}" y1="${trendY1}" x2="${trendX2}" y2="${trendY2}" stroke="var(--color-brand)" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.5" />
+          </svg>
+          ${model.scatter
+            .map((point) => {
+              const x = (point.hours / maxHours) * 100;
+              const y = 100 - (point.gross / maxGross) * 100;
+              return `<span class="schedule-point" style="left:${esc(x.toFixed(2))}%;top:${esc(y.toFixed(2))}%;" title="${esc(`${point.date}: ${point.hours.toFixed(1)}h / ${formatCurrency(point.gross, model.localeCountry, { currency: model.currency })}`)}"></span>`;
+            })
+            .join('')}
+        </div>
+        <div class="schedule-scatter-axis-x">
+          <span>0h</span>
+          <span>${esc((maxHours / 2).toFixed(1))}h</span>
+          <span>${esc(maxHours.toFixed(1))}h</span>
+        </div>
+      </div>
     </div>
   `;
+}
+
+function render24hTimeline(dayShifts, dayPlans) {
+  const renderRow = (rowStart, rowEnd, label) => {
+    const hours = Array.from({ length: 12 }, (_, i) => rowStart + i);
+    const getH = (t) => {
+      if (!t || typeof t !== 'string' || !t.includes(':')) return null;
+      const [h, m] = t.split(':').map(Number);
+      return Number.isFinite(h) ? h + (Number.isFinite(m) ? m / 60 : 0) : null;
+    };
+
+    const shiftsInRow = dayShifts.map(s => {
+      const sH = getH(s.startTime);
+      const eH = getH(s.endTime);
+      if (sH === null || eH === null) return '';
+      if (eH <= rowStart || sH >= rowEnd) return '';
+      const bStart = Math.max(rowStart, sH);
+      const bEnd = Math.min(rowEnd, eH);
+      const left = ((bStart - rowStart) / 12) * 100;
+      const width = ((bEnd - bStart) / 12) * 100;
+      return `<div class="day-timeline-block is-shift" style="left:${left}%; width:${Math.max(1, width)}%;" title="${s.startTime}-${s.endTime}"></div>`;
+    }).join('');
+
+    const plansInRow = dayPlans.map(p => {
+      const sH = getH(p.startTime);
+      const eH = getH(p.endTime);
+      if (sH === null || eH === null) return '';
+      if (eH <= rowStart || sH >= rowEnd) return '';
+      const bStart = Math.max(rowStart, sH);
+      const bEnd = Math.min(rowEnd, eH);
+      const left = ((bStart - rowStart) / 12) * 100;
+      const width = ((bEnd - bStart) / 12) * 100;
+      return `<div class="day-timeline-block is-plan" style="left:${left}%; width:${Math.max(1, width)}%;" title="Planned: ${p.startTime}-${p.endTime}"></div>`;
+    }).join('');
+
+    return `
+      <div class="day-timeline-row">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+           <span style="font-size: 10px; font-weight: 800; color: var(--color-text-muted);">${label}</span>
+        </div>
+        <div class="day-timeline-ruler">
+          ${hours.map(h => `<span>${String(h).padStart(2, '0')}</span>`).join('')}
+        </div>
+        <div class="day-timeline-track">
+          ${shiftsInRow}
+          ${plansInRow}
+        </div>
+      </div>
+    `;
+  };
+
+  return `
+    <div class="day-timeline-container">
+      ${renderRow(0, 12, 'AM (00-12)')}
+      ${renderRow(12, 24, 'PM (12-00)')}
+    </div>
+  `;
+}
+
+async function showDayDetailModal(dateStr, model, root) {
+  const date = parseYmd(dateStr);
+  if (!date) return;
+  
+  const activePlatformId = String(store.get('activePlatformId') || 'all');
+  const dayShifts = (await db.shifts.where('date').equals(dateStr).toArray())
+    .filter(s => s.deletedAt == null)
+    .filter(s => activePlatformId === 'all' || String(s.platformId) === activePlatformId);
+  const dayPlans = (model.planning || []).filter(p => p.date === dateStr);
+  const totalGross = dayShifts.reduce((sum, s) => sum + grossFromShift(s), 0);
+  
+  const content = document.createElement('div');
+  content.className = 'day-detail-modal';
+  content.innerHTML = `
+    <div class="day-detail-summary">
+      <div class="metric-card">
+        <strong>${esc(formatCurrency(totalGross, model.localeCountry, { currency: model.currency }))}</strong>
+        <span>Gross Earnings</span>
+      </div>
+      <div class="metric-card">
+        <strong>${esc(dayShifts.length)}</strong>
+        <span>Shifts Logged</span>
+      </div>
+    </div>
+    
+    <h3 class="day-detail-title">24-Hour Timeline</h3>
+    ${render24hTimeline(dayShifts, dayPlans)}
+    
+    <h3 class="day-detail-title">Shift Details</h3>
+    <div class="day-detail-list">
+      ${dayShifts.length === 0 && dayPlans.length === 0 ? '<p class="schedule-empty">No activity scheduled for this day.</p>' : ''}
+      ${dayShifts.map(s => `
+        <div class="day-detail-row">
+          <span class="badge" data-platform-id="${esc(s.platformId)}">${esc(s.platformId)}</span>
+          <span class="time">${esc(s.startTime)} - ${esc(s.endTime)}</span>
+          <span class="earn">${esc(formatCurrency(grossFromShift(s), model.localeCountry, { currency: model.currency }))}</span>
+        </div>
+      `).join('')}
+      ${dayPlans.map(p => `
+        <div class="day-detail-row is-plan">
+          <span class="badge">PLAN</span>
+          <span class="time">${esc(p.startTime)} - ${esc(p.endTime)}</span>
+          <span class="earn">--</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  showModal({
+    title: `${dayName(date.getDay())}, ${date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`,
+    content,
+    size: 'lg',
+    actions: [{ label: t('common.close'), class: 'btn btn-ghost' }]
+  });
+}
+
+async function handleAddPlan(root, model) {
+  const wrap = document.createElement('div');
+  wrap.className = 'form-grid';
+  wrap.style.display = 'grid';
+  wrap.style.gap = 'var(--space-4)';
+  wrap.innerHTML = `
+    <div class="field">
+      <label class="label">${t('common.date')}</label>
+      <input type="date" class="input" name="date" value="${ymd(new Date())}" />
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+      <div class="field">
+        <label class="label">Start Time</label>
+        <input type="time" class="input" name="startTime" value="11:00" />
+      </div>
+      <div class="field">
+        <label class="label">End Time</label>
+        <input type="time" class="input" name="endTime" value="14:00" />
+      </div>
+    </div>
+    <div class="field">
+      <label class="label">Platform ID</label>
+      <input type="text" class="input" name="platformId" value="other" placeholder="e.g. doordash" />
+    </div>
+  `;
+
+  showModal({
+    title: 'Plan a Future Shift',
+    content: wrap,
+    size: 'sm',
+    actions: [
+      { label: t('common.cancel'), class: 'btn btn-ghost' },
+      {
+        label: t('common.save'),
+        class: 'btn btn-primary',
+        onClick: async () => {
+          const date = wrap.querySelector('[name="date"]')?.value;
+          const startTime = wrap.querySelector('[name="startTime"]')?.value;
+          const endTime = wrap.querySelector('[name="endTime"]')?.value;
+          const platformId = wrap.querySelector('[name="platformId"]')?.value || 'other';
+
+          if (!date || !parseYmd(date)) return;
+          const raw = (await getAppState(APP_STATE_KEYS.planning)) || [];
+          const next = Array.isArray(raw) ? [...raw] : [];
+          next.push({ date, startTime, endTime, platformId });
+          await setAppState(APP_STATE_KEYS.planning, next.slice(-60));
+          await renderScheduleModule(root, {});
+        }
+      }
+    ]
+  });
+}
+
+async function handleMarkOffDay(root) {
+  const wrap = document.createElement('div');
+  wrap.className = 'form-grid';
+  wrap.innerHTML = `
+    <div class="field">
+      <label class="label">Toggle Non-Delivery Day</label>
+      <input type="date" class="input" name="date" value="${ymd(new Date())}" />
+      <p style="font-size: var(--text-xs); color: var(--color-text-secondary); margin-top: var(--space-2);">
+        Days marked as "off" will be highlighted in red on the grids.
+      </p>
+    </div>
+  `;
+
+  showModal({
+    title: 'Schedule Management',
+    content: wrap,
+    size: 'sm',
+    actions: [
+      { label: t('common.cancel'), class: 'btn btn-ghost' },
+      {
+        label: 'Toggle State',
+        class: 'btn btn-primary',
+        onClick: async () => {
+          const date = wrap.querySelector('[name="date"]')?.value;
+          if (!date || !parseYmd(date)) return;
+          const raw = (await getAppState(APP_STATE_KEYS.offDays)) || [];
+          const set = new Set(Array.isArray(raw) ? raw.filter((d) => typeof d === 'string') : []);
+          if (set.has(date)) set.delete(date);
+          else set.add(date);
+          await setAppState(APP_STATE_KEYS.offDays, [...set].sort());
+          await renderScheduleModule(root, {});
+        }
+      }
+    ]
+  });
 }
 
 /**
@@ -390,61 +651,93 @@ export async function renderScheduleModule(root, ctx = {}) {
   const model = await loadScheduleModel(new Date());
   root.innerHTML = `
     <section class="schedule-view">
-      <header class="card card-raised">
-        <h1>${esc(t('schedule.title'))}</h1>
-        <p>${esc(t('schedule.subtitle'))}</p>
+      <header class="card card-raised schedule-header">
+        <div class="schedule-header-text">
+          <h1>${esc(t('schedule.title'))}</h1>
+          <p>${esc(t('schedule.subtitle'))}</p>
+        </div>
       </header>
-      <section class="schedule-grid-2">
-        <article class="card">
-          <h2>${esc(t('schedule.weekView'))}</h2>
-          <div class="schedule-week-grid">${renderWeekGrid(model)}</div>
-        </article>
-        <article class="card">
-          <h2>${esc(t('schedule.monthView'))}</h2>
-          <div class="schedule-month-grid">${renderMonthGrid(model)}</div>
-        </article>
+
+      <section class="schedule-section">
+        <h2 class="schedule-section-title">${esc(t('schedule.weekView'))}</h2>
+        <div class="schedule-week-grid">${renderWeekGrid(model)}</div>
       </section>
-      <section class="schedule-grid-2">
-        <article class="card">
-          <h2>${esc(t('schedule.planningMode'))}</h2>
-          <p>Use the actions below to mark days off and add placeholder shifts for upcoming plans.</p>
-          <div class="schedule-actions">
-            <button class="btn btn-secondary" type="button" data-action="add-plan">Add placeholder shift</button>
-            <button class="btn btn-ghost" type="button" data-action="mark-off-day">Mark non-delivery day</button>
-          </div>
-        </article>
-        ${renderStats(model)}
-      </section>
-      <section class="card">
-        <h2>Time vs earnings efficiency</h2>
+
+      <div class="schedule-main-layout">
+        <section class="schedule-main-content">
+          <article class="card">
+            <div class="card-header" style="padding:0; margin-bottom: var(--space-4);">
+              <h2 style="font-size: var(--text-lg); font-weight: 800;">${esc(t('schedule.monthView'))}</h2>
+            </div>
+            <div class="schedule-month-grid">${renderMonthGrid(model)}</div>
+          </article>
+        </section>
+
+        <aside class="schedule-side-content">
+          <article class="card">
+            <div class="card-header" style="padding:0; margin-bottom: var(--space-4);">
+              <h2 style="font-size: var(--text-lg); font-weight: 800; display: flex; align-items: center; gap: var(--space-2);">
+                ${getIcon('plus', 20)} ${esc(t('schedule.planningMode'))}
+              </h2>
+            </div>
+            <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-4);">
+              Mark days off or plan upcoming shifts.
+            </p>
+            <div class="schedule-actions">
+              <button class="btn btn-secondary btn-sm" type="button" data-action="add-plan">
+                ${getIcon('plus', 16)} Add plan
+              </button>
+              <button class="btn btn-ghost btn-sm" type="button" data-action="mark-off-day">
+                ${getIcon('calendar', 16)} Toggle off-day
+              </button>
+            </div>
+          </article>
+
+          ${renderStats(model)}
+        </aside>
+      </div>
+
+      <section class="card schedule-efficiency-section">
+        <div class="card-header" style="padding:0; margin-bottom: var(--space-4);">
+          <h2 style="font-size: var(--text-lg); font-weight: 800; display: flex; align-items: center; gap: var(--space-2);">
+            ${getIcon('scatter', 20)} Time vs earnings efficiency
+          </h2>
+        </div>
         ${renderScatter(model)}
       </section>
     </section>
   `;
 
-  root.querySelector('[data-action="add-plan"]')?.addEventListener('click', async () => {
-    const date = window.prompt('Plan date (YYYY-MM-DD):', ymd(new Date()));
-    if (!date || !parseYmd(date)) return;
-    const startTime = window.prompt('Start time (HH:MM):', '11:00') || '';
-    const endTime = window.prompt('End time (HH:MM):', '14:00') || '';
-    const platformId = window.prompt('Platform id:', 'other') || 'other';
-    const raw = (await getAppState(APP_STATE_KEYS.planning)) || [];
-    const next = Array.isArray(raw) ? [...raw] : [];
-    next.push({ date, startTime, endTime, platformId });
-    await setAppState(APP_STATE_KEYS.planning, next.slice(-60));
-    await renderScheduleModule(root, {});
-  });
+  const onClick = (e) => {
+    const target = e.target;
+    if (!target) return;
+    
+    const actionEl = target.closest('[data-action]');
+    if (actionEl) {
+      const action = actionEl.getAttribute('data-action');
+      if (action === 'add-plan') handleAddPlan(root, model);
+      if (action === 'mark-off-day') handleMarkOffDay(root);
+      return;
+    }
 
-  root.querySelector('[data-action="mark-off-day"]')?.addEventListener('click', async () => {
-    const date = window.prompt('Off day (YYYY-MM-DD):', ymd(new Date()));
-    if (!date || !parseYmd(date)) return;
-    const raw = (await getAppState(APP_STATE_KEYS.offDays)) || [];
-    const set = new Set(Array.isArray(raw) ? raw.filter((d) => typeof d === 'string') : []);
-    if (set.has(date)) set.delete(date);
-    else set.add(date);
-    await setAppState(APP_STATE_KEYS.offDays, [...set].sort());
-    await renderScheduleModule(root, {});
-  });
+    const cell = target.closest('.schedule-week-cell.is-clickable, .schedule-month-cell.is-clickable');
+    if (cell && cell.dataset.date) {
+      showDayDetailModal(cell.dataset.date, model, root);
+    }
+  };
+
+  root.addEventListener('click', onClick);
+
+  const onPlatform = () => renderScheduleModule(root, ctx);
+  const offPlatform = bus.on(PLATFORM_CHANGED, onPlatform);
+
+  // Simple teardown to avoid multiple listeners on re-render
+  const prevTeardown = root._scheduleTeardown;
+  if (typeof prevTeardown === 'function') prevTeardown();
+  root._scheduleTeardown = () => {
+    root.removeEventListener('click', onClick);
+    offPlatform();
+  };
 
   if (ctx && /** @type {{ fabQuickSchedule?: boolean }} */ (ctx).fabQuickSchedule) {
     queueMicrotask(() => {

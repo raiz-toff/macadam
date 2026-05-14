@@ -305,6 +305,7 @@ export const strings = {
       bonus: 'Bonus',
       distance: 'Distance',
       deadMiles: 'Dead miles (km)',
+      deadMilesRatio: 'Dead miles ratio',
       unitKm: 'km',
       unitMiles: 'miles',
       date: 'Date',
