@@ -13,6 +13,7 @@ import { getIcon } from '../ui/icons.js';
 import { formatCurrency } from '../utils/formatters.js';
 import { defaultRangeForPreset } from '../utils/date-range-presets.js';
 import { t } from '../utils/strings.js';
+import { getDemoAnalyticsAnchorDate } from '../modules/demo/sample-year.js';
 import { getOrderedDashboardWidgetIds, renderWidgetCellsInnerHtml, WidgetRegistry } from '../registry/widgets/index.js';
 import { buildWidgetDataContext } from '../modules/analytics/widget-data.js';
 import { afterRenderWidgets } from '../registry/widgets/after-render.js';
@@ -88,7 +89,7 @@ const teardownByRoot = new WeakMap();
 async function paintDashboard(root, ctx) {
   void ctx;
 
-  const now = new Date();
+  const now = store.get('demoMode') ? getDemoAnalyticsAnchorDate() : new Date();
   const user = store.get('user');
   const weekStartDay = Number(user?.locale?.weekStartDay ?? 0);
   const platformFilter = String(store.get('activePlatformId') ?? 'all');
@@ -342,7 +343,8 @@ async function paintDashboard(root, ctx) {
 
   /** @param {'week'|'month'|'ytd'|'all'} preset */
   const applyPreset = (preset) => {
-    const r = defaultRangeForPreset(preset, new Date(), weekStartDay);
+    const anchorDate = store.get('demoMode') ? getDemoAnalyticsAnchorDate() : new Date();
+    const r = defaultRangeForPreset(preset, anchorDate, weekStartDay);
     saveDashboardRange(r);
     const sEl = /** @type {HTMLInputElement | null} */ (root.querySelector('#dashboard-filter-start'));
     const eEl = /** @type {HTMLInputElement | null} */ (root.querySelector('#dashboard-filter-end'));
