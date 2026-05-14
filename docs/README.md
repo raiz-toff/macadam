@@ -4,8 +4,6 @@ All project specification and architecture docs live in this folder.
 
 | Document | Description |
 |----------|-------------|
-| [`plan.md`](plan.md) | Main product / technical plan (features, file tree, conventions). |
-| [`planv3.md`](planv3.md) | Plan v3.0 alignment (Ontario-first, registries, schema, removals). |
 | [`Registry_arch.md`](Registry_arch.md) | Registry pattern: platforms, countries, engine boundaries. |
 | [`feature_modularity.md`](feature_modularity.md) | Category A/B/C/D modularity and where to add global vs scoped features. |
 | [`MacadamAPI.md`](MacadamAPI.md) | MacadamAPI / P13 local debug surface spec. |
@@ -14,4 +12,11 @@ All project specification and architecture docs live in this folder.
 | [`adding-a-platform.md`](adding-a-platform.md) | How to add a new platform definition. |
 | [`market_resolution.md`](market_resolution.md) | Country-first / province-override resolution, presets, identity, money boundaries. |
 
-Source code `@see` comments use paths like `docs/plan.md` relative to the **repository root**.
+### Internal Planning Docs
+
+| Document | Description |
+|----------|-------------|
+| [`internal/plan.md`](internal/plan.md) | Historical product / technical plan (features, file tree, conventions). |
+| [`internal/planv3.md`](internal/planv3.md) | Historical v3.0 alignment (Ontario-first, registries, schema). |
+
+Source code `@see` comments use paths like `docs/Registry_arch.md` relative to the **repository root**.

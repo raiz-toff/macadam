@@ -1,6 +1,8 @@
 # MACADAM — Feature Modularity Architecture
 ### How modular is adding a new feature? Honest assessment + the fix.
 
+> **Note:** This document represents the original design intent for extending features. While the registries were implemented, some schemas (like widgets or metrics) may have evolved in the final codebase. Treat code snippets as illustrative rather than exact.
+
 ---
 
 ## HONEST ASSESSMENT FIRST

@@ -2,6 +2,8 @@
 ### Modular Platform & Country System
 #### Add a new company or country by adding ONE file. Zero engine changes.
 
+> **Note:** This document represents the original architectural spec for the registry pattern. While the core philosophy holds true, some implementation details may have evolved in the actual source code. Refer to the active codebase for current schemas.
+
 ---
 
 ## THE PROBLEM WITH PHASE 2 (AS-BUILT)
