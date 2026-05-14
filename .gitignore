@@ -27,3 +27,5 @@ Thumbs.db
 
 # Internal Dev/Planning Docs
 docs/internal/
+.vercel
+.env*.local
