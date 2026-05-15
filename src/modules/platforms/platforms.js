@@ -8,7 +8,7 @@ import { store } from '../../core/store.js';
 import { bus, PLATFORM_CHANGED } from '../../core/events.js';
 import { t } from '../../utils/strings.js';
 import { getPlatformConfig } from '../../registry/platforms/terminology.js';
-import { resolvePlatformLogoHtml, showModal } from '../../ui/components.js';
+import { resolvePlatformLogoHtml, showModal, closeModal } from '../../ui/components.js';
 
 const Sortable = /** @type {any} */ (SortableMod).default || SortableMod;
 
@@ -71,18 +71,32 @@ export function renderPlatformSwitcher(mode, opts) {
       .replace(/"/g, '&quot;');
 
   if (mode === 'dropdown') {
-    const optsHtml = [
-      `<option value="all"${selectedId === 'all' ? ' selected' : ''}>${esc(t('app.platformAll'))}</option>`,
-      ...activeRows.map((p) => {
-        const id = String(p.id);
-        const label = typeof p.name === 'string' && p.name ? p.name : id;
-        const sel = selectedId === id ? ' selected' : '';
-        return `<option value="${esc(id)}"${sel}>${esc(label)}</option>`;
-      }),
-    ].join('');
-    return `<div class="platform-switcher platform-switcher--dropdown">
-      <label class="platform-switcher-label" for="comma-platform-select">${esc(t('platforms.switcher'))}</label>
-      <select id="comma-platform-select" class="input platform-switcher-select" aria-label="${esc(t('platforms.switcher'))}">${optsHtml}</select>
+    const active = activeRows.find((p) => String(p.id) === selectedId);
+    const label = selectedId === 'all' ? t('app.platformAll') : active?.name || selectedId;
+    const col =
+      selectedId === 'all'
+        ? 'var(--color-text-muted)'
+        : active?.color || getPlatformConfig(selectedId).color;
+
+    let logo = selectedId === 'all' ? null : resolvePlatformLogoHtml(selectedId);
+    if (!logo && selectedId !== 'all') {
+      logo = `<span style="font-size:12px;font-weight:800;line-height:1;">${esc(
+        String(label).charAt(0).toUpperCase(),
+      )}</span>`;
+    } else if (selectedId === 'all') {
+      logo = `<span style="font-size:12px;font-weight:800;line-height:1;">${esc(
+        String(t('app.platformAll')).charAt(0).toUpperCase(),
+      )}</span>`;
+    }
+
+    return `<div class="platform-switcher platform-switcher--dropdown" style="--platform-color:${esc(col)}">
+      <button type="button" class="platform-switcher-trigger" aria-haspopup="listbox" aria-label="${esc(
+        t('platforms.switcher'),
+      )}">
+        <span class="platform-switcher-trigger-logo">${logo}</span>
+        <span class="platform-switcher-trigger-text">${esc(label)}</span>
+        <svg class="platform-switcher-trigger-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
     </div>`;
   }
 
@@ -194,10 +208,10 @@ export function mountPlatformSwitcher(slot) {
     };
 
     if (displayMode === 'dropdown') {
-      const sel = slot.querySelector('select');
-      if (sel) {
-        sel.addEventListener('change', () => {
-          setFilter(String(sel.value || 'all'));
+      const trigger = slot.querySelector('.platform-switcher-trigger');
+      if (trigger) {
+        trigger.addEventListener('click', () => {
+          showPlatformSelectionModal(activeRows, selectedId, setFilter);
         });
       }
       return;
@@ -537,4 +551,55 @@ export async function reorderPlatforms(newOrder) {
   }
   await pushPlatformStateFromDb();
   bus.emit(PLATFORM_CHANGED, { source: 'reorderPlatforms', order: ids });
+}
+/**
+ * @param {PlatformRow[]} activeRows
+ * @param {string} currentId
+ * @param {(id: string) => void} onSelect
+ */
+function showPlatformSelectionModal(activeRows, currentId, onSelect) {
+  const wrap = document.createElement('div');
+  wrap.className = 'platform-selection-list';
+
+  const items = [
+    { id: 'all', name: t('app.platformAll'), color: 'var(--color-text-muted)' },
+    ...activeRows,
+  ];
+
+  for (const p of items) {
+    const id = String(p.id);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'platform-selection-item';
+    btn.dataset.platformId = id;
+    btn.setAttribute('aria-selected', id === currentId ? 'true' : 'false');
+
+    const col = p.color || getPlatformConfig(id).color;
+    btn.style.setProperty('--platform-color', col);
+
+    let logo = id === 'all' ? null : resolvePlatformLogoHtml(id);
+    if (!logo && id !== 'all') {
+      logo = `<span style="font-size:13px;font-weight:800;line-height:1;">${String(p.name || id).charAt(0).toUpperCase()}</span>`;
+    } else if (id === 'all') {
+      logo = `<span style="font-size:13px;font-weight:800;line-height:1;">${String(t('app.platformAll')).charAt(0).toUpperCase()}</span>`;
+    }
+
+    btn.innerHTML = `
+      <span class="platform-selection-item-logo">${logo}</span>
+      <span class="platform-selection-item-name">${String(p.name || id)}</span>
+      ${id === currentId ? '<svg class="platform-selection-item-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
+    `;
+
+    btn.addEventListener('click', () => {
+      onSelect(id);
+      closeModal();
+    });
+    wrap.appendChild(btn);
+  }
+
+  showModal({
+    title: t('platforms.switcher'),
+    content: wrap,
+    size: 'sm',
+  });
 }
