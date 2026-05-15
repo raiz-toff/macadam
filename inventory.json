@@ -1,0 +1,1322 @@
+[
+  {
+    "path": "src/core/db.js",
+    "sizeCategory": "large",
+    "size": 13123
+  },
+  {
+    "path": "src/core/events.js",
+    "sizeCategory": "medium",
+    "size": 1820
+  },
+  {
+    "path": "src/core/router.js",
+    "sizeCategory": "large",
+    "size": 7909
+  },
+  {
+    "path": "src/core/shell.js",
+    "sizeCategory": "large",
+    "size": 15633
+  },
+  {
+    "path": "src/core/store.js",
+    "sizeCategory": "large",
+    "size": 16031
+  },
+  {
+    "path": "src/core/vault-gate.js",
+    "sizeCategory": "trivial",
+    "size": 529
+  },
+  {
+    "path": "src/css/animations.css",
+    "sizeCategory": "medium",
+    "size": 2140
+  },
+  {
+    "path": "src/css/components.css",
+    "sizeCategory": "large",
+    "size": 30640
+  },
+  {
+    "path": "src/css/layout.css",
+    "sizeCategory": "large",
+    "size": 21733
+  },
+  {
+    "path": "src/css/reset.css",
+    "sizeCategory": "medium",
+    "size": 1232
+  },
+  {
+    "path": "src/css/themes.css",
+    "sizeCategory": "medium",
+    "size": 1203
+  },
+  {
+    "path": "src/css/tokens.css",
+    "sizeCategory": "medium",
+    "size": 1922
+  },
+  {
+    "path": "src/css/views/analytics.css",
+    "sizeCategory": "large",
+    "size": 6666
+  },
+  {
+    "path": "src/css/views/calendar.css",
+    "sizeCategory": "large",
+    "size": 10615
+  },
+  {
+    "path": "src/css/views/dashboard.css",
+    "sizeCategory": "large",
+    "size": 24048
+  },
+  {
+    "path": "src/css/views/onboarding.css",
+    "sizeCategory": "large",
+    "size": 8586
+  },
+  {
+    "path": "src/css/views/reports.css",
+    "sizeCategory": "medium",
+    "size": 3951
+  },
+  {
+    "path": "src/css/views/search.css",
+    "sizeCategory": "large",
+    "size": 5059
+  },
+  {
+    "path": "src/css/views/settings.css",
+    "sizeCategory": "large",
+    "size": 14049
+  },
+  {
+    "path": "src/css/views/shifts.css",
+    "sizeCategory": "large",
+    "size": 12250
+  },
+  {
+    "path": "src/css/views/tax.css",
+    "sizeCategory": "medium",
+    "size": 3429
+  },
+  {
+    "path": "src/css/views/vehicles.css",
+    "sizeCategory": "medium",
+    "size": 3838
+  },
+  {
+    "path": "src/css/widgets_theme.css",
+    "sizeCategory": "large",
+    "size": 12674
+  },
+  {
+    "path": "src/libs/chart.min.js",
+    "sizeCategory": "large",
+    "size": 205399
+  },
+  {
+    "path": "src/libs/confetti.min.js",
+    "sizeCategory": "large",
+    "size": 10781
+  },
+  {
+    "path": "src/libs/dayjs.duration.min.js",
+    "sizeCategory": "medium",
+    "size": 4845
+  },
+  {
+    "path": "src/libs/dayjs.min.js",
+    "sizeCategory": "large",
+    "size": 7160
+  },
+  {
+    "path": "src/libs/dayjs.relativeTime.min.js",
+    "sizeCategory": "medium",
+    "size": 1422
+  },
+  {
+    "path": "src/libs/dexie.min.js",
+    "sizeCategory": "large",
+    "size": 81892
+  },
+  {
+    "path": "src/libs/fuse.min.js",
+    "sizeCategory": "large",
+    "size": 23850
+  },
+  {
+    "path": "src/libs/html2canvas.min.js",
+    "sizeCategory": "large",
+    "size": 198689
+  },
+  {
+    "path": "src/libs/papaparse.min.js",
+    "sizeCategory": "large",
+    "size": 19469
+  },
+  {
+    "path": "src/libs/qrcode.min.js",
+    "sizeCategory": "large",
+    "size": 56694
+  },
+  {
+    "path": "src/libs/sortable.min.js",
+    "sizeCategory": "large",
+    "size": 44581
+  },
+  {
+    "path": "src/main.js",
+    "sizeCategory": "large",
+    "size": 9918
+  },
+  {
+    "path": "src/modules/analytics/analytics-charts.js",
+    "sizeCategory": "medium",
+    "size": 2996
+  },
+  {
+    "path": "src/modules/analytics/analytics.js",
+    "sizeCategory": "large",
+    "size": 43907
+  },
+  {
+    "path": "src/modules/analytics/widget-data.js",
+    "sizeCategory": "medium",
+    "size": 2658
+  },
+  {
+    "path": "src/modules/demo/sample-year.js",
+    "sizeCategory": "trivial",
+    "size": 865
+  },
+  {
+    "path": "src/modules/expenses/expense-form.js",
+    "sizeCategory": "large",
+    "size": 10931
+  },
+  {
+    "path": "src/modules/expenses/expenses.js",
+    "sizeCategory": "large",
+    "size": 52943
+  },
+  {
+    "path": "src/modules/goals/goals.js",
+    "sizeCategory": "large",
+    "size": 17173
+  },
+  {
+    "path": "src/modules/notifications/notification-internal.js",
+    "sizeCategory": "large",
+    "size": 6387
+  },
+  {
+    "path": "src/modules/notifications/notifications.js",
+    "sizeCategory": "medium",
+    "size": 2581
+  },
+  {
+    "path": "src/modules/onboarding/onboarding.js",
+    "sizeCategory": "large",
+    "size": 29930
+  },
+  {
+    "path": "src/modules/onboarding/steps.js",
+    "sizeCategory": "large",
+    "size": 27456
+  },
+  {
+    "path": "src/modules/p13/p13.js",
+    "sizeCategory": "large",
+    "size": 6979
+  },
+  {
+    "path": "src/modules/platforms/platform-specific.js",
+    "sizeCategory": "large",
+    "size": 5466
+  },
+  {
+    "path": "src/modules/platforms/platforms.js",
+    "sizeCategory": "large",
+    "size": 16780
+  },
+  {
+    "path": "src/modules/pwa/pwa-settings.js",
+    "sizeCategory": "large",
+    "size": 5945
+  },
+  {
+    "path": "src/modules/pwa/pwa.js",
+    "sizeCategory": "large",
+    "size": 17011
+  },
+  {
+    "path": "src/modules/reports/reports.js",
+    "sizeCategory": "large",
+    "size": 11326
+  },
+  {
+    "path": "src/modules/schedule/schedule.js",
+    "sizeCategory": "large",
+    "size": 29499
+  },
+  {
+    "path": "src/modules/search/search.js",
+    "sizeCategory": "large",
+    "size": 24753
+  },
+  {
+    "path": "src/modules/settings/appearance-settings.js",
+    "sizeCategory": "large",
+    "size": 8333
+  },
+  {
+    "path": "src/modules/settings/data-settings.js",
+    "sizeCategory": "medium",
+    "size": 3311
+  },
+  {
+    "path": "src/modules/settings/keyboard-shortcuts.js",
+    "sizeCategory": "medium",
+    "size": 2387
+  },
+  {
+    "path": "src/modules/settings/platforms-settings.js",
+    "sizeCategory": "large",
+    "size": 9575
+  },
+  {
+    "path": "src/modules/settings/settings-utils.js",
+    "sizeCategory": "medium",
+    "size": 2175
+  },
+  {
+    "path": "src/modules/settings/settings.js",
+    "sizeCategory": "large",
+    "size": 50732
+  },
+  {
+    "path": "src/modules/shifts/shift-form.js",
+    "sizeCategory": "large",
+    "size": 31939
+  },
+  {
+    "path": "src/modules/shifts/shifts.js",
+    "sizeCategory": "large",
+    "size": 16807
+  },
+  {
+    "path": "src/modules/tax/tax.js",
+    "sizeCategory": "large",
+    "size": 27685
+  },
+  {
+    "path": "src/modules/vehicles/vehicles.js",
+    "sizeCategory": "large",
+    "size": 27229
+  },
+  {
+    "path": "src/registry/badges/_TEMPLATE.badge.js",
+    "sizeCategory": "trivial",
+    "size": 360
+  },
+  {
+    "path": "src/registry/badges/bonus_hunter.badge.js",
+    "sizeCategory": "trivial",
+    "size": 635
+  },
+  {
+    "path": "src/registry/badges/century_day.badge.js",
+    "sizeCategory": "trivial",
+    "size": 547
+  },
+  {
+    "path": "src/registry/badges/data_archivist.badge.js",
+    "sizeCategory": "trivial",
+    "size": 338
+  },
+  {
+    "path": "src/registry/badges/early_bird.badge.js",
+    "sizeCategory": "trivial",
+    "size": 351
+  },
+  {
+    "path": "src/registry/badges/expense_savvy.badge.js",
+    "sizeCategory": "trivial",
+    "size": 372
+  },
+  {
+    "path": "src/registry/badges/first_shift.badge.js",
+    "sizeCategory": "trivial",
+    "size": 370
+  },
+  {
+    "path": "src/registry/badges/five_hundred_week.badge.js",
+    "sizeCategory": "trivial",
+    "size": 552
+  },
+  {
+    "path": "src/registry/badges/goal_month_hit.badge.js",
+    "sizeCategory": "trivial",
+    "size": 430
+  },
+  {
+    "path": "src/registry/badges/goal_week_hit.badge.js",
+    "sizeCategory": "trivial",
+    "size": 425
+  },
+  {
+    "path": "src/registry/badges/index.js",
+    "sizeCategory": "medium",
+    "size": 2972
+  },
+  {
+    "path": "src/registry/badges/marathon_shift.badge.js",
+    "sizeCategory": "trivial",
+    "size": 607
+  },
+  {
+    "path": "src/registry/badges/multi_app_master.badge.js",
+    "sizeCategory": "trivial",
+    "size": 558
+  },
+  {
+    "path": "src/registry/badges/night_owl.badge.js",
+    "sizeCategory": "trivial",
+    "size": 351
+  },
+  {
+    "path": "src/registry/badges/peak_collector.badge.js",
+    "sizeCategory": "trivial",
+    "size": 353
+  },
+  {
+    "path": "src/registry/badges/perfect_week.badge.js",
+    "sizeCategory": "trivial",
+    "size": 348
+  },
+  {
+    "path": "src/registry/badges/personal_best_earnings.badge.js",
+    "sizeCategory": "trivial",
+    "size": 395
+  },
+  {
+    "path": "src/registry/badges/personal_best_hours.badge.js",
+    "sizeCategory": "trivial",
+    "size": 388
+  },
+  {
+    "path": "src/registry/badges/placeholder.badge.js",
+    "sizeCategory": "trivial",
+    "size": 230
+  },
+  {
+    "path": "src/registry/badges/rain_rider.badge.js",
+    "sizeCategory": "trivial",
+    "size": 600
+  },
+  {
+    "path": "src/registry/badges/streak_100.badge.js",
+    "sizeCategory": "trivial",
+    "size": 374
+  },
+  {
+    "path": "src/registry/badges/streak_30.badge.js",
+    "sizeCategory": "trivial",
+    "size": 373
+  },
+  {
+    "path": "src/registry/badges/streak_7.badge.js",
+    "sizeCategory": "trivial",
+    "size": 369
+  },
+  {
+    "path": "src/registry/badges/thousand_month.badge.js",
+    "sizeCategory": "trivial",
+    "size": 555
+  },
+  {
+    "path": "src/registry/badges/tip_champion.badge.js",
+    "sizeCategory": "trivial",
+    "size": 619
+  },
+  {
+    "path": "src/registry/badges/vehicle_caretaker.badge.js",
+    "sizeCategory": "trivial",
+    "size": 351
+  },
+  {
+    "path": "src/registry/badges/weekend_warrior.badge.js",
+    "sizeCategory": "trivial",
+    "size": 387
+  },
+  {
+    "path": "src/registry/countries/CA.country.js",
+    "sizeCategory": "trivial",
+    "size": 997
+  },
+  {
+    "path": "src/registry/countries/UK.country.js",
+    "sizeCategory": "trivial",
+    "size": 807
+  },
+  {
+    "path": "src/registry/countries/US.country.js",
+    "sizeCategory": "medium",
+    "size": 1007
+  },
+  {
+    "path": "src/registry/countries/_TEMPLATE.country.js",
+    "sizeCategory": "trivial",
+    "size": 872
+  },
+  {
+    "path": "src/registry/countries/index.js",
+    "sizeCategory": "medium",
+    "size": 1692
+  },
+  {
+    "path": "src/registry/expense-categories/index.js",
+    "sizeCategory": "medium",
+    "size": 2753
+  },
+  {
+    "path": "src/registry/goal-types/index.js",
+    "sizeCategory": "medium",
+    "size": 1793
+  },
+  {
+    "path": "src/registry/index.js",
+    "sizeCategory": "medium",
+    "size": 1489
+  },
+  {
+    "path": "src/registry/market/resolve.js",
+    "sizeCategory": "medium",
+    "size": 2160
+  },
+  {
+    "path": "src/registry/metrics/_TEMPLATE.metric.js",
+    "sizeCategory": "trivial",
+    "size": 378
+  },
+  {
+    "path": "src/registry/metrics/dead_miles_ratio.metric.js",
+    "sizeCategory": "trivial",
+    "size": 702
+  },
+  {
+    "path": "src/registry/metrics/index.js",
+    "sizeCategory": "medium",
+    "size": 2860
+  },
+  {
+    "path": "src/registry/metrics/month_gross.metric.js",
+    "sizeCategory": "trivial",
+    "size": 419
+  },
+  {
+    "path": "src/registry/metrics/month_hourly.metric.js",
+    "sizeCategory": "trivial",
+    "size": 360
+  },
+  {
+    "path": "src/registry/metrics/month_orders.metric.js",
+    "sizeCategory": "trivial",
+    "size": 330
+  },
+  {
+    "path": "src/registry/metrics/month_zero_days.metric.js",
+    "sizeCategory": "trivial",
+    "size": 343
+  },
+  {
+    "path": "src/registry/metrics/placeholder.metric.js",
+    "sizeCategory": "trivial",
+    "size": 187
+  },
+  {
+    "path": "src/registry/metrics/shift_duration.metric.js",
+    "sizeCategory": "trivial",
+    "size": 951
+  },
+  {
+    "path": "src/registry/metrics/shift_gross.metric.js",
+    "sizeCategory": "trivial",
+    "size": 521
+  },
+  {
+    "path": "src/registry/metrics/shift_hourly.metric.js",
+    "sizeCategory": "medium",
+    "size": 1276
+  },
+  {
+    "path": "src/registry/notifications/_TEMPLATE.notification.js",
+    "sizeCategory": "trivial",
+    "size": 346
+  },
+  {
+    "path": "src/registry/notifications/backup_overdue.notification.js",
+    "sizeCategory": "trivial",
+    "size": 856
+  },
+  {
+    "path": "src/registry/notifications/cross_platform_arbitrage.notification.js",
+    "sizeCategory": "medium",
+    "size": 1778
+  },
+  {
+    "path": "src/registry/notifications/daily_summary.notification.js",
+    "sizeCategory": "trivial",
+    "size": 700
+  },
+  {
+    "path": "src/registry/notifications/high_expense.notification.js",
+    "sizeCategory": "medium",
+    "size": 1113
+  },
+  {
+    "path": "src/registry/notifications/index.js",
+    "sizeCategory": "medium",
+    "size": 2925
+  },
+  {
+    "path": "src/registry/notifications/insurance_expiry.notification.js",
+    "sizeCategory": "medium",
+    "size": 1194
+  },
+  {
+    "path": "src/registry/notifications/low_hourly_rate.notification.js",
+    "sizeCategory": "trivial",
+    "size": 965
+  },
+  {
+    "path": "src/registry/notifications/maintenance_due.notification.js",
+    "sizeCategory": "medium",
+    "size": 1171
+  },
+  {
+    "path": "src/registry/notifications/mid_week_goal.notification.js",
+    "sizeCategory": "medium",
+    "size": 1193
+  },
+  {
+    "path": "src/registry/notifications/milestone_proximity.notification.js",
+    "sizeCategory": "medium",
+    "size": 1017
+  },
+  {
+    "path": "src/registry/notifications/personal_best.notification.js",
+    "sizeCategory": "medium",
+    "size": 1404
+  },
+  {
+    "path": "src/registry/notifications/placeholder.notification.js",
+    "sizeCategory": "trivial",
+    "size": 174
+  },
+  {
+    "path": "src/registry/notifications/streak_risk.notification.js",
+    "sizeCategory": "trivial",
+    "size": 815
+  },
+  {
+    "path": "src/registry/notifications/tax_installment_due.notification.js",
+    "sizeCategory": "medium",
+    "size": 1215
+  },
+  {
+    "path": "src/registry/notifications/weekly_goal_hit.notification.js",
+    "sizeCategory": "medium",
+    "size": 1172
+  },
+  {
+    "path": "src/registry/notifications/weekly_goal_miss.notification.js",
+    "sizeCategory": "medium",
+    "size": 1703
+  },
+  {
+    "path": "src/registry/platforms/_TEMPLATE.platform.js",
+    "sizeCategory": "trivial",
+    "size": 766
+  },
+  {
+    "path": "src/registry/platforms/_logos.js",
+    "sizeCategory": "medium",
+    "size": 4081
+  },
+  {
+    "path": "src/registry/platforms/amazonflex.platform.js",
+    "sizeCategory": "trivial",
+    "size": 689
+  },
+  {
+    "path": "src/registry/platforms/doordash.platform.js",
+    "sizeCategory": "medium",
+    "size": 1033
+  },
+  {
+    "path": "src/registry/platforms/foodora.platform.js",
+    "sizeCategory": "trivial",
+    "size": 679
+  },
+  {
+    "path": "src/registry/platforms/index.js",
+    "sizeCategory": "medium",
+    "size": 3088
+  },
+  {
+    "path": "src/registry/platforms/instacart.platform.js",
+    "sizeCategory": "trivial",
+    "size": 689
+  },
+  {
+    "path": "src/registry/platforms/other.platform.js",
+    "sizeCategory": "trivial",
+    "size": 493
+  },
+  {
+    "path": "src/registry/platforms/skip.platform.js",
+    "sizeCategory": "trivial",
+    "size": 693
+  },
+  {
+    "path": "src/registry/platforms/specific-normalize.js",
+    "sizeCategory": "medium",
+    "size": 2715
+  },
+  {
+    "path": "src/registry/platforms/terminology.js",
+    "sizeCategory": "medium",
+    "size": 3571
+  },
+  {
+    "path": "src/registry/platforms/ubereats.platform.js",
+    "sizeCategory": "medium",
+    "size": 1047
+  },
+  {
+    "path": "src/registry/provinces/CA/ON.province.js",
+    "sizeCategory": "medium",
+    "size": 3716
+  },
+  {
+    "path": "src/registry/provinces/CA/_TEMPLATE.province.js",
+    "sizeCategory": "trivial",
+    "size": 453
+  },
+  {
+    "path": "src/registry/provinces/US/AK.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/AL.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/AR.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/AZ.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/CA.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/CO.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/CT.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/DC.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/DE.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/FL.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/GA.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/HI.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/IA.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/ID.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/IL.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/IN.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/KS.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/KY.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/LA.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/MA.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/MD.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/ME.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/MI.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/MN.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/MO.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/MS.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/MT.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/NC.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/ND.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/NE.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/NH.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/NJ.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/NM.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/NV.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/NY.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/OH.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/OK.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/OR.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/PA.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/RI.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/SC.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/SD.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/TN.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/TX.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/UT.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/VA.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/VT.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/WA.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/WI.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/WV.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/WY.province.js",
+    "sizeCategory": "trivial",
+    "size": 108
+  },
+  {
+    "path": "src/registry/provinces/US/_usStateProvince.js",
+    "sizeCategory": "medium",
+    "size": 1160
+  },
+  {
+    "path": "src/registry/provinces/index.js",
+    "sizeCategory": "medium",
+    "size": 3942
+  },
+  {
+    "path": "src/registry/reports/_TEMPLATE.report-section.js",
+    "sizeCategory": "trivial",
+    "size": 541
+  },
+  {
+    "path": "src/registry/reports/chart.report-section.js",
+    "sizeCategory": "trivial",
+    "size": 297
+  },
+  {
+    "path": "src/registry/reports/expenses.report-section.js",
+    "sizeCategory": "medium",
+    "size": 1105
+  },
+  {
+    "path": "src/registry/reports/index.js",
+    "sizeCategory": "medium",
+    "size": 1896
+  },
+  {
+    "path": "src/registry/reports/notes.report-section.js",
+    "sizeCategory": "trivial",
+    "size": 156
+  },
+  {
+    "path": "src/registry/reports/overview.report-section.js",
+    "sizeCategory": "medium",
+    "size": 2104
+  },
+  {
+    "path": "src/registry/reports/placeholder.report-section.js",
+    "sizeCategory": "trivial",
+    "size": 168
+  },
+  {
+    "path": "src/registry/reports/qr.report-section.js",
+    "sizeCategory": "trivial",
+    "size": 260
+  },
+  {
+    "path": "src/registry/reports/shifts.report-section.js",
+    "sizeCategory": "medium",
+    "size": 1104
+  },
+  {
+    "path": "src/registry/shift-fields/index.js",
+    "sizeCategory": "medium",
+    "size": 4358
+  },
+  {
+    "path": "src/registry/tax/withholding-presets.js",
+    "sizeCategory": "medium",
+    "size": 2000
+  },
+  {
+    "path": "src/registry/types.js",
+    "sizeCategory": "medium",
+    "size": 1166
+  },
+  {
+    "path": "src/registry/widgets/_TEMPLATE.widget.js",
+    "sizeCategory": "trivial",
+    "size": 507
+  },
+  {
+    "path": "src/registry/widgets/after-render.js",
+    "sizeCategory": "trivial",
+    "size": 899
+  },
+  {
+    "path": "src/registry/widgets/avg-rate.widget.js",
+    "sizeCategory": "large",
+    "size": 5603
+  },
+  {
+    "path": "src/registry/widgets/best-day.widget.js",
+    "sizeCategory": "medium",
+    "size": 1841
+  },
+  {
+    "path": "src/registry/widgets/best-hour.widget.js",
+    "sizeCategory": "large",
+    "size": 5673
+  },
+  {
+    "path": "src/registry/widgets/dead-miles.widget.js",
+    "sizeCategory": "medium",
+    "size": 1573
+  },
+  {
+    "path": "src/registry/widgets/deliveries.widget.js",
+    "sizeCategory": "large",
+    "size": 5589
+  },
+  {
+    "path": "src/registry/widgets/earnings.widget.js",
+    "sizeCategory": "large",
+    "size": 6022
+  },
+  {
+    "path": "src/registry/widgets/effective-rate.widget.js",
+    "sizeCategory": "medium",
+    "size": 1634
+  },
+  {
+    "path": "src/registry/widgets/esc.js",
+    "sizeCategory": "trivial",
+    "size": 190
+  },
+  {
+    "path": "src/registry/widgets/expenses.widget.js",
+    "sizeCategory": "large",
+    "size": 7640
+  },
+  {
+    "path": "src/registry/widgets/income-breakdown.widget.js",
+    "sizeCategory": "medium",
+    "size": 2383
+  },
+  {
+    "path": "src/registry/widgets/index.js",
+    "sizeCategory": "large",
+    "size": 5934
+  },
+  {
+    "path": "src/registry/widgets/month-gross.widget.js",
+    "sizeCategory": "medium",
+    "size": 1346
+  },
+  {
+    "path": "src/registry/widgets/month-hourly.widget.js",
+    "sizeCategory": "medium",
+    "size": 1321
+  },
+  {
+    "path": "src/registry/widgets/month-orders.widget.js",
+    "sizeCategory": "medium",
+    "size": 1464
+  },
+  {
+    "path": "src/registry/widgets/net-income.widget.js",
+    "sizeCategory": "medium",
+    "size": 1831
+  },
+  {
+    "path": "src/registry/widgets/out-of-pocket.widget.js",
+    "sizeCategory": "medium",
+    "size": 1470
+  },
+  {
+    "path": "src/registry/widgets/per-delivery.widget.js",
+    "sizeCategory": "medium",
+    "size": 1516
+  },
+  {
+    "path": "src/registry/widgets/placeholder.widget.js",
+    "sizeCategory": "trivial",
+    "size": 318
+  },
+  {
+    "path": "src/registry/widgets/platform-activity.widget.js",
+    "sizeCategory": "large",
+    "size": 5089
+  },
+  {
+    "path": "src/registry/widgets/recent-shifts.widget.js",
+    "sizeCategory": "medium",
+    "size": 3841
+  },
+  {
+    "path": "src/registry/widgets/rolling-trend.widget.js",
+    "sizeCategory": "large",
+    "size": 14009
+  },
+  {
+    "path": "src/registry/widgets/scatter.widget.js",
+    "sizeCategory": "large",
+    "size": 16065
+  },
+  {
+    "path": "src/registry/widgets/schedule.widget.js",
+    "sizeCategory": "medium",
+    "size": 4538
+  },
+  {
+    "path": "src/registry/widgets/stability-score.widget.js",
+    "sizeCategory": "large",
+    "size": 6660
+  },
+  {
+    "path": "src/registry/widgets/streak.widget.js",
+    "sizeCategory": "medium",
+    "size": 1601
+  },
+  {
+    "path": "src/registry/widgets/tax-jar.widget.js",
+    "sizeCategory": "medium",
+    "size": 4578
+  },
+  {
+    "path": "src/registry/widgets/tips-total.widget.js",
+    "sizeCategory": "large",
+    "size": 6307
+  },
+  {
+    "path": "src/registry/widgets/total-hours.widget.js",
+    "sizeCategory": "large",
+    "size": 5707
+  },
+  {
+    "path": "src/registry/widgets/week-compare.widget.js",
+    "sizeCategory": "medium",
+    "size": 1982
+  },
+  {
+    "path": "src/registry/widgets/weekly-goal.widget.js",
+    "sizeCategory": "medium",
+    "size": 1804
+  },
+  {
+    "path": "src/registry/widgets/weekly-projection.widget.js",
+    "sizeCategory": "medium",
+    "size": 2422
+  },
+  {
+    "path": "src/registry/widgets/zero-days.widget.js",
+    "sizeCategory": "medium",
+    "size": 2089
+  },
+  {
+    "path": "src/ui/charts.js",
+    "sizeCategory": "large",
+    "size": 17574
+  },
+  {
+    "path": "src/ui/components.js",
+    "sizeCategory": "large",
+    "size": 48510
+  },
+  {
+    "path": "src/ui/icons.js",
+    "sizeCategory": "large",
+    "size": 8722
+  },
+  {
+    "path": "src/ui/nav-icons.js",
+    "sizeCategory": "large",
+    "size": 12174
+  },
+  {
+    "path": "src/utils/calculations.js",
+    "sizeCategory": "large",
+    "size": 7839
+  },
+  {
+    "path": "src/utils/date-range-presets.js",
+    "sizeCategory": "medium",
+    "size": 2014
+  },
+  {
+    "path": "src/utils/formatters.js",
+    "sizeCategory": "medium",
+    "size": 4486
+  },
+  {
+    "path": "src/utils/locale.js",
+    "sizeCategory": "medium",
+    "size": 4683
+  },
+  {
+    "path": "src/utils/strings.js",
+    "sizeCategory": "large",
+    "size": 93435
+  },
+  {
+    "path": "src/views/about-view.js",
+    "sizeCategory": "medium",
+    "size": 1670
+  },
+  {
+    "path": "src/views/analytics-view.js",
+    "sizeCategory": "large",
+    "size": 13685
+  },
+  {
+    "path": "src/views/dashboard.js",
+    "sizeCategory": "large",
+    "size": 21875
+  },
+  {
+    "path": "src/views/expenses-view.js",
+    "sizeCategory": "medium",
+    "size": 2008
+  },
+  {
+    "path": "src/views/goals-view.js",
+    "sizeCategory": "large",
+    "size": 20372
+  },
+  {
+    "path": "src/views/onboarding-view.js",
+    "sizeCategory": "trivial",
+    "size": 340
+  },
+  {
+    "path": "src/views/print-view.js",
+    "sizeCategory": "medium",
+    "size": 3202
+  },
+  {
+    "path": "src/views/reports-view.js",
+    "sizeCategory": "large",
+    "size": 17993
+  },
+  {
+    "path": "src/views/schedule-view.js",
+    "sizeCategory": "trivial",
+    "size": 240
+  },
+  {
+    "path": "src/views/settings-view.js",
+    "sizeCategory": "medium",
+    "size": 1438
+  },
+  {
+    "path": "src/views/shifts-view.js",
+    "sizeCategory": "large",
+    "size": 30830
+  },
+  {
+    "path": "src/views/tax-view.js",
+    "sizeCategory": "trivial",
+    "size": 240
+  },
+  {
+    "path": "src/views/vehicles-view.js",
+    "sizeCategory": "trivial",
+    "size": 262
+  },
+  {
+    "path": "src/views/view-utils.js",
+    "sizeCategory": "medium",
+    "size": 1191
+  }
+]
