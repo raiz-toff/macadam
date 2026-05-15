@@ -128,15 +128,22 @@ async function paintDashboard(root, ctx) {
   widgetCtx.data.financial = fin; // Inject pre-fetched financial data
 
   // 2. Render Widgets from Registry
-  const widgetIds = getOrderedDashboardWidgetIds(user, widgetCtx).filter(id => ![
+  const currentWidgets = getOrderedDashboardWidgetIds(user, widgetCtx).filter(id => ![
     'earnings',
     'expenses',
     'netIncome',
     'taxJar'
   ].includes(id));
 
-  const widgetCells = await Promise.all(widgetIds.map(async (id) => {
+  // 0. FILTER OUT PERMANENT WIDGETS
+  const dashboardWidgets = currentWidgets.filter(wObj => {
+    const id = typeof wObj === 'string' ? wObj : wObj?.id;
+    return id !== 'totalHours';
+  });
+
+  const widgetCells = await Promise.all(dashboardWidgets.map(async (wObj) => {
     try {
+      const id = typeof wObj === 'string' ? wObj : wObj?.id;
       const def = WidgetRegistry.getById(id);
       if (!def) return null;
 
@@ -167,7 +174,12 @@ async function paintDashboard(root, ctx) {
 
   const fmt = (v) => esc(formatCurrency(Number(v) || 0, localeCountry, { currency }));
   const fmtNum = (v, frac = 2) => esc(Number(v || 0).toFixed(frac));
-  const hoursStr = `${fmtNum(fin.hours, 2)} ${esc(t('views.dashboard.financial.hoursSuffix'))}`;
+  const hoursVal = Number(fin.hours) || 0;
+  const hoursInt = Math.floor(hoursVal);
+  const hoursDec = (hoursVal % 1).toFixed(2).slice(1); // .77
+  const exactHours = Math.floor(hoursVal);
+  const exactMinutes = Math.round((hoursVal - exactHours) * 60);
+  const hoursStr = `${fmtNum(hoursVal, 2)} ${esc(t('views.dashboard.financial.hoursSuffix'))}`;
  
   // --- Visuals for KPI Blocks (Matching Widgets) ---
   const taxProfile = getCountryTaxProfile(localeCountry);
@@ -188,7 +200,8 @@ async function paintDashboard(root, ctx) {
 
   const burnRatio = fin.gross > 0 ? Math.min(100, (fin.expense / fin.gross) * 100) : 0;
   const netMargin = fin.gross > 0 ? Math.min(100, (takeHomePay / fin.gross) * 100) : 0;
-  const taxJarRatio = fin.gross > 0 ? Math.min(100, (taxSetAside / (fin.gross * 0.3)) * 100) : 0; // Relative to 30% goal
+  const taxJarRatio = fin.gross > 0 ? Math.min(100, (taxSetAside / (fin.gross * 0.3)) * 100) : 0; 
+  const hoursRatio = Math.min(100, (hoursVal / 40) * 100);
 
   const wc = widgetCtx.data.weekCompare;
   const isUp = (wc?.delta || 0) >= 0;
@@ -236,6 +249,8 @@ async function paintDashboard(root, ctx) {
         50%  { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
       }
+      @keyframes th-spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      @keyframes th-spin-ccw { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
 
       .kpi-hero-strip {
         display: grid;
@@ -249,7 +264,7 @@ async function paintDashboard(root, ctx) {
         position: relative;
       }
       @media (min-width: 900px) {
-        .kpi-hero-strip { grid-template-columns: repeat(4, 1fr); }
+        .kpi-hero-strip { grid-template-columns: repeat(5, 1fr); }
       }
 
       .kpi-hero-strip::before {
@@ -284,6 +299,8 @@ async function paintDashboard(root, ctx) {
       .kpi-card:nth-child(2) { animation-delay: 0.12s; }
       .kpi-card:nth-child(3) { animation-delay: 0.19s; }
       .kpi-card:nth-child(4) { animation-delay: 0.26s; }
+      .kpi-card:nth-child(5) { animation-delay: 0.33s; }
+      .kpi-card:nth-child(5) { animation-delay: 0.33s; }
 
       /* Accent stripe at top */
       .kpi-card::after {
@@ -440,6 +457,21 @@ async function paintDashboard(root, ctx) {
         mix-blend-mode: overlay;
         z-index: 0;
       }
+
+      /* Orbital dial for Hours */
+      .th-dial-svg {
+        position: absolute;
+        bottom: -20%;
+        right: -15%;
+        width: 100%;
+        height: 100%;
+        color: var(--kpi-accent);
+        opacity: 0.08;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .th-ring-outer { transform-origin: center; animation: th-spin-cw 20s linear infinite; }
+      .th-ring-inner { transform-origin: center; animation: th-spin-ccw 12s linear infinite; }
     </style>
 
     <div class="kpi-hero-strip" role="list" aria-label="Financial KPIs">
@@ -533,6 +565,38 @@ async function paintDashboard(root, ctx) {
         <div class="kpi-value">${fmt(takeHomePay)}</div>
         <div class="kpi-bar-track">
           <div class="kpi-bar-fill" style="width: ${Math.min(netMargin, 100)}%"></div>
+        </div>
+      </div>
+
+      <!-- ⑤ TOTAL HOURS -->
+      <div class="kpi-card" style="--kpi-accent: #3b82f6;" role="listitem">
+        <div class="kpi-card-noise"></div>
+        
+        <!-- Spinning Orbital Background -->
+        <svg class="th-dial-svg" viewBox="0 0 100 100">
+          <circle class="th-ring-outer" cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="12 16" stroke-linecap="round"></circle>
+          <circle class="th-ring-inner" cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="6 10" stroke-linecap="round"></circle>
+        </svg>
+
+        <div class="kpi-card-top" style="margin-bottom: var(--space-1);">
+          <div class="kpi-label-group">
+             <div class="kpi-label" style="margin-bottom: 0;">${esc(t('views.dashboard.financial.totalHours'))}</div>
+          </div>
+        </div>
+
+        <div class="kpi-value" style="display: flex; align-items: baseline; gap: 4px; margin-top: 2px;">
+           <span style="font-weight: 900;">${hoursInt}</span><span style="font-size: 0.6em; font-weight: 800; opacity: 0.7;">${hoursDec}</span>
+           <span style="font-size: 0.45em; font-weight: 900; margin-left: 6px; color: #3b82f6; letter-spacing: 0.05em;">HRS</span>
+        </div>
+
+        <div style="margin-top: auto; display: flex;">
+           <div style="background: var(--color-surface-raised); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--color-text-main); display: flex; gap: 6px; align-items: center; border: 1px solid var(--color-border);">
+              <span style="color: #3b82f6;">${exactHours}h ${exactMinutes}m</span> <span style="opacity: 0.7; font-size: 9px;">ACTIVE</span>
+           </div>
+        </div>
+
+        <div class="kpi-bar-track" style="margin-top: var(--space-3);">
+          <div class="kpi-bar-fill" style="width: ${hoursRatio}%"></div>
         </div>
       </div>
 
