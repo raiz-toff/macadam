@@ -128,6 +128,9 @@ export function renderPlatformSwitcher(mode, opts) {
   )}">${tabs.join('')}</div>`;
 }
 
+let demoSwitcherAutoExpanded = false;
+let activeCollapseCleanup = null;
+
 /** @type {WeakMap<HTMLElement, () => void>} */
 const switcherTeardown = new WeakMap();
 
@@ -220,6 +223,31 @@ export function mountPlatformSwitcher(slot) {
     /* ── Sliding pill: expand / select+collapse ── */
     const tablist = slot.querySelector('.platform-switcher--tabs');
     if (tablist) {
+      const isDemo = store.get('demoMode');
+      if (isDemo && !demoSwitcherAutoExpanded) {
+        demoSwitcherAutoExpanded = true;
+        tablist.classList.add('is-expanded');
+
+        const collapseOnMove = () => {
+          if (tablist.classList.contains('is-expanded')) {
+            tablist.classList.remove('is-expanded');
+          }
+          cleanupCollapseListeners();
+        };
+
+        const cleanupCollapseListeners = () => {
+          window.removeEventListener('scroll', collapseOnMove, true);
+          document.removeEventListener('touchmove', collapseOnMove, { passive: true });
+          document.removeEventListener('wheel', collapseOnMove, { passive: true });
+        };
+
+        activeCollapseCleanup = cleanupCollapseListeners;
+
+        window.addEventListener('scroll', collapseOnMove, true);
+        document.addEventListener('touchmove', collapseOnMove, { passive: true });
+        document.addEventListener('wheel', collapseOnMove, { passive: true });
+      }
+
       let isScrolling = false;
       let startX = 0;
       let startY = 0;
@@ -330,6 +358,10 @@ export function mountPlatformSwitcher(slot) {
   const teardown = () => {
     if (typeof document !== 'undefined') {
       document.removeEventListener('click', onDocClick);
+    }
+    if (activeCollapseCleanup) {
+      activeCollapseCleanup();
+      activeCollapseCleanup = null;
     }
     off();
     store.unsubscribe('platforms', run);
