@@ -148,19 +148,21 @@ export async function render(root, ctx) {
     const msg = fd.get('message') || '';
 
     const subject = `[COMMA Support] ${feedbackType}`;
-    const body = `Hi raj i am mailing regarding thjis\n\n${msg}\n\n` +
+    const body = `Hi Raj,\n\nHope you are doing great! I am writing to you regarding the Macadam web app. Here are my thoughts:\n\n` +
       `----------------------------------------\n` +
-      `SYSTEM DIAGNOSTICS:\n` +
-      `App Version: ${appVersion}\n` +
-      `Date/Time: ${new Date().toISOString()}\n` +
-      `Active Theme: ${theme}\n` +
-      `Weekly Goal: $${weeklyGoal.toFixed(2)}\n` +
-      `Distance Unit: ${distanceUnit}\n` +
-      `Active Platforms: ${platformCount}\n` +
-      `Shifts Logged: ${shiftCount}\n` +
-      `Expenses Logged: ${expenseCount}\n` +
-      `Connection: ${isOnline}\n` +
-      `User Agent: ${userAgent}\n` +
+      `${msg || '(No custom message provided)'}\n` +
+      `----------------------------------------\n\n` +
+      `🛠️ SYSTEM DIAGNOSTICS:\n` +
+      `• App Version: ${appVersion}\n` +
+      `• Date/Time: ${new Date().toLocaleString()}\n` +
+      `• Active Theme: ${theme}\n` +
+      `• Weekly Goal: $${weeklyGoal.toFixed(2)}\n` +
+      `• Distance Unit: ${distanceUnit}\n` +
+      `• Active Platforms: ${platformCount}\n` +
+      `• Shifts Logged: ${shiftCount}\n` +
+      `• Expenses Logged: ${expenseCount}\n` +
+      `• Connection: ${isOnline}\n` +
+      `• User Agent: ${userAgent}\n` +
       `----------------------------------------\n`;
 
     const mailto = `mailto:me@rajkumarneupane.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
