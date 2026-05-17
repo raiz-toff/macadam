@@ -364,6 +364,20 @@ export async function initDatabase() {
   await runLogicalMigrations();
   await seedFirstRun();
   await putMissingAppStateDefaults(nowIso());
+
+  // Purge residual 'orders' fields to ensure single source of truth (deliveryCount)
+  try {
+    await db.shifts.toCollection().modify((row) => {
+      if (row.orders !== undefined) {
+        if (row.deliveryCount == null && row.orders != null) {
+          row.deliveryCount = Math.max(0, Math.floor(Number(row.orders)) || 0);
+        }
+        delete row.orders;
+      }
+    });
+  } catch (err) {
+    console.warn('[comma db] failed to prune residual orders fields:', err);
+  }
 }
 
 export async function getUser() {

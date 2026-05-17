@@ -124,13 +124,13 @@ export function renderShiftForm(opts = {}) {
         ${
           allowWeeklyEntry && mode === 'full'
             ? `<div class="field">
-                <span class="field-label">${escapeHtml(t('shifts.entryScope'))}</span>
+                <span class="field-label">${escapeHtml(t('shifts.entryScopeLabel'))}</span>
                 <div class="btn-group w-full" role="group">
                   <button type="button" class="btn btn-ghost btn-sm is-active" data-scope="day">${escapeHtml(
-                    t('shifts.scopeSingleDay'),
+                    t('shifts.entryOneDay'),
                   )}</button>
                   <button type="button" class="btn btn-ghost btn-sm" data-scope="week">${escapeHtml(
-                    t('shifts.scopeWeekly'),
+                    t('shifts.entryWeekDays'),
                   )}</button>
                 </div>
                 <input type="hidden" name="entryScope" value="day" />
@@ -192,10 +192,8 @@ export function renderShiftForm(opts = {}) {
           </div>
         </label>
 
-        <div class="shifts-form-toggle ${mode === 'quick' ? '' : ''}">
-          <button type="button" class="btn btn-ghost" data-action="toggle-advanced" aria-expanded="${
-            mode === 'quick' ? 'false' : 'true'
-          }">${escapeHtml(t('shifts.advancedToggle'))}</button>
+        <div class="shifts-form-toggle">
+          <button type="button" class="btn btn-ghost" data-action="toggle-advanced" aria-expanded="false">${escapeHtml(t('shifts.advancedToggle'))}</button>
         </div>
 
         <div class="shifts-advanced" data-advanced>
@@ -242,11 +240,11 @@ export function renderShiftForm(opts = {}) {
               <span class="field-label">${escapeHtml(t('shifts.weather'))}</span>
               <select class="input" name="weather">
                 <option value="">${escapeHtml(t('common.optional'))}</option>
-                <option value="clear">${escapeHtml(t('shifts.weatherClear'))}</option>
-                <option value="rain">${escapeHtml(t('shifts.weatherRain'))}</option>
-                <option value="snow">${escapeHtml(t('shifts.weatherSnow'))}</option>
-                <option value="fog">${escapeHtml(t('shifts.weatherFog'))}</option>
-                <option value="heat">${escapeHtml(t('shifts.weatherHeat'))}</option>
+                <option value="clear">☀️ ${escapeHtml(t('shifts.weatherClear'))}</option>
+                <option value="rain">🌧️ ${escapeHtml(t('shifts.weatherRain'))}</option>
+                <option value="snow">❄️ ${escapeHtml(t('shifts.weatherSnow'))}</option>
+                <option value="fog">🌫️ ${escapeHtml(t('shifts.weatherFog'))}</option>
+                <option value="heat">🔥 ${escapeHtml(t('shifts.weatherHeat'))}</option>
               </select>
             </label>
 
@@ -387,7 +385,7 @@ export function renderShiftForm(opts = {}) {
   const unit = distanceUnit();
   if (distanceHint) distanceHint.textContent = unit === 'mi' ? t('shifts.unitMiles') : t('shifts.unitKm');
 
-  let advancedOpen = mode !== 'quick';
+  let advancedOpen = false;
   const applyAdvanced = () => {
     if (!toggleBtn || !advWrap) return;
     toggleBtn.setAttribute('aria-expanded', advancedOpen ? 'true' : 'false');
@@ -622,17 +620,34 @@ export function renderShiftForm(opts = {}) {
   seed('gross', grossDollars);
   seed('tips', tipsDollars);
   seed('bonus', bonusDollars);
-  seed('orders', initial.orders ?? '');
-  seed('distance', initial.distanceKm ?? initial.distance ?? '');
+  seed('orders', initial.deliveryCount ?? initial.orders ?? '');
+  let distanceVal = '';
+  if (initial.distanceKm != null && Number.isFinite(Number(initial.distanceKm))) {
+    const km = Number(initial.distanceKm);
+    distanceVal = String(unit === 'mi' ? parseFloat((km / 1.60934).toFixed(2)) : parseFloat(km.toFixed(2)));
+  } else if (initial.distance != null) {
+    distanceVal = String(initial.distance);
+  }
+
+  let deadMilesVal = '';
+  if (initial.deadMilesKm != null && Number.isFinite(Number(initial.deadMilesKm))) {
+    const km = Number(initial.deadMilesKm);
+    deadMilesVal = String(unit === 'mi' ? parseFloat((km / 1.60934).toFixed(2)) : parseFloat(km.toFixed(2)));
+  } else if (initial.deadMiles != null) {
+    deadMilesVal = String(initial.deadMiles);
+  }
+
+  seed('distance', distanceVal);
   seed('onlineMinutes', initial.onlineMinutes ?? '');
   seed('activeMinutes', initial.activeMinutes ?? '');
   seed('weather', initial.weather ?? '');
-  seed('deadMilesKm', initial.deadMilesKm ?? '');
+  seed('deadMilesKm', deadMilesVal);
   seed('outOfPocketExpense', initial.outOfPocketExpense ?? '');
   seed('notes', initial.notes ?? '');
   if (typeof initial.mood === 'string') setMood(initial.mood);
 
   if (startEl && !startEl.value && mode === 'quick') startEl.value = hmNow();
+  seed('platformId', defaultPlatformId);
 
   renderPlatformSpecificFields(String(platformSel?.value || defaultPlatformId));
 

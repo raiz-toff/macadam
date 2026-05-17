@@ -17,6 +17,7 @@ import {
 } from './shifts.js';
 import { showToast, showModal, showDrawer } from '../../ui/components.js';
 import { renderShiftForm } from './shift-form.js';
+import { GPSTracker } from '../../core/gps-tracker.js';
 
 let clockOverlayEl = null;
 let updateInterval = null;
@@ -26,6 +27,8 @@ const PLAY_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3
 const PAUSE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;"><path d="M2 6C2 4.11438 2 3.17157 2.58579 2.58579C3.17157 2 4.11438 2 6 2C7.88562 2 8.82843 2 9.41421 2.58579C10 3.17157 10 4.11438 10 6V18C10 19.8856 10 20.8284 9.41421 21.4142C8.82843 22 7.88562 22 6 22C4.11438 22 3.17157 22 2.58579 21.4142C2 20.8284 2 19.8856 2 18V6Z" fill="currentColor"></path><path opacity="0.5" d="M14 6C14 4.11438 14 3.17157 14.5858 2.58579C15.1716 2 16.1144 2 18 2C19.8856 2 20.8284 2 21.4142 2.58579C22 3.17157 22 4.11438 22 6V18C22 19.8856 22 20.8284 21.4142 21.4142C20.8284 22 19.8856 22 18 22C16.1144 22 15.1716 22 14.5858 21.4142C14 20.8284 14 19.8856 14 18V6Z" fill="currentColor"></path></svg>`;
 
 const MINIMIZE_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;"><path d="M20 4L14 10M14 10H17.75M14 10V6.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M4 20L10 14M10 14H6.25M10 14V17.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C21.5093 4.43821 21.8356 5.80655 21.9449 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>`;
+
+const GOT_ORDER_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>`;
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -383,6 +386,7 @@ export function openBigClockOverlay() {
         <div style="display: flex; flex-direction: column; align-items: center; z-index: 2;">
           <span class="text-secondary" style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--color-text-muted);" id="bigclock-state-label">Active Time</span>
           <div class="big-clock-time" id="bigclock-digital-time">00:00:00</div>
+          <div id="bigclock-distance" style="font-family: var(--font-body); font-size: 16px; font-weight: 700; color: var(--color-text-secondary); margin-top: 4px; display: none;">0.00 km</div>
           
           <span class="text-secondary" style="font-size: 12px; color: var(--color-text-secondary); font-weight: 500;" id="bigclock-target-eta"></span>
         </div>
@@ -401,6 +405,12 @@ export function openBigClockOverlay() {
 
       <!-- Control actions grid -->
       <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); width: 100%; max-width: 320px; margin: var(--space-2) auto 0 auto;">
+        
+        <!-- Got First Order Button -->
+        <button type="button" class="btn btn-big-firstorder" id="bigclock-btn-firstorder" style="width: 100%; display: none;">
+          ${GOT_ORDER_ICON_SVG} <span>Got First Order</span>
+        </button>
+
         <div style="display: flex; align-items: center; justify-content: center; gap: var(--space-3); width: 100%;">
           <!-- Pause/Resume button -->
           <button type="button" class="btn flex-1" id="bigclock-btn-pause"></button>
@@ -412,7 +422,7 @@ export function openBigClockOverlay() {
         </div>
 
         <!-- End Shift button -->
-        <button type="button" class="btn btn-danger btn-big-stop" id="bigclock-btn-end" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <button type="button" class="btn btn-danger btn-big-stop" id="bigclock-btn-end" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; height: 42px; border-radius: 8px;">
           ${getIcon('square', 14)} Stop & Save Shift
         </button>
       </div>
@@ -431,6 +441,7 @@ export function openBigClockOverlay() {
   const pauseBtn = clockOverlayEl.querySelector('#bigclock-btn-pause');
   const minimizeBtn = clockOverlayEl.querySelector('#bigclock-btn-minimize');
   const endBtn = clockOverlayEl.querySelector('#bigclock-btn-end');
+  const firstOrderBtn = clockOverlayEl.querySelector('#bigclock-btn-firstorder');
 
   // Trigger animations
   const svgContainer = clockOverlayEl.querySelector('.circular-timer-container');
@@ -452,6 +463,42 @@ export function openBigClockOverlay() {
 
     digitalTime.textContent = formatTimeMs(elapsed);
 
+    // Show or hide First Order button
+    if (firstOrderBtn) {
+      if (GPSTracker.isFirstOrderReceived() || isPaused) {
+        firstOrderBtn.style.display = 'none';
+      } else {
+        firstOrderBtn.style.display = 'flex';
+      }
+    }
+
+    const distanceKm = GPSTracker.getAccumulatedDistance();
+    const deadKm = GPSTracker.getDeadDistance();
+    const distanceEl = clockOverlayEl.querySelector('#bigclock-distance');
+    if (distanceEl) {
+      if (distanceKm > 0.01) {
+        const user = store.get('user');
+        const unit = user && user.locale && typeof user.locale.distanceUnit === 'string' ? user.locale.distanceUnit : 'km';
+        const dist = unit === 'mi' ? distanceKm / 1.60934 : distanceKm;
+        const dead = unit === 'mi' ? deadKm / 1.60934 : deadKm;
+
+        if (GPSTracker.isFirstOrderReceived()) {
+          distanceEl.innerHTML = `
+            <div style="font-size: 16px; font-weight: 700; color: var(--color-text-primary); text-shadow: 0 0 8px rgba(255,255,255,0.05);">${dist.toFixed(2)} ${unit} total</div>
+            <div style="font-size: 11px; font-weight: 600; color: var(--color-text-secondary); opacity: 0.75; margin-top: 2px;">Active: ${(dist - dead).toFixed(2)} ${unit} • Dead: ${dead.toFixed(2)} ${unit}</div>
+          `;
+        } else {
+          distanceEl.innerHTML = `
+            <div style="font-size: 16px; font-weight: 700; color: #f59e0b; text-shadow: 0 0 10px rgba(245,158,11,0.1);">${dist.toFixed(2)} ${unit}</div>
+            <span style="font-size: 9px; font-weight: 800; background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-top: 3px; display: inline-block; border: 1px solid rgba(245,158,11,0.25);">Dead Miles 💀</span>
+          `;
+        }
+        distanceEl.style.display = 'block';
+      } else {
+        distanceEl.style.display = 'none';
+      }
+    }
+
     // Apply colors and states
     if (isPaused) {
       stateLabel.textContent = 'Shift Paused';
@@ -461,6 +508,14 @@ export function openBigClockOverlay() {
       svgContainer.style.animation = 'pulsePauseGlow 4s ease-in-out infinite';
       pauseBtn.className = 'btn btn-big-resume flex-1';
       pauseBtn.innerHTML = `${PLAY_ICON_SVG} <span>Resume</span>`;
+    } else if (!GPSTracker.isFirstOrderReceived()) {
+      stateLabel.textContent = 'Waiting for Order';
+      stateLabel.style.color = '#f59e0b';
+      digitalTime.style.color = 'var(--color-text-primary)';
+      ring.setAttribute('stroke', '#f59e0b');
+      svgContainer.style.animation = 'pulsePauseGlow 4s ease-in-out infinite';
+      pauseBtn.className = 'btn btn-big-pause flex-1';
+      pauseBtn.innerHTML = `${PAUSE_ICON_SVG} <span>Pause</span>`;
     } else {
       stateLabel.textContent = 'Shift Active';
       stateLabel.style.color = esc(platformColor);
@@ -518,6 +573,14 @@ export function openBigClockOverlay() {
   };
 
   // Click bindings
+  if (firstOrderBtn) {
+    firstOrderBtn.addEventListener('click', () => {
+      GPSTracker.markFirstOrderReceived();
+      showToast({ type: 'success', message: '🎉 First order received! Active miles tracking started.', duration: 3000 });
+      updateClockUI();
+    });
+  }
+
   pauseBtn.addEventListener('click', async () => {
     const currentTimer = store.get('activeShiftTimer');
     if (!currentTimer) return;
@@ -546,6 +609,7 @@ export function openBigClockOverlay() {
         mode: 'full',
         initial: prefill,
         submitLabel: t('common.save'),
+        allowWeeklyEntry: false,
       });
       const handle = showModal({
         title: t('shifts.endShift'),

@@ -223,3 +223,29 @@
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
   }
 }
+
+.btn-big-firstorder {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  background: linear-gradient(135deg, var(--color-success) 0%, color-mix(in srgb, var(--color-success) 80%, #000) 100%) !important;
+  border: none !important;
+  color: white !important;
+  border-radius: var(--radius-lg) !important;
+  height: 52px !important;
+  font-weight: 800 !important;
+  font-size: 15px !important;
+  letter-spacing: 0.02em !important;
+  box-shadow: 0 8px 25px color-mix(in srgb, var(--color-success) 25%, transparent) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-big-firstorder:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--color-success) 40%, transparent) !important;
+}
+
+.btn-big-firstorder:active {
+  transform: translateY(1px) !important;
+}

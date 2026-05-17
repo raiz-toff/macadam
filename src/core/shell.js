@@ -14,6 +14,7 @@ import { renderShiftForm } from '../modules/shifts/shift-form.js';
 import { restoreShiftTimerFromLocalStorage, saveShift, stopShiftTimer, startShiftTimer } from '../modules/shifts/shifts.js';
 import { db } from './db.js';
 import { bus } from './events.js';
+import { GPSTracker } from './gps-tracker.js';
 
 /** @type {ReturnType<typeof setInterval> | null} */
 let clockTimer = null;
@@ -385,6 +386,7 @@ export async function renderAppShell(root) {
           mode: 'full',
           initial: prefill,
           submitLabel: t('common.save'),
+          allowWeeklyEntry: false,
         });
         const handle = showModal({
           title: t('shifts.endShift'),
@@ -424,6 +426,11 @@ async function hydrateShiftTimerBar(bar) {
   try {
     await restoreShiftTimerFromLocalStorage();
 
+    const getDistanceUnit = () => {
+      const user = store.get('user');
+      return user && user.locale && typeof user.locale.distanceUnit === 'string' ? user.locale.distanceUnit : 'km';
+    };
+
     const apply = () => {
       const timer = store.get('activeShiftTimer');
       const startIso = timer && typeof timer.startTime === 'string' ? timer.startTime : null;
@@ -445,6 +452,15 @@ async function hydrateShiftTimerBar(bar) {
       const mm = mins % 60;
       const elapsed = hh > 0 ? `${hh}h ${mm}m` : `${mm}m`;
 
+      const distanceKm = GPSTracker.getAccumulatedDistance();
+      let distanceStr = '';
+      if (distanceKm > 0.01) {
+        const unit = getDistanceUnit();
+        const dist = unit === 'mi' ? distanceKm / 1.60934 : distanceKm;
+        const prefix = GPSTracker.isFirstOrderReceived() ? '' : '💀 ';
+        distanceStr = ` • ${prefix}${dist.toFixed(1)} ${unit}`;
+      }
+
       bar.hidden = false;
       bar.removeAttribute('hidden');
       bar.classList.remove('is-collapsed');
@@ -460,11 +476,11 @@ async function hydrateShiftTimerBar(bar) {
         <div class="shift-timer-bar-inner" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 4px 0;">
           <div style="display: flex; align-items: center; gap: 10px;">
             <span class="shift-timer-dot" style="width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: ${escapeAttr(platformColor)}; box-shadow: 0 0 10px ${escapeAttr(platformColor)}; animation: ${isPaused ? 'none' : 'pulse 1.8s infinite'};" aria-hidden="true"></span>
-            <span class="shift-timer-label" style="font-weight: 600;">${escapeHtml(platformName)} ${isPaused ? '(Paused)' : t('shifts.shiftTimer')}</span>
-            <span class="shift-timer-meta" style="font-weight: 700; color: white; background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 4px; font-size: 13px;">${escapeHtml(elapsed)}</span>
+            <span class="shift-timer-label" style="font-weight: 600; color: var(--color-text-primary);">${escapeHtml(platformName)} ${isPaused ? '(Paused)' : t('shifts.shiftTimer')}</span>
+            <span class="shift-timer-meta" style="font-weight: 700; color: var(--color-text-primary); background: var(--color-surface-raised); border: 1px solid var(--color-border); padding: 2px 8px; border-radius: 4px; font-size: 13px; display: inline-flex; align-items: center; gap: 4px;">${escapeHtml(elapsed)}${escapeHtml(distanceStr)}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 11px; color: rgba(255,255,255,0.45); font-weight: 500; display: inline-block; vertical-align: middle;">View Timer</span>
+            <span style="font-size: 11px; color: var(--color-text-secondary); opacity: 0.8; font-weight: 600; display: inline-block; vertical-align: middle;">View Timer</span>
             <button type="button" class="btn btn-ghost btn-xs shift-timer-cta" data-action="end-shift" style="color: var(--color-danger); border-color: rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.08); font-weight: 700; border-radius: 4px; padding: 4px 8px; font-size: 12px;">${escapeHtml(
               t('shifts.endShift'),
             )}</button>
@@ -512,7 +528,7 @@ async function hydrateShiftTimerBar(bar) {
         try {
           const prefill = await stopShiftTimer();
           if (!prefill) return;
-          const formApi = renderShiftForm({ mode: 'full', initial: prefill, submitLabel: t('common.save') });
+          const formApi = renderShiftForm({ mode: 'full', initial: prefill, submitLabel: t('common.save'), allowWeeklyEntry: false });
           const handle = showModal({ title: t('shifts.endShift'), content: formApi.el, actions: [] });
           formApi.el.querySelector('form')?.addEventListener('submit', async (evt) => {
             evt.preventDefault();

@@ -13,6 +13,7 @@ import { store } from '../../core/store.js';
 import { acquireWakeLock, releaseWakeLock } from '../pwa/pwa.js';
 import { extractShiftPlatformSpecific } from '../platforms/platform-specific.js';
 import { saveExpense, updateExpense, deleteExpense } from '../expenses/expenses.js';
+import { GPSTracker } from '../../core/gps-tracker.js';
 
 const LS_TIMER_KEY = 'comma_active_shift_timer';
 const APP_STATE_TIMER_KEY = 'active_shift_start';
@@ -377,6 +378,10 @@ export async function updateShift(id, patch) {
     nextPatch.bonusEarnings = dollarsToCents(nextPatch.bonus);
     delete nextPatch.bonus;
   }
+  if (nextPatch.orders !== undefined || nextPatch.deliveryCount !== undefined) {
+    nextPatch.deliveryCount = clampNum(nextPatch.deliveryCount ?? nextPatch.orders, { min: 0 });
+    delete nextPatch.orders;
+  }
 
   const next = {
     ...prev,
@@ -553,6 +558,9 @@ export async function startShiftTimer(platformId, targetTime = null, vehicleId =
 
   /* Feature 248 — Wake Lock managed by P12 PWA module (re-acquires on visibility). */
   void acquireWakeLock().catch(() => {});
+
+  /* Start real-time GPS coordinate tracking for distance calculation. */
+  void GPSTracker.start().catch((err) => console.warn('[GPSTracker] Start failed', err));
 }
 
 /**
@@ -576,6 +584,9 @@ export async function pauseShiftTimer() {
   bus.emit(SHIFT_TIMER_START, payload);
 
   void releaseWakeLock().catch(() => {});
+
+  /* Pause GPS tracking during breaks to preserve battery */
+  GPSTracker.pause();
 }
 
 /**
@@ -598,6 +609,14 @@ export async function resumeShiftTimer() {
   bus.emit(SHIFT_TIMER_START, payload);
 
   void acquireWakeLock().catch(() => {});
+
+  /* Resume GPS tracking after the break */
+  void GPSTracker.resume().catch((err) => console.warn('[GPSTracker] Resume failed', err));
+}
+
+function getDistanceUnit() {
+  const user = store.get('user');
+  return user && user.locale && typeof user.locale.distanceUnit === 'string' ? user.locale.distanceUnit : 'km';
 }
 
 /**
@@ -617,6 +636,23 @@ export async function stopShiftTimer() {
 
   /* Feature 248 — release the wake lock when the timer stops. */
   void releaseWakeLock().catch(() => {});
+
+  /* Stop real-time GPS coordinate tracking and compute accumulated distance splits */
+  const splits = GPSTracker.stop();
+  const totalKm = splits.total;
+  const deadKm = splits.dead;
+
+  let distanceVal = null;
+  let deadMilesVal = null;
+
+  if (totalKm > 0.01) {
+    const unit = getDistanceUnit();
+    const factor = unit === 'mi' ? 1.60934 : 1.0;
+    distanceVal = parseFloat((totalKm / factor).toFixed(2));
+    if (deadKm > 0.01) {
+      deadMilesVal = parseFloat((deadKm / factor).toFixed(2));
+    }
+  }
 
   if (!state || !state.startTime) return null;
 
@@ -640,6 +676,10 @@ export async function stopShiftTimer() {
     endTime: endHm,
     activeMinutes: durMin,
     onlineMinutes: durMin,
+    distanceKm: totalKm > 0.01 ? parseFloat(totalKm.toFixed(4)) : null,
+    distance: distanceVal,
+    deadMilesKm: deadKm > 0.01 ? parseFloat(deadKm.toFixed(4)) : null,
+    deadMiles: deadMilesVal,
   };
 }
 
@@ -649,7 +689,12 @@ export async function stopShiftTimer() {
  */
 export async function restoreShiftTimerFromLocalStorage() {
   const current = await getAppState(APP_STATE_TIMER_KEY);
-  if (current) return;
+  if (current) {
+    if (!current.pausedAt && !GPSTracker.isActive()) {
+      void GPSTracker.start().catch((err) => console.warn('[GPSTracker] Restart failed', err));
+    }
+    return;
+  }
   let raw = null;
   try {
     raw = localStorage.getItem(LS_TIMER_KEY);
@@ -662,5 +707,9 @@ export async function restoreShiftTimerFromLocalStorage() {
   if (typeof o.startTime !== 'string') return;
   if (typeof o.platformId !== 'string') return;
   await setAppState(APP_STATE_TIMER_KEY, o);
+
+  if (!o.pausedAt && !GPSTracker.isActive()) {
+    void GPSTracker.start().catch((err) => console.warn('[GPSTracker] Start failed', err));
+  }
 }
 

@@ -27,6 +27,7 @@ import scatter from './scatter.widget.js';
 import stabilityScore from './stability-score.widget.js';
 import tipsTotal from './tips-total.widget.js';
 import zeroDays from './zero-days.widget.js';
+import hoursCompare from './hours-compare.widget.js';
 
 /** First bento stat strip — matches legacy `views/dashboard.js` layout. */
 export const DASHBOARD_STAT_STRIP_IDS = ['weeklyProjection', 'deliveries', 'weekCompare'];
@@ -73,6 +74,7 @@ const WIDGETS = [
   streak,
   tipsTotal,
   zeroDays,
+  hoursCompare,
 ];
 
 /** @type {Map<string, WidgetDefinition>} */

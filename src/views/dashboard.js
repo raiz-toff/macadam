@@ -227,11 +227,19 @@ async function paintDashboard(root, ctx) {
   const fmt = (v) => esc(formatCurrency(Number(v) || 0, localeCountry, { currency }));
   const fmtNum = (v, frac = 2) => esc(Number(v || 0).toFixed(frac));
   const hoursVal = Number(fin.hours) || 0;
-  const hoursInt = Math.floor(hoursVal);
-  const hoursDec = (hoursVal % 1).toFixed(2).slice(1); // .77
-  const exactHours = Math.floor(hoursVal);
-  const exactMinutes = Math.round((hoursVal - exactHours) * 60);
-  const hoursStr = `${fmtNum(hoursVal, 2)} ${esc(t('views.dashboard.financial.hoursSuffix'))}`;
+  const activeHoursVal = Number(fin.activeHours) || Number(fin.hours) || 0;
+  const onlineHoursVal = Number(fin.onlineHours) || Number(fin.hours) || 0;
+
+  const activeHoursInt = Math.floor(activeHoursVal);
+  const activeHoursDec = (activeHoursVal % 1).toFixed(2).slice(1);
+  const activeExactHours = Math.floor(activeHoursVal);
+  const activeExactMinutes = Math.round((activeHoursVal - activeExactHours) * 60);
+
+  const onlineHoursInt = Math.floor(onlineHoursVal);
+  const onlineHoursDec = (onlineHoursVal % 1).toFixed(2).slice(1);
+  const onlineExactHours = Math.floor(onlineHoursVal);
+  const onlineExactMinutes = Math.round((onlineHoursVal - onlineExactHours) * 60);
+  const hoursStr = `${fmtNum(activeHoursVal, 2)} ${esc(t('views.dashboard.financial.hoursSuffix'))}`;
  
   // --- Visuals for KPI Blocks (Matching Widgets) ---
   const taxProfile = getCountryTaxProfile(localeCountry);
@@ -293,9 +301,20 @@ async function paintDashboard(root, ctx) {
   const sparkPathStep    = getSparkPathStep(rollingPoints.map((p, i) => p * (0.2 + (i % 3) * 0.05))); 
   const sparkPathCurve   = getSparkPathCurve(rollingPoints.map((p, i) => p * (0.6 + (i % 2) * 0.02)));
 
-  const hoursSparkBars = rollingPoints.map((p, i) => {
-    const h = Math.max(4, (p / maxP) * 16);
-    return `<div style="flex: 1; height: ${h}px; background: currentColor; border-radius: 1px;"></div>`;
+  const activeHoursPts = widgetCtx.data.rollingTrend?.activeHoursPoints?.slice(-14).map(p => Number(p.y) || 0) || rollingPoints.map(p => p * 0.2);
+  const onlineHoursPts = widgetCtx.data.rollingTrend?.onlineHoursPoints?.slice(-14).map(p => Number(p.y) || 0) || rollingPoints.map(p => p * 0.28);
+
+  const maxAH = Math.max(...activeHoursPts, 1);
+  const maxOH = Math.max(...onlineHoursPts, 1);
+
+  const activeHoursSparkBars = activeHoursPts.map(p => {
+    const h = Math.max(4, (p / maxAH) * 22);
+    return `<div class="kpi-pillar-bar" style="flex: 1; height: ${h}px; background: currentColor; border-radius: 1px; transition: height 0.3s ease;"></div>`;
+  }).join('');
+
+  const onlineHoursSparkBars = onlineHoursPts.map(p => {
+    const h = Math.max(4, (p / maxOH) * 22);
+    return `<div class="kpi-pillar-bar" style="flex: 1; height: ${h}px; background: currentColor; border-radius: 1px; transition: height 0.3s ease;"></div>`;
   }).join('');
 
   const burnRatio = fin.gross > 0 ? Math.min(100, (fin.expense / fin.gross) * 100) : 0;
@@ -305,10 +324,12 @@ async function paintDashboard(root, ctx) {
     fin.avgRateHr = fin.hours > 0 ? fin.gross / fin.hours : 0;
   }
 
-  const sparkPathRate = getSparkPath(rollingPoints.map((p, i) => {
-    const h = (p / (maxP || 1)) * 40; // Mock variation based on gross trend
-    return h;
-  }));
+  const activeRateVal = fin.activeAvgRateHr ?? fin.avgRateHr ?? 0;
+  const onlineRateVal = fin.onlineAvgRateHr ?? fin.avgRateHr ?? 0;
+  const activePts = widgetCtx.data.rollingTrend?.activeRatePoints?.slice(-14).map(p => Number(p.y) || 0) || rollingPoints;
+  const onlinePts = widgetCtx.data.rollingTrend?.onlineRatePoints?.slice(-14).map(p => Number(p.y) || 0) || rollingPoints.map(p => p * 0.75);
+  const sparkPathRate = getSparkPath(activePts);
+  const sparkPathRateOnline = getSparkPath(onlinePts);
   const taxJarRatio = fin.gross > 0 ? Math.min(100, (taxSetAside / (fin.gross * 0.3)) * 100) : 0; 
   const hoursRatio = Math.min(100, (hoursVal / 40) * 100);
 
@@ -523,6 +544,14 @@ async function paintDashboard(root, ctx) {
         animation: kpi-bar-grow 1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
         position: relative;
       }
+      @keyframes kpi-pillar-grow {
+        from { transform: scaleY(0.1); opacity: 0; }
+        to { transform: scaleY(1); opacity: 1; }
+      }
+      .kpi-pillar-bar {
+        transform-origin: bottom;
+        animation: kpi-pillar-grow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      }
 
       /* Pulse dot (gross card only) */
       .kpi-pulse-wrap {
@@ -612,28 +641,55 @@ async function paintDashboard(root, ctx) {
         </div>
       </div>
 
-      <!-- ② AVG RATE - Sloping Peak -->
+      <!-- ② AVG RATE - Tabbed Card -->
       <div class="kpi-card" style="--kpi-accent: #f59e0b;" role="listitem">
         <div class="kpi-card-noise"></div>
-        <div class="kpi-card-top">
+        <div class="kpi-card-top" style="align-items: center;">
           <div class="kpi-label-group">
-            <div class="kpi-label">${esc(t('views.dashboard.financial.avgRateHr')) || 'Avg $/hr'}</div>
+            <div class="kpi-label" style="margin: 0;">${esc(t('views.dashboard.financial.avgRateHr')) || 'Avg $/hr'}</div>
+          </div>
+          <div class="kpi-card-tabs" style="display: flex; background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5px; align-items: center;">
+            <button type="button" class="btn btn-xs kpi-rate-tab is-active" data-rate-tab="active" style="padding: 0 6px; font-size: 8px; font-weight: 700; border-radius: 10px; height: 16px; min-height: 0; line-height: 14px;">Active</button>
+            <button type="button" class="btn btn-xs kpi-rate-tab btn-ghost" data-rate-tab="online" style="padding: 0 6px; font-size: 8px; font-weight: 700; border-radius: 10px; height: 16px; min-height: 0; line-height: 14px;">Online</button>
           </div>
         </div>
-        <div class="kpi-value" style="display: flex; align-items: baseline; gap: 4px;">
-           <span>${fmt(fin.avgRateHr || 0)}</span><span style="font-size: 0.5em; opacity: 0.7; font-weight: 800;">/hr</span>
+
+        <!-- Panel 1: Active Time Rate -->
+        <div id="kpi-panel-active" class="kpi-rate-panel" style="display: flex; flex-direction: column; flex: 1; margin-top: var(--space-1);">
+          <div class="kpi-value" style="display: flex; align-items: baseline; gap: 4px;">
+             <span>${fmt(activeRateVal)}</span><span style="font-size: 0.5em; opacity: 0.7; font-weight: 800;">/hr</span>
+          </div>
+
+          <svg class="kpi-spark" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none" style="margin-bottom: var(--space-2); height: 45px;">
+            <path class="kpi-spark-area" d="M 0,${svgH} L ${sparkPathRate} L ${svgW},${svgH} Z" style="fill: var(--kpi-accent); opacity: 0.12;" />
+            <path fill="none" stroke="var(--kpi-accent)" stroke-width="2.5" d="M ${sparkPathRate}" style="opacity: 1;" />
+          </svg>
+
+          <div style="margin-top: auto; display: flex;">
+             <div style="background: var(--color-surface-raised); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--color-text-main); display: flex; gap: 6px; align-items: center; border: 1px solid var(--color-border);">
+                <span style="color: #f59e0b;">${activeRateVal >= 35 ? 'ELITE' : activeRateVal >= 25 ? 'PRO' : 'ACTIVE'}</span> 
+                <span style="opacity: 0.7; font-size: 9px;">ACTIVE EFFICIENCY</span>
+             </div>
+          </div>
         </div>
 
-        <svg class="kpi-spark" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none" style="margin-bottom: var(--space-2); height: 45px;">
-          <path class="kpi-spark-area" d="M 0,${svgH} L ${sparkPathRate} L ${svgW},${svgH} Z" style="fill: var(--kpi-accent); opacity: 0.12;" />
-          <path fill="none" stroke="var(--kpi-accent)" stroke-width="2.5" d="M ${sparkPathRate}" style="opacity: 1;" />
-        </svg>
+        <!-- Panel 2: Total Online Time Rate -->
+        <div id="kpi-panel-online" class="kpi-rate-panel" style="display: none; flex-direction: column; flex: 1; margin-top: var(--space-1);">
+          <div class="kpi-value" style="display: flex; align-items: baseline; gap: 4px;">
+             <span>${fmt(onlineRateVal)}</span><span style="font-size: 0.5em; opacity: 0.7; font-weight: 800;">/hr</span>
+          </div>
 
-        <div style="margin-top: auto; display: flex;">
-           <div style="background: var(--color-surface-raised); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--color-text-main); display: flex; gap: 6px; align-items: center; border: 1px solid var(--color-border);">
-              <span style="color: #f59e0b;">${(fin.avgRateHr || 0) >= 35 ? 'ELITE' : (fin.avgRateHr || 0) >= 25 ? 'PRO' : 'ACTIVE'}</span> 
-              <span style="opacity: 0.7; font-size: 9px;">EFFICIENCY</span>
-           </div>
+          <svg class="kpi-spark" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none" style="margin-bottom: var(--space-2); height: 45px;">
+            <path class="kpi-spark-area" d="M 0,${svgH} L ${sparkPathRateOnline} L ${svgW},${svgH} Z" style="fill: var(--kpi-accent); opacity: 0.12;" />
+            <path fill="none" stroke="var(--kpi-accent)" stroke-width="2.5" d="M ${sparkPathRateOnline}" style="opacity: 1;" />
+          </svg>
+
+          <div style="margin-top: auto; display: flex;">
+             <div style="background: var(--color-surface-raised); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--color-text-main); display: flex; gap: 6px; align-items: center; border: 1px solid var(--color-border);">
+                <span style="color: #f59e0b;">${onlineRateVal >= 35 ? 'ELITE' : onlineRateVal >= 25 ? 'PRO' : 'ONLINE'}</span> 
+                <span style="opacity: 0.7; font-size: 9px;">TOTAL EFFICIENCY</span>
+             </div>
+          </div>
         </div>
       </div>
 
@@ -705,29 +761,53 @@ async function paintDashboard(root, ctx) {
         </div>
       </div>
 
-      <!-- ⑥ TOTAL HOURS - Activity Pillars -->
+      <!-- ⑥ TOTAL HOURS - Tabbed Card -->
       <div class="kpi-card" style="--kpi-accent: #6366f1;" role="listitem">
         <div class="kpi-card-noise"></div>
-        
-        <div class="kpi-card-top" style="margin-bottom: var(--space-1);">
+        <div class="kpi-card-top" style="align-items: center;">
           <div class="kpi-label-group">
-             <div class="kpi-label" style="margin-bottom: 0;">${esc(t('views.dashboard.financial.totalHours'))}</div>
+            <div class="kpi-label" style="margin: 0;">${esc(t('views.dashboard.financial.totalHours'))}</div>
+          </div>
+          <div class="kpi-card-tabs" style="display: flex; background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5px; align-items: center;">
+            <button type="button" class="btn btn-xs kpi-hours-tab is-active" data-hours-tab="active" style="padding: 0 6px; font-size: 8px; font-weight: 700; border-radius: 10px; height: 16px; min-height: 0; line-height: 14px;">Active</button>
+            <button type="button" class="btn btn-xs kpi-hours-tab btn-ghost" data-hours-tab="online" style="padding: 0 6px; font-size: 8px; font-weight: 700; border-radius: 10px; height: 16px; min-height: 0; line-height: 14px;">Online</button>
           </div>
         </div>
 
-        <div class="kpi-value" style="display: flex; align-items: baseline; gap: 4px; margin-top: 2px;">
-           <span style="font-weight: 900;">${hoursInt}</span><span style="font-size: 0.6em; font-weight: 800; opacity: 0.7;">${hoursDec}</span>
-           <span style="font-size: 0.45em; font-weight: 900; margin-left: 6px; color: #3b82f6; letter-spacing: 0.05em;">HRS</span>
+        <!-- Panel 1: Active Hours -->
+        <div id="kpi-panel-hours-active" class="kpi-hours-panel" style="display: flex; flex-direction: column; flex: 1; margin-top: var(--space-1);">
+          <div class="kpi-value" style="display: flex; align-items: baseline; gap: 4px; margin-top: 2px;">
+             <span style="font-weight: 900;">${activeHoursInt}</span><span style="font-size: 0.6em; font-weight: 800; opacity: 0.7;">.${activeHoursDec}</span>
+             <span style="font-size: 0.45em; font-weight: 900; margin-left: 6px; color: #3b82f6; letter-spacing: 0.05em;">HRS</span>
+          </div>
+
+          <div style="display: flex; height: 35px; align-items: flex-end; gap: 2px; margin-top: 10px; margin-bottom: 8px; color: var(--kpi-accent);">
+             ${activeHoursSparkBars}
+          </div>
+
+          <div style="margin-top: auto; display: flex;">
+             <div style="background: var(--color-surface-raised); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--color-text-main); display: flex; gap: 6px; align-items: center; border: 1px solid var(--color-border);">
+                <span style="color: #3b82f6;">${activeExactHours}h ${activeExactMinutes}m</span> <span style="opacity: 0.7; font-size: 9px;">ACTIVE</span>
+             </div>
+          </div>
         </div>
 
-        <div style="display: flex; height: 35px; align-items: flex-end; gap: 2px; margin-top: 10px; margin-bottom: 8px; color: var(--kpi-accent);">
-           ${hoursSparkBars.replace(/opacity: 0.15/g, 'opacity: 0.6')}
-        </div>
+        <!-- Panel 2: Total Online Hours -->
+        <div id="kpi-panel-hours-online" class="kpi-hours-panel" style="display: none; flex-direction: column; flex: 1; margin-top: var(--space-1);">
+          <div class="kpi-value" style="display: flex; align-items: baseline; gap: 4px; margin-top: 2px;">
+             <span style="font-weight: 900;">${onlineHoursInt}</span><span style="font-size: 0.6em; font-weight: 800; opacity: 0.7;">.${onlineHoursDec}</span>
+             <span style="font-size: 0.45em; font-weight: 900; margin-left: 6px; color: #3b82f6; letter-spacing: 0.05em;">HRS</span>
+          </div>
 
-        <div style="margin-top: auto; display: flex;">
-           <div style="background: var(--color-surface-raised); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--color-text-main); display: flex; gap: 6px; align-items: center; border: 1px solid var(--color-border);">
-              <span style="color: #3b82f6;">${exactHours}h ${exactMinutes}m</span> <span style="opacity: 0.7; font-size: 9px;">ACTIVE</span>
-           </div>
+          <div style="display: flex; height: 35px; align-items: flex-end; gap: 2px; margin-top: 10px; margin-bottom: 8px; color: var(--kpi-accent);">
+             ${onlineHoursSparkBars}
+          </div>
+
+          <div style="margin-top: auto; display: flex;">
+             <div style="background: var(--color-surface-raised); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--color-text-main); display: flex; gap: 6px; align-items: center; border: 1px solid var(--color-border);">
+                <span style="color: #3b82f6;">${onlineExactHours}h ${onlineExactMinutes}m</span> <span style="opacity: 0.7; font-size: 9px;">ONLINE</span>
+             </div>
+          </div>
         </div>
       </div>
 
@@ -1036,10 +1116,72 @@ async function paintDashboard(root, ctx) {
     const el = /** @type {HTMLElement | null} */ (
       ev.target &&
       /** @type {HTMLElement} */ (ev.target).closest(
-        '[data-dashboard-preset],[data-dashboard-apply],[data-dashboard-monthly-page],[data-dashboard-monthly-goto],[data-dashboard-toggle-filter],[data-dashboard-toggle-shortcuts]',
+        '[data-dashboard-preset],[data-dashboard-apply],[data-dashboard-monthly-page],[data-dashboard-monthly-goto],[data-dashboard-toggle-filter],[data-dashboard-toggle-shortcuts],[data-rate-tab],[data-hours-tab]',
       )
     );
     if (!el || !root.contains(el)) return;
+
+    if (el.hasAttribute('data-hours-tab')) {
+      ev.stopPropagation();
+      const tab = el.getAttribute('data-hours-tab');
+      root.querySelectorAll('[data-hours-tab]').forEach((b) => {
+        b.classList.toggle('is-active', b === el);
+        b.classList.toggle('btn-ghost', b !== el);
+      });
+      const activePanel = root.querySelector('#kpi-panel-hours-active');
+      const onlinePanel = root.querySelector('#kpi-panel-hours-online');
+      if (activePanel && onlinePanel) {
+        if (tab === 'active') {
+          activePanel.style.display = 'flex';
+          onlinePanel.style.display = 'none';
+          activePanel.querySelectorAll('.kpi-pillar-bar').forEach(bar => {
+            bar.style.animation = 'none';
+            void bar.offsetWidth;
+            bar.style.animation = '';
+          });
+        } else {
+          activePanel.style.display = 'none';
+          onlinePanel.style.display = 'flex';
+          onlinePanel.querySelectorAll('.kpi-pillar-bar').forEach(bar => {
+            bar.style.animation = 'none';
+            void bar.offsetWidth;
+            bar.style.animation = '';
+          });
+        }
+      }
+      return;
+    }
+
+    if (el.hasAttribute('data-rate-tab')) {
+      ev.stopPropagation();
+      const tab = el.getAttribute('data-rate-tab');
+      root.querySelectorAll('[data-rate-tab]').forEach((b) => {
+        b.classList.toggle('is-active', b === el);
+        b.classList.toggle('btn-ghost', b !== el);
+      });
+      const activePanel = root.querySelector('#kpi-panel-active');
+      const onlinePanel = root.querySelector('#kpi-panel-online');
+      if (activePanel && onlinePanel) {
+        if (tab === 'active') {
+          activePanel.style.display = 'flex';
+          onlinePanel.style.display = 'none';
+          activePanel.querySelectorAll('.kpi-spark-path').forEach(path => {
+            path.style.animation = 'none';
+            void path.offsetWidth;
+            path.style.animation = '';
+          });
+        } else {
+          activePanel.style.display = 'none';
+          onlinePanel.style.display = 'flex';
+          onlinePanel.querySelectorAll('.kpi-spark-path').forEach(path => {
+            path.style.animation = 'none';
+            void path.offsetWidth;
+            path.style.animation = '';
+          });
+        }
+      }
+      return;
+    }
 
     if (el.hasAttribute('data-dashboard-toggle-shortcuts')) {
       const isExp = loadDashboardShortcutsExpanded();

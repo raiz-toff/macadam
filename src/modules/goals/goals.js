@@ -116,7 +116,7 @@ async function sumShiftMetric(startDate, endDate, metric) {
     else if (metric === 'tips') {
       total += shift.grossEarnings != null ? num(shift.tips ?? 0) / 100 : num(shift.tips, 0);
     }
-    else if (metric === 'deliveries') total += num(shift.orders ?? shift.deliveryCount, 0);
+    else if (metric === 'deliveries') total += num(shift.deliveryCount ?? shift.orders, 0);
     else if (metric === 'hours') total += num(shift.activeMinutes ?? shift.durationMinutes, 0) / 60;
     else if (metric === 'distance') total += num(shift.distanceKm, 0);
     else if (metric === 'net_profit') {
@@ -387,7 +387,7 @@ async function handleShiftSaved(payload) {
     if (await b.checkFromShift(shiftCtx)) await maybeUnlockBadge(b.id);
   }
 
-  const deliveries = num(shift.orders ?? shift.deliveryCount, 0);
+  const deliveries = num(shift.deliveryCount ?? shift.orders, 0);
   await refreshChallengeProgress({ earnings: weekGross, deliveries, streak });
   await evaluateGoalHistory();
   bus.emit(GOAL_UPDATED, { source: 'shift_saved', shiftId });

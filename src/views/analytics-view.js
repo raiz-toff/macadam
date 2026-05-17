@@ -168,7 +168,7 @@ async function paintAnalytics(root, _ctx) {
             } else if (activeTab === 'insights') {
               categoryWidgetIds = ['platformActivity', 'incomeBreakdown', 'weeklyProjection', 'stabilityScore', 'taxJar', 'recentShifts', 'schedule'];
             } else {
-              categoryWidgetIds = ['earnings', 'netIncome', 'totalHours', 'deliveries', 'tipsTotal', 'expenses', 'avgRate', 'effectiveRate', 'zeroDays', 'monthGross', 'monthHourly', 'monthOrders', 'outOfPocket', 'perDelivery'];
+              categoryWidgetIds = ['earnings', 'netIncome', 'totalHours', 'hoursCompare', 'deliveries', 'tipsTotal', 'expenses', 'avgRate', 'effectiveRate', 'zeroDays', 'monthGross', 'monthHourly', 'monthOrders', 'outOfPocket', 'perDelivery'];
             }
 
             // Filter "On Dashboard" to only show widgets from THIS category
