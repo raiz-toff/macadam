@@ -266,26 +266,18 @@ function openTargetTimeStep(platformId, vehicleId) {
   btnCancel.addEventListener('click', () => drawer.close());
 
   btnStart.addEventListener('click', async () => {
-    // Notifications are required — check before doing anything
+    // Notifications preferred but not required — prompt if not yet asked, warn if denied
     if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
       if (Notification.permission === 'denied') {
         showToast({
-          type: 'error',
-          message: '⚠️ Notifications are blocked for this site. Enable them in your browser/OS settings to start a shift.',
-          duration: 8000,
-        });
-        return;
-      }
-      // 'default' — ask one more time
-      let result = 'default';
-      try { result = await Notification.requestPermission(); } catch {}
-      if (result !== 'granted') {
-        showToast({
           type: 'warning',
-          message: '🔔 You must allow notifications to start a shift. They are used for live shift timer alerts.',
-          duration: 7000,
+          message: '🔔 Notifications are blocked — live shift alerts won\'t work. Enable them in site settings for the best experience.',
+          duration: 6000,
         });
-        return;
+        // Fall through — shift still starts
+      } else {
+        // 'default' — ask once
+        try { await Notification.requestPermission(); } catch {}
       }
     }
 

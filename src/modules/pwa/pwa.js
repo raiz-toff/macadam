@@ -544,72 +544,46 @@ export async function triggerPremiumInstallFlow(onSuccess, parentModalHandle = n
     parentModalHandle.close();
   }
 
-  // Detect iOS Safari or standalone
-  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(/** @type {any} */ (window).MSStream);
+  const nav = typeof navigator !== 'undefined' ? navigator : null;
+  const isIOS = nav && /iPad|iPhone|iPod/.test(nav.userAgent) && !(/** @type {any} */ (window).MSStream);
+  const isAndroid = nav && /Android/.test(nav.userAgent);
+  const isChrome = nav && /Chrome/.test(nav.userAgent) && !/Edg/.test(nav.userAgent);
 
   const guide = document.createElement('div');
   guide.className = 'pwa-install-guide';
-  guide.style.cssText = `
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    padding: var(--space-2) 0;
-  `;
+  guide.style.cssText = `display:flex;flex-direction:column;gap:var(--space-4);padding:var(--space-2) 0;`;
+
+  function step(num, html) {
+    return `
+      <div style="display:flex;gap:var(--space-3);align-items:flex-start;">
+        <div style="background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:8px;font-weight:800;font-size:16px;color:var(--color-brand);width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${num}</div>
+        <div style="flex:1;font-size:var(--text-sm);line-height:1.6;color:var(--color-text-primary);">${html}</div>
+      </div>`;
+  }
 
   if (isIOS) {
-    guide.innerHTML = `
-      <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
-        <div style="background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 8px; font-weight:800; font-size:16px; color:var(--color-brand); width:36px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">1</div>
-        <div style="flex:1; font-size: var(--text-sm); line-height: 1.5; color: var(--color-text-primary);">
-          Tap the <strong>Share</strong> button in Safari's bottom toolbar (the square with an arrow pointing up).
-        </div>
-      </div>
-      <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
-        <div style="background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 8px; font-weight:800; font-size:16px; color:var(--color-brand); width:36px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</div>
-        <div style="flex:1; font-size: var(--text-sm); line-height: 1.5; color: var(--color-text-primary);">
-          Scroll down the sharing menu options and select <strong>"Add to Home Screen"</strong>.
-        </div>
-      </div>
-      <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
-        <div style="background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 8px; font-weight:800; font-size:16px; color:var(--color-brand); width:36px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">3</div>
-        <div style="flex:1; font-size: var(--text-sm); line-height: 1.5; color: var(--color-text-primary);">
-          Tap <strong>"Add"</strong> in the top-right corner. COMMA will appear on your device's home screen!
-        </div>
-      </div>
-    `;
+    guide.innerHTML =
+      step(1, 'Tap the <strong>Share</strong> button in Safari\'s toolbar — the box with an arrow pointing up.') +
+      step(2, 'Scroll the share sheet and tap <strong>"Add to Home Screen"</strong>.') +
+      step(3, 'Tap <strong>"Add"</strong> in the top-right corner. COMMA will appear on your home screen like a native app!');
+  } else if (isAndroid && isChrome) {
+    guide.innerHTML =
+      step(1, 'Tap the <strong>menu button</strong> (⋮ three dots) in Chrome\'s top-right corner.') +
+      step(2, 'Tap <strong>"Install app"</strong> from the menu.') +
+      step(3, 'Tap <strong>"Install"</strong> on the prompt. COMMA installs as a full-screen app — no browser chrome!');
   } else {
-    guide.innerHTML = `
-      <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
-        <div style="background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 8px; font-weight:800; font-size:16px; color:var(--color-brand); width:36px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">1</div>
-        <div style="flex:1; font-size: var(--text-sm); line-height: 1.5; color: var(--color-text-primary);">
-          Tap the browser's menu button (three vertical dots in the top-right corner of Chrome, Edge, or Firefox).
-        </div>
-      </div>
-      <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
-        <div style="background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 8px; font-weight:800; font-size:16px; color:var(--color-brand); width:36px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</div>
-        <div style="flex:1; font-size: var(--text-sm); line-height: 1.5; color: var(--color-text-primary);">
-          Select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong> from the menu options list.
-        </div>
-      </div>
-      <div style="display: flex; gap: var(--space-3); align-items: flex-start;">
-        <div style="background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 8px; font-weight:800; font-size:16px; color:var(--color-brand); width:36px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">3</div>
-        <div style="flex:1; font-size: var(--text-sm); line-height: 1.5; color: var(--color-text-primary);">
-          Confirm the prompt. COMMA is now installed on your device for high-performance offline access!
-        </div>
-      </div>
-    `;
+    // Generic Chrome/Edge desktop or other browsers
+    guide.innerHTML =
+      step(1, 'Look for the <strong>install icon</strong> (⊕) in your browser\'s address bar, or open the browser menu (⋮).') +
+      step(2, 'Click <strong>"Install COMMA"</strong> or <strong>"Install app"</strong>.') +
+      step(3, 'Click <strong>"Install"</strong> on the confirmation dialog. COMMA opens as a standalone app!');
   }
 
   showModal({
-    title: 'How to Install COMMA',
+    title: 'Install COMMA',
     content: guide,
     size: 'sm',
-    actions: [
-      {
-        label: 'Got it',
-        class: 'btn btn-primary btn-block',
-      }
-    ]
+    actions: [{ label: 'Got it', class: 'btn btn-primary btn-block' }],
   });
 }
 
