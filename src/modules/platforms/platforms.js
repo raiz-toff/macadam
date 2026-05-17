@@ -128,7 +128,7 @@ export function renderPlatformSwitcher(mode, opts) {
   )}">${tabs.join('')}</div>`;
 }
 
-let demoSwitcherAutoExpanded = false;
+let demoSwitcherShouldBeExpanded = true;
 let activeCollapseCleanup = null;
 
 /** @type {WeakMap<HTMLElement, () => void>} */
@@ -199,6 +199,7 @@ export function mountPlatformSwitcher(slot) {
 
     const setFilter = (id) => {
       const next = id === 'all' || ids.has(id) ? id : 'all';
+      demoSwitcherShouldBeExpanded = false;
       // Apply visual state instantly for snappy UI
       applySelectionVisual(next);
       
@@ -224,11 +225,11 @@ export function mountPlatformSwitcher(slot) {
     const tablist = slot.querySelector('.platform-switcher--tabs');
     if (tablist) {
       const isDemo = store.get('demoMode');
-      if (isDemo && !demoSwitcherAutoExpanded) {
-        demoSwitcherAutoExpanded = true;
+      if (isDemo && demoSwitcherShouldBeExpanded) {
         tablist.classList.add('is-expanded');
 
         const collapseOnMove = () => {
+          demoSwitcherShouldBeExpanded = false;
           if (tablist.classList.contains('is-expanded')) {
             tablist.classList.remove('is-expanded');
           }
