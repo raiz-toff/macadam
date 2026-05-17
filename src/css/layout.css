@@ -36,6 +36,18 @@ samp {
   padding-top: env(safe-area-inset-top, 0);
 }
 
+/* Fullscreen or Standalone PWA top space override to prevent camera cutout / notch overlap */
+@media (display-mode: fullscreen), (display-mode: standalone) {
+  .app-shell-chrome {
+    padding-top: max(32px, env(safe-area-inset-top, 24px));
+  }
+}
+
+:fullscreen .app-shell-chrome,
+:-webkit-full-screen .app-shell-chrome {
+  padding-top: max(32px, env(safe-area-inset-top, 24px));
+}
+
 .demo-mode-bar {
   display: flex;
   align-items: center;
