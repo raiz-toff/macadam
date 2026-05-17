@@ -675,12 +675,7 @@
 
 .financial-dash-filter-content {
   padding: var(--space-4);
-  display: none;
-}
-
-.financial-dash-filter.is-expanded .financial-dash-filter-content {
   display: block;
-  border-top: 1px solid var(--color-border);
 }
 
 .financial-dash-summary-left {

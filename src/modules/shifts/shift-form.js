@@ -9,6 +9,7 @@ import { showNumericKeypad } from '../../ui/components.js';
 import { calcHourlyRate } from '../../utils/calculations.js';
 import { enumerateWeekDates } from '../../utils/date-range-presets.js';
 import { getPlatformConfig } from '../../registry/platforms/terminology.js';
+import { PlatformRegistry } from '../../registry/platforms/index.js';
 import { ShiftFieldRegistry } from '../../registry/shift-fields/index.js';
 
 function escapeAttr(v) {
@@ -88,13 +89,26 @@ export function renderShiftForm(opts = {}) {
   const user = store.get('user');
   const weekStartDay = Number(user?.locale?.weekStartDay ?? 0);
   const activePlatforms = /** @type {Array<{ id: string, name?: string, active?: boolean }>} */ (store.get('platforms') || []);
+  
+  // For safety during editing: if editing a shift with a platform that is not in the active list, add it to display
+  const initialPlatformId = typeof initial.platformId === 'string' ? initial.platformId : '';
+  const displayPlatforms = [...activePlatforms];
+  if (initialPlatformId && !displayPlatforms.some(p => p.id === initialPlatformId)) {
+    const pConfig = PlatformRegistry.getById(initialPlatformId);
+    if (pConfig) {
+      displayPlatforms.push({ id: pConfig.id, name: pConfig.name, active: false });
+    } else {
+      displayPlatforms.push({ id: initialPlatformId, name: initialPlatformId, active: false });
+    }
+  }
+
   const primary = user && typeof user.primaryPlatform === 'string' ? user.primaryPlatform : null;
   const defaultPlatformId =
     typeof initial.platformId === 'string' && initial.platformId
       ? String(initial.platformId)
-      : primary && activePlatforms.find((p) => p.id === primary)
+      : primary && displayPlatforms.find((p) => p.id === primary)
         ? primary
-        : activePlatforms[0]?.id || 'other';
+        : displayPlatforms[0]?.id || 'other';
 
   const dateVal = typeof initial.date === 'string' && initial.date ? String(initial.date) : ymdToday();
   const weekAnchorSeed = dateVal;
@@ -105,41 +119,54 @@ export function renderShiftForm(opts = {}) {
   wrapper.className = 'shifts-form';
   wrapper.dataset.shiftFieldRegistryCount = String(ShiftFieldRegistry.getAll().length);
   wrapper.innerHTML = `
-    <form class="shifts-form-inner" autocomplete="off">
-
-      <div class="shifts-form-grid">
+    <form class="shifts-form-container" novalidate>
+      <div class="shifts-form-fields">
         ${
-          allowWeeklyEntry
-            ? `<div class="field field--span2 shifts-entry-scope" role="radiogroup" aria-label="${escapeAttr(t('shifts.entryScopeLabel'))}">
-          <span class="field-label">${escapeHtml(t('shifts.entryScopeLabel'))}</span>
-          <div class="shifts-segmented">
-            <label class="shifts-segmented-item"><input type="radio" name="entryScope" value="day" checked /><span>${escapeHtml(t('shifts.entryOneDay'))}</span></label>
-            <label class="shifts-segmented-item"><input type="radio" name="entryScope" value="week" /><span>${escapeHtml(t('shifts.entryWeekDays'))}</span></label>
-          </div>
-        </div>
-        <div class="field field--span2 shifts-week-panel is-hidden" data-week-panel>
-          <label class="field">
-            <span class="field-label">${escapeHtml(t('shifts.weekContaining'))}</span>
-            <input class="input" name="weekAnchor" type="date" value="${escapeAttr(weekAnchorSeed)}" />
-          </label>
-          <div class="shifts-weekday-row" data-week-day-row role="group" aria-label="${escapeAttr(t('shifts.weekDaysHint'))}"></div>
-          <p class="field-hint">${escapeHtml(t('shifts.weekSaveHint'))}</p>
-        </div>`
+          allowWeeklyEntry && mode === 'full'
+            ? `<div class="field">
+                <span class="field-label">${escapeHtml(t('shifts.entryScope'))}</span>
+                <div class="btn-group w-full" role="group">
+                  <button type="button" class="btn btn-ghost btn-sm is-active" data-scope="day">${escapeHtml(
+                    t('shifts.scopeSingleDay'),
+                  )}</button>
+                  <button type="button" class="btn btn-ghost btn-sm" data-scope="week">${escapeHtml(
+                    t('shifts.scopeWeekly'),
+                  )}</button>
+                </div>
+                <input type="hidden" name="entryScope" value="day" />
+              </div>
+              
+              <div class="shifts-week-panel is-hidden" data-week-panel>
+                <label class="field">
+                  <span class="field-label">${escapeHtml(t('shifts.weekContaining'))}</span>
+                  <input class="input" name="weekAnchor" type="date" value="${escapeAttr(weekAnchorSeed)}" />
+                </label>
+                <div class="shifts-weekday-row" data-week-day-row role="group" aria-label="${escapeAttr(t('shifts.weekDaysHint'))}"></div>
+                <p class="field-hint">${escapeHtml(t('shifts.weekSaveHint'))}</p>
+              </div>`
             : ''
         }
 
         <label class="field" data-day-date-wrap>
           <span class="field-label">${escapeHtml(t('shifts.platform'))}</span>
           <select class="input" name="platformId" required>
-            ${activePlatforms
-              .map((p) => {
-                const id = String(p.id);
-                const label = typeof p.name === 'string' && p.name ? p.name : id;
-                const sel = id === defaultPlatformId ? ' selected' : '';
-                return `<option value="${escapeAttr(id)}"${sel}>${escapeHtml(label)}</option>`;
-              })
-              .join('')}
+            ${displayPlatforms.length > 0
+              ? displayPlatforms
+                  .map((p) => {
+                    const id = String(p.id);
+                    const label = typeof p.name === 'string' && p.name ? p.name : id;
+                    const sel = id === defaultPlatformId ? ' selected' : '';
+                    return `<option value="${escapeAttr(id)}"${sel}>${escapeHtml(label)}</option>`;
+                  })
+                  .join('')
+              : `<option value="" disabled selected>No platforms detected</option>`
+            }
           </select>
+          ${displayPlatforms.length === 0 ? `
+            <span class="field-hint" style="color: var(--color-danger); margin-top: var(--space-1);">
+              No active platforms detected. <a href="#/settings?tab=platforms" style="text-decoration: underline; font-weight: bold; color: inherit;">Enable platforms in Settings</a> to add shifts.
+            </span>
+          ` : ''}
         </label>
 
         <label class="field">
@@ -149,12 +176,12 @@ export function renderShiftForm(opts = {}) {
 
         <label class="field">
           <span class="field-label">${escapeHtml(t('shifts.startTime'))}</span>
-          <input class="input" name="startTime" type="time" value="${escapeAttr(startTimeVal)}" />
+          <input class="input" name="startTime" type="text" data-clocklet="format: HH:mm" placeholder="hh:mm" value="${escapeAttr(startTimeVal)}" readonly style="cursor: pointer;" />
         </label>
 
         <label class="field">
           <span class="field-label">${escapeHtml(t('shifts.endTime'))}</span>
-          <input class="input" name="endTime" type="time" value="${escapeAttr(endTimeVal)}" />
+          <input class="input" name="endTime" type="text" data-clocklet="format: HH:mm" placeholder="hh:mm" value="${escapeAttr(endTimeVal)}" readonly style="cursor: pointer;" />
         </label>
 
         <label class="field field--span2">

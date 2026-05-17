@@ -23,6 +23,7 @@ import { getIcon } from '../../ui/icons.js';
 import { requestToken, isDriveConnected } from '../backup/drive-auth.js';
 import { listAvailableBackups, runRestore } from '../backup/restore-engine.js';
 import { deserializeVault } from '../backup/vault-serializer.js';
+import { runOnOpenNotificationCheck } from '../notifications/notifications.js';
 import {
   TOTAL_STEPS,
   defaultDraftFromUser,
@@ -987,6 +988,7 @@ export async function mountOnboarding(root) {
           await store.refresh('currentWeekGoal');
           bus.emit(ONBOARDING_COMPLETE, { displayName, demo: true });
           showToast({ type: 'info', message: t('onboarding.demoEnabled'), duration: 5000 });
+          await runOnOpenNotificationCheck();
           Router.navigate('#/dashboard');
         } catch (e) {
           console.error(e);
@@ -1051,6 +1053,7 @@ export async function mountOnboarding(root) {
     await store.refresh('platforms');
     bus.emit(ONBOARDING_COMPLETE, { displayName: draft.displayName });
     showToast({ type: 'celebration', message: t('onboarding.completeToast'), duration: 4500 });
+    await runOnOpenNotificationCheck();
     Router.navigate('#/dashboard');
   }
 

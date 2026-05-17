@@ -19,7 +19,11 @@ import { render as renderOnboarding } from '../views/onboarding-view.js';
 import { render as renderAbout } from '../views/about-view.js';
 import { render as renderPrint } from '../views/print-view.js';
 import { render as renderImportHelp } from '../views/import-help-view.js';
+import { render as renderImport } from '../views/import-view.js';
+import { render as renderNotifications } from '../views/notifications-view.js';
 import { t } from '../utils/strings.js';
+
+let activeViewCleanup = null;
 
 /** @typedef {{ hash: string, name: string, context: Record<string, unknown>, render: (el: HTMLElement, ctx: Record<string, unknown>) => void | Promise<void> }} COMMARoute */
 
@@ -50,6 +54,8 @@ function resolveRouteDef(hash) {
     { hash: '#/schedule', name: 'schedule', render: renderSchedule },
     { hash: '#/goals', name: 'goals', render: renderGoals },
     { hash: '#/reports', name: 'reports', render: renderReports },
+    { hash: '#/import', name: 'import', render: renderImport },
+    { hash: '#/notifications', name: 'notifications', render: renderNotifications },
     { hash: '#/settings', name: 'settings', render: renderSettings },
     { hash: '#/onboarding', name: 'onboarding', render: renderOnboarding },
     { hash: '#/about', name: 'about', render: renderAbout },
@@ -174,12 +180,29 @@ function handleRoute() {
 
   updateNavActive(hash);
 
+  if (typeof activeViewCleanup === 'function') {
+    try {
+      activeViewCleanup();
+    } catch (err) {
+      console.error('[comma] view cleanup failed', err);
+    }
+  }
+  activeViewCleanup = null;
+
   viewRoot.textContent = '';
   viewRoot.className = '';
   try {
     const maybe = def.render(viewRoot, def.context);
     if (maybe && typeof /** @type {{ then?: unknown }} */ (maybe).then === 'function') {
-      /** @type {Promise<unknown>} */ (maybe).catch((e) => renderErrorBoundary(viewRoot, e));
+      /** @type {Promise<unknown>} */ (maybe)
+        .then((cleanupFn) => {
+          if (typeof cleanupFn === 'function') {
+            activeViewCleanup = cleanupFn;
+          }
+        })
+        .catch((e) => renderErrorBoundary(viewRoot, e));
+    } else if (typeof maybe === 'function') {
+      activeViewCleanup = maybe;
     }
   } catch (e) {
     renderErrorBoundary(viewRoot, e);

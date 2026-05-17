@@ -268,6 +268,7 @@ async function loadScheduleModel(referenceDate = new Date()) {
     user,
     currency,
     localeCountry,
+    weekStartDay,
     weekStartDate,
     monthStart,
     monthEnd,
@@ -332,15 +333,27 @@ function renderWeekGrid(model) {
 
 function renderMonthGrid(model) {
   const firstDay = new Date(model.monthStart);
-  const start = weekStart(firstDay, 0);
+  const start = weekStart(firstDay, model.weekStartDay);
   const cells = [];
+  
+  // Add day headers
+  for (let i = 0; i < 7; i += 1) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    cells.push(`
+      <div class="schedule-month-header-cell">
+        ${esc(dayName(d.getDay()))}
+      </div>
+    `);
+  }
+
   for (let i = 0; i < 42; i += 1) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
     const key = ymd(d);
     const inMonth = d.getMonth() === model.monthStart.getMonth();
     const entry = model.monthByDate.get(key) || { gross: 0, platforms: new Set() };
-    const hasData = entry.platforms.size > 0; // Plans aren't in monthByDate yet, but shifts are.
+    const hasData = entry.platforms.size > 0;
     const bucket = bucketForHeat(entry.gross);
     const dots = [...entry.platforms].slice(0, 4);
     cells.push(`
@@ -566,11 +579,11 @@ async function handleAddPlan(root, model) {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
       <div class="field">
         <label class="label">Start Time</label>
-        <input type="time" class="input" name="startTime" value="11:00" />
+        <input type="text" class="input" name="startTime" data-clocklet="format: HH:mm" value="11:00" readonly style="cursor:pointer;" />
       </div>
       <div class="field">
         <label class="label">End Time</label>
-        <input type="time" class="input" name="endTime" value="14:00" />
+        <input type="text" class="input" name="endTime" data-clocklet="format: HH:mm" value="14:00" readonly style="cursor:pointer;" />
       </div>
     </div>
     <div class="field">

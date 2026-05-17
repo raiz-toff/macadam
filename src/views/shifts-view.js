@@ -3,7 +3,7 @@ import { db } from '../core/db.js';
 import { bus, PLATFORM_CHANGED, SHIFT_DELETED, SHIFT_SAVED } from '../core/events.js';
 import { store } from '../core/store.js';
 import { t } from '../utils/strings.js';
-import { showDrawer, showModal, showToast, renderEmptyState } from '../ui/components.js';
+import { showDrawer, showModal, showToast, renderEmptyState, renderSkeleton } from '../ui/components.js';
 import { getIcon } from '../ui/icons.js';
 import { getPlatformConfig } from '../registry/platforms/terminology.js';
 import { renderShiftForm } from '../modules/shifts/shift-form.js';
@@ -70,6 +70,9 @@ function loadShiftsRange(weekStartDay) {
         if (store.get('demoMode') && !demoSampleRangeOverlaps(start, end)) {
           /* Saved range (e.g. real-world week) misses 2025 demo data — ignore. */
         } else {
+          if (p.preset && p.preset !== 'custom') {
+            return defaultRangeForPreset(p.preset, shiftsFilterAnchorDate(), weekStartDay);
+          }
           return normalized;
         }
       }
@@ -308,55 +311,79 @@ export async function render(root, ctx) {
     <section class="shifts-view">
       <header class="shifts-view-header">
         <div class="shifts-view-header-main">
-          <h1 class="shifts-view-title">${escapeHtml(t('views.shifts.title'))}</h1>
+          <h1 class="shifts-view-title">
+            ${escapeHtml(t('views.shifts.title'))}
+            <span class="shifts-count-badge" data-slot="shifts-count" hidden></span>
+          </h1>
           <p class="shifts-view-subtitle">${escapeHtml(t('views.shifts.subtitle'))}</p>
         </div>
         <div class="shifts-view-header-tools" role="toolbar" aria-label="${escapeHtml(t('shifts.headerToolsAria'))}">
           <button type="button" class="btn btn-secondary btn-sm" data-action="start-timer">${escapeHtml(t('shifts.startShift'))}</button>
           <button type="button" class="btn btn-secondary btn-sm" data-action="templates">${escapeHtml(t('shifts.templates'))}</button>
-          <button type="button" class="btn btn-secondary btn-sm" data-action="import">${escapeHtml(t('shifts.bulkImport'))}</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="trash">${getIcon('trash', 14)} <span>${escapeHtml(t('shifts.trash'))}</span></button>
         </div>
       </header>
 
       <div class="shifts-view-body">
         ${(() => {
-          const stored = localStorage.getItem('comma_shifts_toolbar_collapsed');
-          const isCollapsed = stored === null ? true : stored === 'true';
+          const storedFilter = localStorage.getItem('comma_shifts_toolbar_collapsed');
+          const filterCollapsed = storedFilter === null ? true : storedFilter === 'true';
+          const storedShortcuts = localStorage.getItem('comma_shifts_shortcuts_collapsed');
+          const shortcutsCollapsed = storedShortcuts === null ? true : storedShortcuts === 'true';
           return `
-        <div class="shifts-filter card${isCollapsed ? '' : ' is-expanded'}" data-shifts-filter>
-          <button type="button" class="shifts-filter-summary" data-shifts-toggle-filter aria-expanded="${!isCollapsed}">
-            <span class="shifts-filter-summary-left">
-              <span class="shifts-filter-summary-icon">${getIcon('calendar', 18)}</span>
-              <span class="shifts-filter-summary-text" data-shifts-summary>Loading range...</span>
+        <div class="financial-filter-container card" style="margin-bottom: var(--space-4); background: var(--bg-card, #27272a); border: 1px solid var(--border-color, #3f3f46); border-radius: var(--radius-lg, 12px); overflow: hidden; padding: 0;">
+          <button type="button" class="financial-dash-filter-summary" data-shifts-toggle-shortcuts aria-expanded="${!shortcutsCollapsed}" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: var(--space-3) var(--space-4); background: transparent; border: none; cursor: pointer; color: inherit; text-align: left;">
+            <span class="financial-dash-summary-left" style="display: flex; align-items: center; gap: var(--space-2); font-weight: 600;">
+              <span class="financial-dash-summary-icon" style="color: var(--color-primary, #10b981);">${getIcon('calendar', 18)}</span>
+              <span class="financial-dash-summary-text" data-shifts-summary></span>
             </span>
-            <span class="shifts-filter-summary-right">
-              <span class="shifts-filter-summary-preset badge" data-shifts-summary-preset>...</span>
-              <span class="shifts-filter-summary-chevron">${getIcon('chevron-down', 18)}</span>
+            <span class="financial-dash-summary-right" style="display: flex; align-items: center; gap: var(--space-2);">
+              <span class="financial-dash-summary-preset badge badge--secondary" data-shifts-summary-preset style="text-transform: capitalize;"></span>
+              <span class="financial-dash-summary-chevron" data-shifts-summary-chevron style="display: flex; align-items: center; transition: transform 0.2s ease;">${getIcon(shortcutsCollapsed ? 'chevron-down' : 'chevron-up', 18)}</span>
             </span>
           </button>
-          <div class="shifts-filter-content">
-            <div class="shifts-filter-bar">
-              <div class="shifts-filter-left">
-                <div class="shifts-presets-group" role="group" aria-label="${escapeHtml(t('shifts.filterPresetsAria'))}">
-                  <button type="button" class="btn btn-ghost btn-sm shifts-preset-btn" data-shifts-preset="week">${escapeHtml(t('shifts.presetWeek'))}</button>
-                  <button type="button" class="btn btn-ghost btn-sm shifts-preset-btn" data-shifts-preset="ytd">${escapeHtml(t('shifts.presetYtd'))}</button>
-                  <button type="button" class="btn btn-ghost btn-sm shifts-preset-btn" data-shifts-preset="all">${escapeHtml(t('shifts.presetAll'))}</button>
-                </div>
-                <div class="shifts-filter-dates">
-                  <input type="date" class="input shifts-filter-date" id="shifts-filter-start" aria-label="${escapeHtml(t('shifts.rangeStart'))}" />
-                  <span class="shifts-filter-dates-sep" aria-hidden="true">–</span>
-                  <input type="date" class="input shifts-filter-date" id="shifts-filter-end" aria-label="${escapeHtml(t('shifts.rangeEnd'))}" />
-                  <button type="button" class="btn btn-primary btn-sm shifts-filter-apply" data-shifts-action="apply">${escapeHtml(t('shifts.rangeApply'))}</button>
-                </div>
+
+          <div class="financial-filter-body" data-shifts-shortcut-bar style="display: ${shortcutsCollapsed ? 'none' : 'block'}; border-top: 1px solid var(--border-color, #3f3f46); padding: var(--space-3) var(--space-4); background: var(--bg-surface, #18181b);">
+            <div class="filter-shortcut-bar" style="display: flex; gap: var(--space-3); align-items: center; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;">
+              <div class="shifts-presets-group">
+                <button type="button" class="btn shifts-preset-btn" data-shifts-preset="day">${escapeHtml(t('views.dashboard.financial.presetDay'))}</button>
+                <button type="button" class="btn shifts-preset-btn" data-shifts-preset="week">${escapeHtml(t('views.dashboard.financial.presetWeek'))}</button>
+                <button type="button" class="btn shifts-preset-btn" data-shifts-preset="month">${escapeHtml(t('views.dashboard.financial.presetMonth'))}</button>
+                <button type="button" class="btn shifts-preset-btn" data-shifts-preset="q1">${escapeHtml(t('views.dashboard.financial.presetQ1'))}</button>
+                <button type="button" class="btn shifts-preset-btn" data-shifts-preset="q2">${escapeHtml(t('views.dashboard.financial.presetQ2'))}</button>
+                <button type="button" class="btn shifts-preset-btn" data-shifts-preset="q3">${escapeHtml(t('views.dashboard.financial.presetQ3'))}</button>
+                <button type="button" class="btn shifts-preset-btn" data-shifts-preset="q4">${escapeHtml(t('views.dashboard.financial.presetQ4'))}</button>
+                <button type="button" class="btn shifts-preset-btn" data-shifts-preset="year">${escapeHtml(t('views.dashboard.financial.presetYear'))}</button>
               </div>
-              <div class="shifts-filter-right">
-                <label class="shifts-sort-inline">
-                  <span class="shifts-sort-inline-label">${escapeHtml(t('shifts.sortByDate'))}</span>
-                  <select class="input shifts-sort-select" data-shifts-sort aria-label="${escapeHtml(t('shifts.sortByDate'))}">
-                    <option value="desc">${escapeHtml(t('shifts.sortNewest'))}</option>
-                    <option value="asc">${escapeHtml(t('shifts.sortOldest'))}</option>
-                  </select>
-                </label>
+              <button type="button" class="btn ${filterCollapsed ? 'btn-ghost' : 'btn-primary'} btn-sm" data-shifts-toggle-filter style="white-space:nowrap;">${escapeHtml(t('views.dashboard.financial.presetCustom'))} <span data-shifts-custom-chevron>${getIcon(filterCollapsed ? 'chevron-down' : 'chevron-up', 14)}</span></button>
+            </div>
+            <div class="shifts-filter" data-shifts-filter style="display: ${filterCollapsed || shortcutsCollapsed ? 'none' : 'block'}; margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px dashed var(--border-color, #3f3f46);">
+              <div class="shifts-filter-content" style="padding: 0;">
+                <div class="shifts-filter-bar" style="flex-wrap: wrap; align-items: center; justify-content: space-between;">
+                  <div class="shifts-filter-left">
+                    <div class="shifts-filter-dates" style="display: flex; gap: var(--space-2); align-items: center;">
+                      <div class="input-with-icon" style="position: relative;">
+                        <input type="text" class="input shifts-filter-date-start" id="shifts-filter-start" placeholder="Start date" readonly style="width: 130px; padding-left: 32px; cursor: pointer;" />
+                        <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--color-primary, #10b981); pointer-events: none;">${getIcon('calendar', 16)}</span>
+                      </div>
+                      <span style="color: var(--color-text-muted, #a1a1aa); font-weight: 600;">&ndash;</span>
+                      <div class="input-with-icon" style="position: relative;">
+                        <input type="text" class="input shifts-filter-date-end" id="shifts-filter-end" placeholder="End date" readonly style="width: 130px; padding-left: 32px; cursor: pointer;" />
+                        <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--color-primary, #10b981); pointer-events: none;">${getIcon('calendar', 16)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="shifts-filter-right" style="display: flex; gap: var(--space-3); align-items: center;">
+                    <label class="shifts-sort-inline">
+                      <span class="shifts-sort-inline-label">${escapeHtml(t('shifts.sortByDate'))}</span>
+                      <select class="input shifts-sort-select" data-shifts-sort aria-label="${escapeHtml(t('shifts.sortByDate'))}">
+                        <option value="desc">${escapeHtml(t('shifts.sortNewest'))}</option>
+                        <option value="asc">${escapeHtml(t('shifts.sortOldest'))}</option>
+                      </select>
+                    </label>
+                    <button type="button" class="btn btn-primary btn-sm shifts-filter-apply" data-shifts-apply style="height: 36px;">${getIcon('filter', 16)} ${escapeHtml(t('views.dashboard.financial.apply'))}</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -371,6 +398,7 @@ export async function render(root, ctx) {
   const listSlot = /** @type {HTMLElement | null} */ (root.querySelector('[data-slot="list"]'));
   const pagerSlot = /** @type {HTMLElement | null} */ (root.querySelector('[data-slot="pager"]'));
   const summaryEl = /** @type {HTMLElement | null} */ (root.querySelector('[data-shifts-summary]'));
+  const countSlot = /** @type {HTMLElement | null} */ (root.querySelector('[data-slot="shifts-count"]'));
 
   const paint = async () => {
     if (!listSlot || !pagerSlot) return;
@@ -386,27 +414,105 @@ export async function render(root, ctx) {
     const presetSummary = root.querySelector('[data-shifts-summary-preset]');
     if (presetSummary) {
       const p = range.preset;
-      presetSummary.textContent = p === 'week' ? 'Week' : p === 'ytd' ? 'YTD' : p === 'all' ? 'All Time' : 'Custom';
+      presetSummary.textContent = p === 'custom' ? 'Custom' : p.charAt(0).toUpperCase() + p.slice(1);
     }
+
+    const storedFilter = localStorage.getItem('comma_shifts_toolbar_collapsed');
+    const filterCollapsed = storedFilter === null ? true : storedFilter === 'true';
+    const storedShortcuts = localStorage.getItem('comma_shifts_shortcuts_collapsed');
+    const shortcutsCollapsed = storedShortcuts === null ? true : storedShortcuts === 'true';
+
+    const shortcutBarEl = root.querySelector('[data-shifts-shortcut-bar]');
+    if (shortcutBarEl) shortcutBarEl.style.display = shortcutsCollapsed ? 'none' : 'block';
+
+    const filterEl = root.querySelector('[data-shifts-filter]');
+    if (filterEl) filterEl.style.display = filterCollapsed || shortcutsCollapsed ? 'none' : 'block';
+
+    const summaryChevron = root.querySelector('[data-shifts-summary-chevron]');
+    if (summaryChevron) summaryChevron.innerHTML = getIcon(shortcutsCollapsed ? 'chevron-down' : 'chevron-up', 18);
+
+    const customChevron = root.querySelector('[data-shifts-custom-chevron]');
+    if (customChevron) customChevron.innerHTML = getIcon(filterCollapsed ? 'chevron-down' : 'chevron-up', 14);
+
+    const customBtn = root.querySelector('[data-shifts-toggle-filter]');
+    if (customBtn) {
+      customBtn.className = `btn ${filterCollapsed ? 'btn-ghost' : 'btn-primary'} btn-sm`;
+    }
+
+    listSlot.innerHTML = `
+      <div class="shifts-skeleton-list" style="display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-2);">
+        ${renderSkeleton('card')}
+        ${renderSkeleton('card')}
+        ${renderSkeleton('card')}
+        ${renderSkeleton('card')}
+      </div>
+    `;
 
     const all = await loadAllShiftsForPlatform();
     const filtered = filterAndSortShifts(all, range.start, range.end, sortDir);
     const total = filtered.length;
+
+    if (countSlot) {
+      countSlot.textContent = String(total);
+      countSlot.hidden = false;
+      countSlot.setAttribute('aria-label', `${total} shifts loaded`);
+    }
     const totalPages = total > 0 ? Math.ceil(total / SHIFTS_PER_PAGE) : 1;
     let pageIdx = total > SHIFTS_PER_PAGE ? loadShiftsPageIdx(range.start, range.end, range.preset) : 0;
     if (pageIdx >= totalPages) pageIdx = Math.max(0, totalPages - 1);
     if (total > SHIFTS_PER_PAGE) saveShiftsPageIdx(range.start, range.end, range.preset, pageIdx);
 
-    const sEl = /** @type {HTMLInputElement | null} */ (root.querySelector('#shifts-filter-start'));
-    const eEl = /** @type {HTMLInputElement | null} */ (root.querySelector('#shifts-filter-end'));
+    const startInput = /** @type {HTMLInputElement | null} */ (root.querySelector('#shifts-filter-start'));
+    const endInput = /** @type {HTMLInputElement | null} */ (root.querySelector('#shifts-filter-end'));
+    if (startInput) {
+      startInput.value = range.start;
+      if (window.flatpickr) {
+        if (!startInput._fp) {
+          startInput._fp = window.flatpickr(startInput, {
+            dateFormat: 'Y-m-d',
+            defaultDate: range.start,
+            onChange: function(selectedDates) {
+              if (selectedDates.length === 1) {
+                const s = window.flatpickr.formatDate(selectedDates[0], "Y-m-d");
+                saveShiftsRange({ start: s, end: range.end, preset: 'custom' });
+                saveShiftsPageIdx(s, range.end, 'custom', 0);
+                void paint();
+              }
+            }
+          });
+        } else {
+          startInput._fp.setDate(range.start, false);
+        }
+      }
+    }
+    if (endInput) {
+      endInput.value = range.end;
+      if (window.flatpickr) {
+        if (!endInput._fp) {
+          endInput._fp = window.flatpickr(endInput, {
+            dateFormat: 'Y-m-d',
+            defaultDate: range.end,
+            onChange: function(selectedDates) {
+              if (selectedDates.length === 1) {
+                const e = window.flatpickr.formatDate(selectedDates[0], "Y-m-d");
+                saveShiftsRange({ start: range.start, end: e, preset: 'custom' });
+                saveShiftsPageIdx(range.start, e, 'custom', 0);
+                void paint();
+              }
+            }
+          });
+        } else {
+          endInput._fp.setDate(range.end, false);
+        }
+      }
+    }
+
     const sortEl = /** @type {HTMLSelectElement | null} */ (root.querySelector('select[data-shifts-sort]'));
-    if (sEl) sEl.value = range.start;
-    if (eEl) eEl.value = range.end;
     if (sortEl) sortEl.value = sortDir;
 
     root.querySelectorAll('[data-shifts-preset]').forEach((btn) => {
       const p = btn.getAttribute('data-shifts-preset');
-      btn.classList.toggle('is-active', p === range.preset);
+      btn.className = `btn shifts-preset-btn ${p === range.preset ? 'is-active' : ''}`;
     });
 
     if (!total) {
@@ -459,27 +565,45 @@ export async function render(root, ctx) {
   };
 
   const onClick = async (e) => {
+    const toggleShortcuts = e.target instanceof Element ? e.target.closest('[data-shifts-toggle-shortcuts]') : null;
+    if (toggleShortcuts) {
+      const stored = localStorage.getItem('comma_shifts_shortcuts_collapsed');
+      const isCollapsed = stored === null ? true : stored === 'true';
+      const nextCollapsed = !isCollapsed;
+      localStorage.setItem('comma_shifts_shortcuts_collapsed', nextCollapsed ? 'true' : 'false');
+      if (nextCollapsed) {
+        localStorage.setItem('comma_shifts_toolbar_collapsed', 'true');
+      }
+      await paint();
+      return;
+    }
+
     const toggle = e.target instanceof Element ? e.target.closest('[data-shifts-toggle-filter]') : null;
     if (toggle) {
-      const parent = root.querySelector('[data-shifts-filter]');
-      if (parent) {
-        const wasOpen = parent.classList.contains('is-expanded');
-        parent.classList.toggle('is-expanded', !wasOpen);
-        localStorage.setItem('comma_shifts_toolbar_collapsed', wasOpen ? 'false' : 'true');
-        toggle.setAttribute('aria-expanded', String(!wasOpen));
-      }
+      const stored = localStorage.getItem('comma_shifts_toolbar_collapsed');
+      const isCollapsed = stored === null ? true : stored === 'true';
+      localStorage.setItem('comma_shifts_toolbar_collapsed', isCollapsed ? 'false' : 'true');
+      await paint();
+      return;
+    }
+
+    const applyBtn = e.target instanceof Element ? e.target.closest('[data-shifts-apply]') : null;
+    if (applyBtn) {
+      localStorage.setItem('comma_shifts_toolbar_collapsed', 'true');
+      await paint();
       return;
     }
 
     const navEl = /** @type {HTMLElement | null} */ (
-      e.target && /** @type {HTMLElement} */ (e.target).closest('[data-shifts-preset],[data-shifts-action],[data-shifts-page]')
+      e.target && /** @type {HTMLElement} */ (e.target).closest('[data-shifts-preset],[data-shifts-action],[data-shifts-page],[data-shifts-apply]')
     );
     if (navEl && root.contains(navEl)) {
       const preset = navEl.getAttribute('data-shifts-preset');
-      if (preset === 'week' || preset === 'ytd' || preset === 'all') {
+      if (preset && preset !== 'custom') {
         const user = store.get('user');
         const wsd = Number(user?.locale?.weekStartDay ?? 0);
-        const r = defaultRangeForPreset(preset, new Date(), wsd);
+        // @ts-ignore
+        const r = defaultRangeForPreset(preset, shiftsFilterAnchorDate(), wsd);
         saveShiftsRange(r);
         saveShiftsPageIdx(r.start, r.end, r.preset, 0);
         await paint();
@@ -496,24 +620,7 @@ export async function render(root, ctx) {
         }
         return;
       }
-      if (navEl.getAttribute('data-shifts-action') === 'apply') {
-        const sEl = /** @type {HTMLInputElement | null} */ (root.querySelector('#shifts-filter-start'));
-        const eEl = /** @type {HTMLInputElement | null} */ (root.querySelector('#shifts-filter-end'));
-        let s = String(sEl?.value || '').trim();
-        let e = String(eEl?.value || '').trim();
-        if (!s || !e) return;
-        if (s > e) {
-          const t0 = s;
-          s = e;
-          e = t0;
-          if (sEl) sEl.value = s;
-          if (eEl) eEl.value = e;
-        }
-        saveShiftsRange({ start: s, end: e, preset: 'custom' });
-        saveShiftsPageIdx(s, e, 'custom', 0);
-        await paint();
-        return;
-      }
+
       const pageNav = navEl.getAttribute('data-shifts-page');
       if (pageNav != null) {
         if (navEl.hasAttribute('disabled')) return;
@@ -564,8 +671,8 @@ export async function render(root, ctx) {
       return;
     }
 
-    if (action === 'import') {
-      await openCsvImport();
+    if (action === 'trash') {
+      await openTrashManager();
       return;
     }
 
@@ -663,6 +770,89 @@ export async function render(root, ctx) {
   }
 
   return teardown;
+}
+
+async function openTrashManager() {
+  const paintTrashList = async (bodyEl) => {
+    const deleted = await db.shifts.toArray().then(rows => rows.filter(s => s.deletedAt != null));
+    deleted.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+
+    const listContainer = bodyEl.querySelector('.shifts-trash-list');
+    if (!listContainer) return;
+
+    if (deleted.length === 0) {
+      listContainer.innerHTML = `<div class="text-sm shifts-muted" style="text-align:center; padding:var(--space-6) 0;">${escapeHtml(t('shifts.noTrash'))}</div>`;
+      const purgeBtn = bodyEl.querySelector('[data-action="purge-trash"]');
+      if (purgeBtn) purgeBtn.setAttribute('disabled', '');
+      return;
+    }
+
+    listContainer.innerHTML = deleted.map((s) => {
+      const pid = String(s.platformId || 'other');
+      const pl = getPlatformConfig(pid);
+      const grossFormatted = s.grossEarnings != null 
+        ? `$${(s.grossEarnings / 100).toFixed(2)}`
+        : s.gross != null 
+          ? `$${Number(s.gross).toFixed(2)}`
+          : '$0.00';
+      return `
+        <div class="trash-row" data-shift-id="${escapeAttr(String(s.id))}">
+          <div class="trash-row-info">
+            <span class="trash-row-date">${escapeHtml(s.date || '')}</span>
+            <span class="trash-row-platform badge" data-platform-id="${escapeAttr(pid)}" style="background-color: var(--color-${pid}, var(--color-other)); color: #fff; margin-left: var(--space-2);">${escapeHtml(pl.name || pid)}</span>
+            <span class="trash-row-gross" style="margin-left: var(--space-2); font-weight: 600;">${grossFormatted}</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="restore-trash">${escapeHtml(t('shifts.restore'))}</button>
+        </div>
+      `;
+    }).join('');
+    
+    const purgeBtn = bodyEl.querySelector('[data-action="purge-trash"]');
+    if (purgeBtn) purgeBtn.removeAttribute('disabled');
+  };
+
+  const body = document.createElement('div');
+  body.className = 'shifts-trash';
+  body.style.display = 'flex';
+  body.style.flexDirection = 'column';
+  body.style.gap = 'var(--space-4)';
+  body.innerHTML = `
+    <div class="shifts-trash-actions" style="display:flex; justify-content:flex-end;">
+      <button type="button" class="btn btn-danger btn-sm" data-action="purge-trash">${escapeHtml(t('shifts.purgeTrash'))}</button>
+    </div>
+    <div class="shifts-trash-list" style="display:flex; flex-direction:column; gap:var(--space-2); max-height: 350px; overflow-y: auto;">
+      <div class="text-sm shifts-muted">Loading trash...</div>
+    </div>
+  `;
+
+  const handle = showModal({
+    title: t('shifts.trash'),
+    content: body,
+    actions: [{ label: t('common.close'), variant: 'ghost', onClick: () => handle.close() }],
+  });
+
+  await paintTrashList(body);
+
+  body.addEventListener('click', async (e) => {
+    const el = /** @type {HTMLElement | null} */ (e.target && /** @type {HTMLElement} */ (e.target).closest('[data-action],[data-shift-id]'));
+    if (!el) return;
+    const action = el.getAttribute('data-action');
+    if (action === 'purge-trash') {
+      await db.shifts.filter((s) => s.deletedAt != null).delete();
+      showToast({ type: 'success', message: t('shifts.purgedToast'), duration: 1600 });
+      await paintTrashList(body);
+      return;
+    }
+    if (action === 'restore-trash') {
+      const row = /** @type {HTMLElement | null} */ (el.closest('[data-shift-id]'));
+      const id = row ? Number(row.getAttribute('data-shift-id')) : null;
+      if (id) {
+        await restoreShift(id);
+        showToast({ type: 'success', message: t('shifts.restoredToast'), duration: 1600 });
+        await paintTrashList(body);
+      }
+    }
+  });
 }
 
 async function openTemplatesManager() {
@@ -766,88 +956,3 @@ async function openTemplatesManager() {
   });
 }
 
-async function openCsvImport() {
-  const wrap = document.createElement('div');
-  wrap.className = 'shifts-import';
-  wrap.innerHTML = `
-    <p class="text-sm shifts-secondary">${escapeHtml(t('shifts.importLead'))}</p>
-    <input type="file" class="input" accept=".csv,text/csv" data-file />
-    <div class="shifts-import-preview" data-preview></div>
-    <div class="shifts-import-actions" data-actions hidden>
-      <button type="button" class="btn btn-ghost" data-action="append">${escapeHtml(t('shifts.importAppend'))}</button>
-      <button type="button" class="btn btn-danger" data-action="replace">${escapeHtml(t('shifts.importReplace'))}</button>
-    </div>
-  `;
-
-  const handle = showModal({
-    title: t('shifts.bulkImport'),
-    content: wrap,
-    actions: [{ label: t('common.close'), variant: 'ghost', onClick: () => handle.close() }],
-  });
-
-  /** @type {any[]} */
-  let parsedRows = [];
-
-  const fileEl = /** @type {HTMLInputElement | null} */ (wrap.querySelector('[data-file]'));
-  const preview = /** @type {HTMLElement | null} */ (wrap.querySelector('[data-preview]'));
-  const actions = /** @type {HTMLElement | null} */ (wrap.querySelector('[data-actions]'));
-
-  fileEl?.addEventListener('change', async () => {
-    const file = fileEl.files && fileEl.files[0];
-    if (!file) return;
-    const text = await file.text();
-    const res = Papa.parse(text, { header: true, skipEmptyLines: true });
-    if (!res || res.errors?.length) {
-      showToast({ type: 'error', message: t('shifts.importParseError'), duration: 2200 });
-      return;
-    }
-    parsedRows = (res.data || []).slice(0, 5000);
-    const first = parsedRows.slice(0, 5);
-    if (preview) {
-      preview.innerHTML = `
-        <div class="text-sm">${escapeHtml(t('shifts.importPreview'))}</div>
-        <pre class="import-pre">${escapeHtml(JSON.stringify(first, null, 2))}</pre>
-      `;
-    }
-    if (actions) actions.hidden = false;
-  });
-
-  wrap.addEventListener('click', async (e) => {
-    const el = /** @type {HTMLElement | null} */ (e.target && /** @type {HTMLElement} */ (e.target).closest('[data-action]'));
-    if (!el) return;
-    const action = el.getAttribute('data-action');
-    if (!action || !parsedRows.length) return;
-
-    try {
-      if (action === 'replace') {
-        await db.transaction('rw', db.shifts, async () => {
-          await db.shifts.clear();
-        });
-      }
-      let added = 0;
-      for (const r of parsedRows) {
-        const row = /** @type {Record<string, unknown>} */ (r || {});
-        const shiftData = {
-          platformId: row.platformId || row.platform || row.app || 'other',
-          date: row.date,
-          startTime: row.startTime,
-          endTime: row.endTime,
-          gross: row.gross,
-          tips: row.tips,
-          bonus: row.bonus,
-          orders: row.orders,
-          distanceKm: row.distanceKm || row.distance,
-          notes: row.notes || '',
-        };
-        // eslint-disable-next-line no-await-in-loop
-        await saveShift(shiftData);
-        added += 1;
-      }
-      showToast({ type: 'success', message: t('shifts.importDone').replace('{count}', String(added)), duration: 2500 });
-      handle.close();
-    } catch (err) {
-      console.warn('[comma shifts] import failed', err);
-      showToast({ type: 'error', message: t('errors.generic'), duration: 2200 });
-    }
-  });
-}

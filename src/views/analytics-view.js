@@ -7,6 +7,7 @@ import { saveUser } from '../core/db.js';
 import { getIcon } from '../ui/icons.js';
 import { t } from '../utils/strings.js';
 import { ymd } from '../utils/date-range-presets.js';
+import { renderSkeleton } from '../ui/components.js';
 
 
 /** @param {string} h */
@@ -50,6 +51,31 @@ async function paintAnalytics(root, _ctx) {
     end: ymd(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
   };
 
+  root.innerHTML = `
+    <header class="view-header">
+      <div class="view-header-content">
+        <h1>${esc(t('analytics.title'))}</h1>
+        <p class="view-subtitle">${esc(t('analytics.subtitle'))}</p>
+      </div>
+    </header>
+    <section class="view-body" style="padding-bottom: var(--space-20);">
+      <div class="analytics-layout">
+        <aside class="analytics-nav-column">
+          <div class="analytics-tabs">
+            <button type="button" class="analytics-tab-btn is-active"><span>Loading...</span></button>
+          </div>
+        </aside>
+        <main class="analytics-panels">
+          <div class="bento-grid" style="margin-top: var(--space-2);">
+            ${renderSkeleton('card')}
+            ${renderSkeleton('card')}
+            ${renderSkeleton('card')}
+            ${renderSkeleton('card')}
+          </div>
+        </main>
+      </div>
+    </section>
+  `;
 
   const widgetCtx = await buildWidgetDataContext(range, platformFilter, weekStartDay);
   const currentWidgets = getOrderedDashboardWidgetIds(user, widgetCtx);

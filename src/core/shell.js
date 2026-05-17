@@ -12,6 +12,8 @@ import { openGlobalSearchOverlay } from '../modules/search/search.js';
 import { exitDemoToOnboardingStart } from '../modules/onboarding/onboarding.js';
 import { renderShiftForm } from '../modules/shifts/shift-form.js';
 import { restoreShiftTimerFromLocalStorage, saveShift, stopShiftTimer, startShiftTimer } from '../modules/shifts/shifts.js';
+import { db } from './db.js';
+import { bus } from './events.js';
 
 /** @type {ReturnType<typeof setInterval> | null} */
 let clockTimer = null;
@@ -139,6 +141,10 @@ export async function renderAppShell(root) {
         <button type="button" class="app-header-search" data-open-global-search aria-label="${escapeAttr(t('app.navSearch'))}">
           ${getIcon('search', 22, 'header-search-icon')}
         </button>
+        <a href="#/notifications" class="app-header-notifications" data-nav-route="#/notifications" aria-label="Notifications" style="position:relative; display:flex; align-items:center;">
+          ${getIcon('bell', 22, 'header-bell-icon')}
+          <span id="header-unread-badge" style="position:absolute; top:-4px; right:-4px; background:var(--color-danger); color:white; font-size:10px; font-weight:700; border-radius:10px; padding:2px 5px; display:none;"></span>
+        </a>
         <a href="#/settings" class="app-header-settings" data-nav-route="#/settings" aria-label="${escapeAttr(t('app.navSettings'))}">
           ${getIcon('settings', 22, 'header-settings-icon')}
         </a>
@@ -155,6 +161,7 @@ export async function renderAppShell(root) {
           ${navLink('#/schedule', 'calendar', 'app.navSchedule')}
           ${navLink('#/goals', 'trophy', 'app.navGoals')}
           ${navLink('#/reports', 'bag', 'app.navReports')}
+          ${navLink('#/import', 'file-plus', 'app.navImport')}
           ${navLink('#/settings', 'settings', 'app.navSettings')}
         </nav>
         <main class="app-main" role="main" id="app-main">
@@ -212,6 +219,37 @@ export async function renderAppShell(root) {
     if (av) av.textContent = initialsFromUser(store.get('user'));
   });
 
+  async function updateUnreadBadge() {
+    try {
+      const count = await db.notifications.filter((n) => !n.read && !n.dismissed).count();
+      const badge = root.querySelector('#header-unread-badge');
+      const link = root.querySelector('.app-header-notifications');
+      if (badge) {
+        if (count > 0) {
+          badge.style.display = 'inline-block';
+          badge.textContent = count > 99 ? '99+' : String(count);
+          if (link) {
+            link.innerHTML = `${getIcon('bell-active', 22, 'header-bell-icon')} ` + badge.outerHTML;
+            link.style.color = 'var(--color-primary, #10b981)';
+          }
+        } else {
+          badge.style.display = 'none';
+          if (link) {
+            link.innerHTML = `${getIcon('bell', 22, 'header-bell-icon')} ` + badge.outerHTML;
+            link.style.color = '';
+          }
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  void updateUnreadBadge();
+  bus.on('notification:unread-change', () => {
+    void updateUnreadBadge();
+  });
+
   function openMoreNavMenu() {
     const morePages = [
       { href: '#/expenses', icon: 'receipt', label: 'app.navExpenses' },
@@ -219,6 +257,7 @@ export async function renderAppShell(root) {
       { href: '#/vehicles', icon: 'fuel', label: 'app.navVehicles' },
       { href: '#/schedule', icon: 'clock', label: 'app.navSchedule' },
       { href: '#/reports', icon: 'receipt', label: 'app.navReports' },
+      { href: '#/import', icon: 'file-plus', label: 'app.navImport' },
       { href: '#/settings', icon: 'settings', label: 'app.navSettings' },
     ];
 

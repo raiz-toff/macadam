@@ -8,6 +8,9 @@ import { isUserVaultActive } from '../../core/vault-gate.js';
 import { showNotifyCard } from '../../ui/components.js';
 import { getNextTaxDeadline } from '../../utils/locale.js';
 import { getCountryTaxProfile } from '../../registry/countries/index.js';
+import { store } from '../../core/store.js';
+import { bus } from '../../core/events.js';
+import { getDemoAnalyticsAnchorDate } from '../demo/sample-year.js';
 
 export const NOTIFICATION_IDS = Object.freeze({
   dailySummary: 'daily_summary',
@@ -125,7 +128,7 @@ export async function createNotification(type, title, message, opts = {}) {
   if (!pref.enabled || pref.frequency === 'off') return false;
 
   const createdAt = nowIso();
-  const now = new Date(createdAt);
+  const now = store.get('demoMode') ? getDemoAnalyticsAnchorDate() : new Date(createdAt);
   const id = opts.dedupeKey || makeNotificationId(type, now, opts.scope || 'day');
   const existing = await db.notifications.get(id);
   if (existing) return false;
@@ -144,13 +147,25 @@ export async function createNotification(type, title, message, opts = {}) {
   showNotifyCard({
     title,
     message,
+    icon: 'bell',
     type: opts.tone || 'info',
     duration: 7000,
+    actions: [
+      {
+        label: 'View',
+        class: 'btn btn-primary btn-sm',
+        onClick: (close) => {
+          close();
+          window.location.hash = '#/notifications';
+        },
+      },
+    ],
   });
 
   await db.notifications.update(id, {
     shownAt: nowIso(),
   });
+  bus.emit('notification:unread-change');
   return true;
 }
 

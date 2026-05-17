@@ -11,6 +11,7 @@ import { store } from '../core/store.js';
 import { getFinancialOverviewForRange, getFinancialMonthlyBreakdown } from '../modules/analytics/analytics.js';
 import { getIcon } from '../ui/icons.js';
 import { formatCurrency } from '../utils/formatters.js';
+import { renderSkeleton } from '../ui/components.js';
 import { defaultRangeForPreset } from '../utils/date-range-presets.js';
 import { t } from '../utils/strings.js';
 import { getDemoAnalyticsAnchorDate } from '../modules/demo/sample-year.js';
@@ -64,6 +65,7 @@ function saveDashboardRange(s) {
 }
 
 let _dashFilterExpanded = false;
+let _dashShortcutsExpanded = false;
 
 function loadDashboardFilterExpanded() {
   return _dashFilterExpanded;
@@ -71,6 +73,14 @@ function loadDashboardFilterExpanded() {
 
 function saveDashboardFilterExpanded(expanded) {
   _dashFilterExpanded = expanded;
+}
+
+function loadDashboardShortcutsExpanded() {
+  return _dashShortcutsExpanded;
+}
+
+function saveDashboardShortcutsExpanded(expanded) {
+  _dashShortcutsExpanded = expanded;
 }
 
 /** @param {string} start @param {string} end */
@@ -117,6 +127,33 @@ async function paintDashboard(root, ctx) {
     const t0 = range.start;
     range = { ...range, start: range.end, end: t0 };
   }
+
+  root.innerHTML = `
+    <section class="dashboard-view dashboard-view--financial">
+      <header class="financial-dash-header" style="margin-bottom: var(--space-6);">
+        <div class="financial-dash-header-text">
+          <h1 class="financial-dash-title">${esc(t('views.dashboard.financial.title'))}</h1>
+          <p class="financial-dash-subtitle">${esc(t('views.dashboard.financial.subtitle'))}</p>
+        </div>
+      </header>
+      <div class="kpi-hero-strip" style="margin-bottom: var(--space-6); display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3);">
+        ${renderSkeleton('stat')}
+        ${renderSkeleton('stat')}
+        ${renderSkeleton('stat')}
+        ${renderSkeleton('stat')}
+        ${renderSkeleton('stat')}
+        ${renderSkeleton('stat')}
+      </div>
+      <div style="margin-bottom: var(--space-6);">
+        ${renderSkeleton('chart')}
+      </div>
+      <div class="bento-grid" style="margin-bottom: var(--space-6);">
+        ${renderSkeleton('card')}
+        ${renderSkeleton('card')}
+        ${renderSkeleton('card')}
+      </div>
+    </section>
+  `;
 
   const [fin, monthly] = await Promise.all([
     getFinancialOverviewForRange(range.start, range.end, platformFilter, weekStartDay),
@@ -791,37 +828,54 @@ async function paintDashboard(root, ctx) {
         </div>
       </header>
 
-      <div class="financial-dash-filter card${loadDashboardFilterExpanded() ? ' is-expanded' : ''}" data-dashboard-filter>
-        <button type="button" class="financial-dash-filter-summary" data-dashboard-toggle-filter aria-expanded="${loadDashboardFilterExpanded()}">
-          <span class="financial-dash-summary-left">
-            <span class="financial-dash-summary-icon">${getIcon('calendar', 18)}</span>
+      <div class="financial-filter-container card" style="margin-bottom: var(--space-4); background: var(--bg-card, #27272a); border: 1px solid var(--border-color, #3f3f46); border-radius: var(--radius-lg, 12px); overflow: hidden; padding: 0;">
+        <button type="button" class="financial-dash-filter-summary" data-dashboard-toggle-shortcuts aria-expanded="${loadDashboardShortcutsExpanded()}" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: var(--space-3) var(--space-4); background: transparent; border: none; cursor: pointer; color: inherit; text-align: left;">
+          <span class="financial-dash-summary-left" style="display: flex; align-items: center; gap: var(--space-2); font-weight: 600;">
+            <span class="financial-dash-summary-icon" style="color: var(--color-primary, #10b981);">${getIcon('calendar', 18)}</span>
             <span class="financial-dash-summary-text">${range.start} &ndash; ${range.end}</span>
           </span>
-          <span class="financial-dash-summary-right">
-            <span class="financial-dash-summary-preset badge">${esc(range.preset === 'custom' ? t('views.dashboard.financial.presetCustom') : t(`views.dashboard.financial.preset${range.preset.charAt(0).toUpperCase() + range.preset.slice(1)}`))}</span>
-            <span class="financial-dash-summary-chevron">${getIcon('chevron-down', 18)}</span>
+          <span class="financial-dash-summary-right" style="display: flex; align-items: center; gap: var(--space-2);">
+            <span class="financial-dash-summary-preset badge badge--secondary" style="text-transform: capitalize;">${esc(range.preset === 'custom' ? t('views.dashboard.financial.presetCustom') : t(`views.dashboard.financial.preset${range.preset.charAt(0).toUpperCase() + range.preset.slice(1)}`))}</span>
+            <span class="financial-dash-summary-chevron" style="display: flex; align-items: center; transition: transform 0.2s ease;">${getIcon(loadDashboardShortcutsExpanded() ? 'chevron-up' : 'chevron-down', 18)}</span>
           </span>
         </button>
 
-        <div class="financial-dash-filter-content">
-          <div class="financial-dash-filter-bar">
-            <div class="financial-dash-filter-left">
-              <span class="financial-dash-filter-label">${esc(t('views.dashboard.financial.dateRange'))}</span>
-              <div class="financial-dash-dates">
-                <input type="date" class="input financial-dash-date" id="dashboard-filter-start" value="${esc(range.start)}" aria-label="${esc(t('views.dashboard.financial.startDate'))}" />
-                <input type="date" class="input financial-dash-date" id="dashboard-filter-end" value="${esc(range.end)}" aria-label="${esc(t('views.dashboard.financial.endDate'))}" />
-              </div>
+        <div class="financial-filter-body" style="display: ${loadDashboardShortcutsExpanded() ? 'block' : 'none'}; border-top: 1px solid var(--border-color, #3f3f46); padding: var(--space-3) var(--space-4); background: var(--bg-surface, #18181b);">
+          <div class="filter-shortcut-bar" style="display: flex; gap: var(--space-3); align-items: center; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;">
+            <div class="financial-dash-presets">
+              <button type="button" class="btn financial-dash-preset ${range.preset === 'day' ? 'is-active' : ''}" data-dashboard-preset="day">${esc(t('views.dashboard.financial.presetDay'))}</button>
+              <button type="button" class="btn financial-dash-preset ${range.preset === 'week' ? 'is-active' : ''}" data-dashboard-preset="week">${esc(t('views.dashboard.financial.presetWeek'))}</button>
+              <button type="button" class="btn financial-dash-preset ${range.preset === 'month' ? 'is-active' : ''}" data-dashboard-preset="month">${esc(t('views.dashboard.financial.presetMonth'))}</button>
+              <button type="button" class="btn financial-dash-preset ${range.preset === 'q1' ? 'is-active' : ''}" data-dashboard-preset="q1">${esc(t('views.dashboard.financial.presetQ1'))}</button>
+              <button type="button" class="btn financial-dash-preset ${range.preset === 'q2' ? 'is-active' : ''}" data-dashboard-preset="q2">${esc(t('views.dashboard.financial.presetQ2'))}</button>
+              <button type="button" class="btn financial-dash-preset ${range.preset === 'q3' ? 'is-active' : ''}" data-dashboard-preset="q3">${esc(t('views.dashboard.financial.presetQ3'))}</button>
+              <button type="button" class="btn financial-dash-preset ${range.preset === 'q4' ? 'is-active' : ''}" data-dashboard-preset="q4">${esc(t('views.dashboard.financial.presetQ4'))}</button>
+              <button type="button" class="btn financial-dash-preset ${range.preset === 'year' ? 'is-active' : ''}" data-dashboard-preset="year">${esc(t('views.dashboard.financial.presetYear'))}</button>
             </div>
-            <div class="financial-dash-filter-right">
-              <div class="financial-dash-presets" role="group" aria-label="${esc(t('views.dashboard.financial.presetsAria'))}">
-                <button type="button" class="btn btn-ghost financial-dash-preset${presetActive('week')}" data-dashboard-preset="week">${esc(t('views.dashboard.financial.presetWeek'))}</button>
-                <button type="button" class="btn btn-ghost financial-dash-preset${presetActive('month')}" data-dashboard-preset="month">${esc(t('views.dashboard.financial.presetMonth'))}</button>
-                <button type="button" class="btn btn-ghost financial-dash-preset${presetActive('ytd')}" data-dashboard-preset="ytd">${esc(t('views.dashboard.financial.presetYtd'))}</button>
-                <button type="button" class="btn btn-ghost financial-dash-preset${presetActive('all')}" data-dashboard-preset="all">${esc(t('views.dashboard.financial.presetAll'))}</button>
+            <button type="button" class="btn ${loadDashboardFilterExpanded() ? 'btn-primary' : 'btn-ghost'} btn-sm" data-dashboard-toggle-filter style="white-space:nowrap;">${esc(t('views.dashboard.financial.presetCustom'))} ${getIcon(loadDashboardFilterExpanded() ? 'chevron-up' : 'chevron-down', 14)}</button>
+          </div>
+
+          <div class="financial-dash-filter" data-dashboard-filter style="display: ${loadDashboardFilterExpanded() ? 'block' : 'none'}; margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px dashed var(--border-color, #3f3f46);">
+            <div class="financial-dash-filter-content" style="padding: 0;">
+              <div class="financial-dash-filter-bar" style="flex-wrap: wrap;">
+                <div class="financial-dash-filter-left">
+                  <span class="financial-dash-filter-label">${esc(t('views.dashboard.financial.dateRange'))}</span>
+                  <div class="financial-dash-dates" style="display: flex; gap: var(--space-2); align-items: center;">
+                    <div class="input-with-icon" style="position: relative;">
+                      <input type="text" class="input financial-dash-date-start" id="dashboard-filter-start" placeholder="Start date" readonly style="width: 130px; padding-left: 32px; cursor: pointer;" value="${range.start}" />
+                      <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--color-primary, #10b981); pointer-events: none;">${getIcon('calendar', 16)}</span>
+                    </div>
+                    <span style="color: var(--color-text-muted, #a1a1aa); font-weight: 600;">&ndash;</span>
+                    <div class="input-with-icon" style="position: relative;">
+                      <input type="text" class="input financial-dash-date-end" id="dashboard-filter-end" placeholder="End date" readonly style="width: 130px; padding-left: 32px; cursor: pointer;" value="${range.end}" />
+                      <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--color-primary, #10b981); pointer-events: none;">${getIcon('calendar', 16)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="financial-dash-filter-right">
+                  <button type="button" class="btn btn-primary btn-sm financial-dash-apply" data-dashboard-apply>${getIcon('filter', 16)} ${esc(t('views.dashboard.financial.apply'))}</button>
+                </div>
               </div>
-              <button type="button" class="btn btn-primary financial-dash-apply" data-dashboard-apply>
-                ${getIcon('filter', 18, 'financial-dash-apply-icon')}${esc(t('views.dashboard.financial.apply'))}
-              </button>
             </div>
           </div>
         </div>
@@ -906,31 +960,69 @@ async function paintDashboard(root, ctx) {
     </section>
   `;
 
-  /** @param {'week'|'month'|'ytd'|'all'} preset */
-  const applyPreset = (preset) => {
-    const anchorDate = store.get('demoMode') ? getDemoAnalyticsAnchorDate() : new Date();
-    const r = defaultRangeForPreset(preset, anchorDate, weekStartDay);
-    saveDashboardRange(r);
-    saveDashboardFilterExpanded(false);
-    const sEl = /** @type {HTMLInputElement | null} */ (root.querySelector('#dashboard-filter-start'));
-    const eEl = /** @type {HTMLInputElement | null} */ (root.querySelector('#dashboard-filter-end'));
-    if (sEl) sEl.value = r.start;
-    if (eEl) eEl.value = r.end;
-    void paintDashboard(root, ctx);
-  };
+  const startInput = /** @type {HTMLInputElement | null} */ (root.querySelector('#dashboard-filter-start'));
+  const endInput = /** @type {HTMLInputElement | null} */ (root.querySelector('#dashboard-filter-end'));
+  if (startInput && window.flatpickr) {
+    if (!startInput._fp) {
+      startInput._fp = window.flatpickr(startInput, {
+        dateFormat: 'Y-m-d',
+        defaultDate: range.start,
+        onChange: function(selectedDates) {
+          if (selectedDates.length === 1) {
+            const s = window.flatpickr.formatDate(selectedDates[0], "Y-m-d");
+            saveDashboardRange({ start: s, end: range.end, preset: 'custom' });
+            void paintDashboard(root, ctx);
+          }
+        }
+      });
+    } else {
+      startInput._fp.setDate(range.start, false);
+    }
+  }
+  if (endInput && window.flatpickr) {
+    if (!endInput._fp) {
+      endInput._fp = window.flatpickr(endInput, {
+        dateFormat: 'Y-m-d',
+        defaultDate: range.end,
+        onChange: function(selectedDates) {
+          if (selectedDates.length === 1) {
+            const e = window.flatpickr.formatDate(selectedDates[0], "Y-m-d");
+            saveDashboardRange({ start: range.start, end: e, preset: 'custom' });
+            void paintDashboard(root, ctx);
+          }
+        }
+      });
+    } else {
+      endInput._fp.setDate(range.end, false);
+    }
+  }
 
   root.onclick = async (ev) => {
     const el = /** @type {HTMLElement | null} */ (
       ev.target &&
       /** @type {HTMLElement} */ (ev.target).closest(
-        '[data-dashboard-preset],[data-dashboard-apply],[data-dashboard-monthly-page],[data-dashboard-monthly-goto],[data-dashboard-toggle-filter]',
+        '[data-dashboard-preset],[data-dashboard-apply],[data-dashboard-monthly-page],[data-dashboard-monthly-goto],[data-dashboard-toggle-filter],[data-dashboard-toggle-shortcuts]',
       )
     );
     if (!el || !root.contains(el)) return;
 
+    if (el.hasAttribute('data-dashboard-toggle-shortcuts')) {
+      const isExp = loadDashboardShortcutsExpanded();
+      saveDashboardShortcutsExpanded(!isExp);
+      if (isExp) saveDashboardFilterExpanded(false);
+      void paintDashboard(root, ctx);
+      return;
+    }
+
     if (el.hasAttribute('data-dashboard-toggle-filter')) {
       const isExpanded = loadDashboardFilterExpanded();
       saveDashboardFilterExpanded(!isExpanded);
+      void paintDashboard(root, ctx);
+      return;
+    }
+
+    if (el.hasAttribute('data-dashboard-apply')) {
+      saveDashboardFilterExpanded(false);
       void paintDashboard(root, ctx);
       return;
     }
@@ -961,27 +1053,13 @@ async function paintDashboard(root, ctx) {
       return;
     }
 
-    if (el.hasAttribute('data-dashboard-apply')) {
-      const sEl = /** @type {HTMLInputElement | null} */ (root.querySelector('#dashboard-filter-start'));
-      const eEl = /** @type {HTMLInputElement | null} */ (root.querySelector('#dashboard-filter-end'));
-      let s = String(sEl?.value || '').trim();
-      let e = String(eEl?.value || '').trim();
-      if (!s || !e) return;
-      if (s > e) {
-        const t1 = s;
-        s = e;
-        e = t1;
-        if (sEl) sEl.value = s;
-        if (eEl) eEl.value = e;
-      }
-      saveDashboardRange({ start: s, end: e, preset: 'custom' });
-      saveDashboardFilterExpanded(false);
-      void paintDashboard(root, ctx);
-      return;
-    }
     const preset = el.getAttribute('data-dashboard-preset');
-    if (preset === 'week' || preset === 'month' || preset === 'ytd' || preset === 'all') {
-      applyPreset(preset);
+    if (preset) {
+      const anchorDate = store.get('demoMode') ? getDemoAnalyticsAnchorDate() : new Date();
+      // @ts-ignore
+      const r = defaultRangeForPreset(preset, anchorDate, weekStartDay);
+      saveDashboardRange(r);
+      void paintDashboard(root, ctx);
     }
   };
 

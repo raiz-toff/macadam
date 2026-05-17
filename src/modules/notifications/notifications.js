@@ -6,6 +6,9 @@
 
 import { db, getUser } from '../../core/db.js';
 import { isUserVaultActive } from '../../core/vault-gate.js';
+import { store } from '../../core/store.js';
+import { bus } from '../../core/events.js';
+import { getDemoAnalyticsAnchorDate } from '../demo/sample-year.js';
 import { NotificationRegistry } from '../../registry/notifications/index.js';
 import {
   NOTIFICATION_IDS,
@@ -25,7 +28,7 @@ export { createNotification, getPrefForType, normalizeTypePref } from './notific
 export async function checkAllNotifications() {
   const user = await getUser();
   if (!user || !isUserVaultActive(user)) return;
-  const now = new Date();
+  const now = store.get('demoMode') ? getDemoAnalyticsAnchorDate() : new Date();
   const today = ymd(now);
   const weekStartDay = Math.max(0, Math.min(6, num(user?.locale?.weekStartDay, 0)));
   const week = weekBounds(now, weekStartDay);
@@ -72,6 +75,7 @@ export async function runOnOpenNotificationCheck() {
 export async function markNotificationRead(id) {
   if (!id) return;
   await db.notifications.update(id, { read: true, readAt: nowIso() });
+  bus.emit('notification:unread-change');
 }
 
 /**
@@ -81,4 +85,5 @@ export async function markNotificationRead(id) {
 export async function dismissNotification(id) {
   if (!id) return;
   await db.notifications.update(id, { dismissed: true, dismissedAt: nowIso(), read: true });
+  bus.emit('notification:unread-change');
 }

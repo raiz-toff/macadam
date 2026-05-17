@@ -326,7 +326,6 @@ export async function mountSettings(root, ctx = {}) {
   const annualD = (Number(user.annualGoal) || 0) / 100;
   const provinceFieldLabelKey = provinceLabelKeyForCountry(countryId);
   const userAccentNorm = normalizeAccentHex(user.accentColor);
-  const allPlatforms = await db.platforms.toArray();
 
   updateAccentColor();
   applyFontSize(user.fontSize || 'medium');
@@ -728,13 +727,16 @@ export async function mountSettings(root, ctx = {}) {
           <div class="settings-grid">
             <label class="input-group">
               <span class="input-label">Reset single platform</span>
-              <select class="input" data-reset-platform-select>
-                ${allPlatforms.map((p) => `<option value="${esc(String(p.id))}">${esc(String(p.name || p.id))}</option>`).join('')}
+              <select class="input" data-reset-platform-select ${activePlats.length === 0 ? 'disabled' : ''}>
+                ${activePlats.length > 0
+                  ? activePlats.map((p) => `<option value="${esc(String(p.id))}">${esc(String(p.name || p.id))}</option>`).join('')
+                  : `<option value="" disabled selected>No platforms detected</option>`
+                }
               </select>
             </label>
           </div>
           <div class="settings-actions">
-            <button type="button" class="btn btn-danger btn-sm" data-reset-platform>Reset platform data</button>
+            <button type="button" class="btn btn-danger btn-sm" data-reset-platform ${activePlats.length === 0 ? 'disabled' : ''}>Reset platform data</button>
           </div>
           <hr class="settings-divider" />
           <p class="text-secondary settings-section-lead">Export is required before full vault wipe.</p>
@@ -1140,13 +1142,14 @@ export async function mountSettings(root, ctx = {}) {
     if (!platformId) return;
     showConfirm({
       title: 'Reset platform data?',
-      message: `This deactivates ${platformId} and detaches existing shifts/expenses from it.`,
+      message: `This deactivates ${platformId} and permanently deletes all shifts, expenses, and goals associated with it. This action cannot be undone.`,
       confirmLabel: 'Reset platform',
       confirmClass: 'btn btn-danger',
       onConfirm: async () => {
         await db.platforms.update(platformId, { active: false, deactivatedAt: new Date().toISOString() });
-        await db.shifts.where('platformId').equals(platformId).modify({ platformId: null });
-        await db.expenses.where('platformId').equals(platformId).modify({ platformId: null });
+        await db.shifts.where('platformId').equals(platformId).delete();
+        await db.expenses.where('platformId').equals(platformId).delete();
+        await db.goals.where('platformId').equals(platformId).delete();
         const fresh = await getUser();
         const nextIds = Array.isArray(fresh?.platforms) ? fresh.platforms.filter((id) => id !== platformId) : [];
         await saveUser({
@@ -1156,7 +1159,7 @@ export async function mountSettings(root, ctx = {}) {
         await store.refresh('user');
         await store.refresh('platforms');
         bus.emit(PLATFORM_CHANGED, { source: 'settings_reset_platform', platformId });
-        showToast({ type: 'info', message: 'Platform reset complete.' });
+        showToast({ type: 'info', message: 'Platform reset complete. All associated data deleted.' });
       },
     });
   });

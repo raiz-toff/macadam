@@ -76,7 +76,10 @@ function isHm(s) {
 function minutesBetween(ymd, startHm, endHm) {
   if (!isYmd(ymd) || !isHm(startHm) || !isHm(endHm)) return null;
   const start = new Date(`${ymd}T${startHm}:00`);
-  const end = new Date(`${ymd}T${endHm}:00`);
+  let end = new Date(`${ymd}T${endHm}:00`);
+  if (end.getTime() < start.getTime()) {
+    end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  }
   const ms = end.getTime() - start.getTime();
   if (!Number.isFinite(ms)) return null;
   const min = Math.round(ms / 60000);
@@ -126,7 +129,7 @@ function safeJsonParse(raw, fallback) {
  * @param {Record<string, unknown>} input
  * @returns {Omit<ShiftRow, 'id'>}
  */
-function normalizeShiftInput(input) {
+export function normalizeShiftInput(input) {
   const dateRaw = typeof input.date === 'string' ? input.date : '';
   const today = new Date();
   const minDate = new Date();
@@ -232,23 +235,39 @@ export async function getShift(id) {
  * @param {string} date YYYY-MM-DD
  * @param {string|null} startTime HH:mm
  * @param {string|null} endTime HH:mm
- * @param {{ excludeId?: number }} [opts]
+ * @param {{ excludeId?: number, platformId?: string }} [opts]
  */
 export async function checkConflict(date, startTime, endTime, opts = {}) {
   if (!isYmd(date) || !isHm(startTime) || !isHm(endTime)) return null;
   const excludeId = typeof opts.excludeId === 'number' ? opts.excludeId : null;
+  const platformId = typeof opts.platformId === 'string' ? opts.platformId.trim().toLowerCase() : null;
+
   const shifts = await db.shifts.where('date').equals(date).toArray();
   const targetStart = new Date(`${date}T${startTime}:00`).getTime();
-  const targetEnd = new Date(`${date}T${endTime}:00`).getTime();
+  let targetEnd = new Date(`${date}T${endTime}:00`).getTime();
+  if (targetEnd < targetStart) {
+    targetEnd += 24 * 60 * 60 * 1000;
+  }
   if (!Number.isFinite(targetStart) || !Number.isFinite(targetEnd)) return null;
+
+  // Skip conflict validation if target shift has 1 minute or less of duration (placeholder/daily total)
+  if (targetEnd - targetStart <= 60000) return null;
 
   for (const s of shifts) {
     if (s.deletedAt != null) continue;
     if (excludeId != null && s.id === excludeId) continue;
+    if (platformId != null && s.platformId != null && s.platformId.toLowerCase() !== platformId) continue;
     if (!isHm(s.startTime) || !isHm(s.endTime)) continue;
     const sStart = new Date(`${date}T${s.startTime}:00`).getTime();
-    const sEnd = new Date(`${date}T${s.endTime}:00`).getTime();
+    let sEnd = new Date(`${date}T${s.endTime}:00`).getTime();
+    if (sEnd < sStart) {
+      sEnd += 24 * 60 * 60 * 1000;
+    }
     if (!Number.isFinite(sStart) || !Number.isFinite(sEnd)) continue;
+
+    // Skip if the existing shift is a placeholder/daily total (1 min or less)
+    if (sEnd - sStart <= 60000) continue;
+
     const overlap = targetStart < sEnd && targetEnd > sStart;
     if (overlap) return s;
   }
@@ -273,6 +292,18 @@ export async function checkHoursWarning(date) {
 }
 
 /**
+ * Save multiple shifts in a single transaction (Bulk Import).
+ * @param {Array<import('./shifts.js').Shift>} shifts
+ */
+export async function saveShiftsBulk(shifts) {
+  if (!shifts || shifts.length === 0) return;
+  return db.transaction('rw', db.shifts, async () => {
+    // bulkPut handles upserting by primary key (id or date+platformId if composite)
+    await db.shifts.bulkPut(shifts);
+  });
+}
+
+/**
  * Insert shift (Feature 33–46 + save action).
  * Emits SHIFT_SAVED with `{ id }`.
  * @param {Record<string, unknown>} shiftData
@@ -280,7 +311,7 @@ export async function checkHoursWarning(date) {
 export async function saveShift(shiftData) {
   const row = normalizeShiftInput(shiftData);
   validateTimeWindow(row.date, row.startTime, row.endTime);
-  const conflict = await checkConflict(row.date, row.startTime, row.endTime);
+  const conflict = await checkConflict(row.date, row.startTime, row.endTime, { platformId: row.platformId });
   if (conflict) throw new Error('shift:conflict');
 
   const id = await db.shifts.add(row);
@@ -336,7 +367,7 @@ export async function updateShift(id, patch) {
   if (patch.provinceId != null) next.provinceId = resolveProvinceId({ provinceId: patch.provinceId });
 
   validateTimeWindow(next.date, next.startTime, next.endTime);
-  const conflict = await checkConflict(next.date, next.startTime, next.endTime, { excludeId: id });
+  const conflict = await checkConflict(next.date, next.startTime, next.endTime, { excludeId: id, platformId: next.platformId });
   if (conflict) throw new Error('shift:conflict');
 
   await db.shifts.put(next);

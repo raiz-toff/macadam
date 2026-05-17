@@ -181,53 +181,7 @@ export async function render(root, ctx) {
           </div>
         </div>
 
-        <!-- NEW: PARTIAL DATA IMPORT -->
-        <div style="margin-top: var(--space-8); border-top: 1px solid var(--color-border); padding-top: var(--space-8);">
-          <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-6);">
-            ${getIcon('file-plus', 20, 'text-brand')}
-            <h2 style="margin: 0; font-size: var(--text-lg); font-weight: 800;">Partial Data Import</h2>
-          </div>
-          
-          <div class="import-grid">
-            
-            <!-- Shift Import -->
-            <div class="card card-raised import-card">
-              <h3>
-                ${getIcon('calendar', 16, 'text-brand')} Import Shifts
-                <a href="#/import-guide" style="margin-left: auto; font-size: 10px; font-weight: 400; color: var(--color-text-secondary); text-decoration: underline;">Guide</a>
-              </h3>
-              <p>Upload a CSV to import multiple shifts at once.</p>
-              <input class="input import-file-input" type="file" accept=".csv" data-action="import-shifts-file" />
-              <div data-slot="shifts-preview" class="import-preview-box" hidden></div>
-              <button class="btn btn-sm btn-primary" data-action="run-shifts-import" disabled style="width: 100%;">${getIcon('plus', 14)} Import Shifts</button>
-            </div>
 
-            <!-- Expense Import -->
-            <div class="card card-raised import-card">
-              <h3>
-                ${getIcon('receipt', 16, 'text-brand')} Import Expenses
-                <a href="#/import-guide" style="margin-left: auto; font-size: 10px; font-weight: 400; color: var(--color-text-secondary); text-decoration: underline;">Guide</a>
-              </h3>
-              <p>Import vehicle costs, platform fees, or equipment.</p>
-              <input class="input import-file-input" type="file" accept=".csv" data-action="import-expenses-file" />
-              <div data-slot="expenses-preview" class="import-preview-box" hidden></div>
-              <button class="btn btn-sm btn-primary" data-action="run-expenses-import" disabled style="width: 100%;">${getIcon('plus', 14)} Import Expenses</button>
-            </div>
-
-            <!-- Income Import -->
-            <div class="card card-raised import-card">
-              <h3>
-                ${getIcon('banknote', 16, 'text-brand')} Import Incomes
-                <a href="#/import-guide" style="margin-left: auto; font-size: 10px; font-weight: 400; color: var(--color-text-secondary); text-decoration: underline;">Guide</a>
-              </h3>
-              <p>Import platform-specific earning statements.</p>
-              <input class="input import-file-input" type="file" accept=".csv" data-action="import-incomes-file" />
-              <div data-slot="incomes-preview" class="import-preview-box" hidden></div>
-              <button class="btn btn-sm btn-primary" data-action="run-incomes-import" disabled style="width: 100%;">${getIcon('plus', 14)} Import Incomes</button>
-            </div>
-
-          </div>
-        </div>
       </section>
     </section>
   `;
@@ -371,74 +325,7 @@ export async function render(root, ctx) {
     }
   });
 
-  // SHIFTS CSV IMPORT
-  let parsedShifts = [];
-  const shiftsFileInput = /** @type {HTMLInputElement|null} */ (container.querySelector('[data-action="import-shifts-file"]'));
-  const shiftsPreviewSlot = /** @type {HTMLElement|null} */ (container.querySelector('[data-slot="shifts-preview"]'));
-  const shiftsImportBtn = /** @type {HTMLButtonElement|null} */ (container.querySelector('[data-action="run-shifts-import"]'));
 
-  shiftsFileInput?.addEventListener('change', async () => {
-    const file = shiftsFileInput.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const res = Papa.parse(text, { header: true, skipEmptyLines: true });
-    if (!res || res.errors?.length) {
-      showToast({ type: 'error', message: 'Could not parse shifts CSV.' });
-      return;
-    }
-    parsedShifts = res.data || [];
-    if (shiftsPreviewSlot) {
-      shiftsPreviewSlot.hidden = false;
-      shiftsPreviewSlot.textContent = JSON.stringify(parsedShifts.slice(0, 3), null, 2);
-    }
-    if (shiftsImportBtn) shiftsImportBtn.disabled = parsedShifts.length === 0;
-  });
-
-  // EXPENSES CSV IMPORT
-  let parsedExpenses = [];
-  const expensesFileInput = /** @type {HTMLInputElement|null} */ (container.querySelector('[data-action="import-expenses-file"]'));
-  const expensesPreviewSlot = /** @type {HTMLElement|null} */ (container.querySelector('[data-slot="expenses-preview"]'));
-  const expensesImportBtn = /** @type {HTMLButtonElement|null} */ (container.querySelector('[data-action="run-expenses-import"]'));
-
-  expensesFileInput?.addEventListener('change', async () => {
-    const file = expensesFileInput.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const res = Papa.parse(text, { header: true, skipEmptyLines: true });
-    if (!res || res.errors?.length) {
-      showToast({ type: 'error', message: 'Could not parse expenses CSV.' });
-      return;
-    }
-    parsedExpenses = res.data || [];
-    if (expensesPreviewSlot) {
-      expensesPreviewSlot.hidden = false;
-      expensesPreviewSlot.textContent = JSON.stringify(parsedExpenses.slice(0, 3), null, 2);
-    }
-    if (expensesImportBtn) expensesImportBtn.disabled = parsedExpenses.length === 0;
-  });
-
-  // INCOMES CSV IMPORT
-  let parsedIncomes = [];
-  const incomesFileInput = /** @type {HTMLInputElement|null} */ (container.querySelector('[data-action="import-incomes-file"]'));
-  const incomesPreviewSlot = /** @type {HTMLElement|null} */ (container.querySelector('[data-slot="incomes-preview"]'));
-  const incomesImportBtn = /** @type {HTMLButtonElement|null} */ (container.querySelector('[data-action="run-incomes-import"]'));
-
-  incomesFileInput?.addEventListener('change', async () => {
-    const file = incomesFileInput.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const res = Papa.parse(text, { header: true, skipEmptyLines: true });
-    if (!res || res.errors?.length) {
-      showToast({ type: 'error', message: 'Could not parse incomes CSV.' });
-      return;
-    }
-    parsedIncomes = res.data || [];
-    if (incomesPreviewSlot) {
-      incomesPreviewSlot.hidden = false;
-      incomesPreviewSlot.textContent = JSON.stringify(parsedIncomes.slice(0, 3), null, 2);
-    }
-    if (incomesImportBtn) incomesImportBtn.disabled = parsedIncomes.length === 0;
-  });
 
   container.addEventListener('click', async (e) => {
     const target = e.target instanceof HTMLElement ? e.target.closest('[data-action]') : null;
@@ -489,84 +376,7 @@ export async function render(root, ctx) {
       exportYearInReviewPng(canvas.toDataURL('image/png'), new Date(currentReport.endDate).getFullYear());
       showToast({ type: 'success', message: 'Year in review exported.', duration: 1800 });
     }
-    if (action === 'run-shifts-import') {
-      if (!parsedShifts.length) return;
-      let added = 0;
-      for (const r of parsedShifts) {
-        const row = /** @type {Record<string, any>} */ (r || {});
-        const shiftData = {
-          platformId: row.platformId || row.platform || 'other',
-          date: row.date,
-          startTime: row.startTime,
-          endTime: row.endTime,
-          gross: row.gross || row.earnings || 0,
-          tips: row.tips || 0,
-          bonus: row.bonus || 0,
-          orders: row.orders || row.deliveries || 0,
-          distanceKm: row.distanceKm || row.distance || 0,
-          deadMilesKm: row.deadMilesKm || 0,
-          notes: row.notes || '',
-        };
-        await saveShift(shiftData);
-        added += 1;
-      }
-      showToast({ type: 'success', message: `Imported ${added} shifts.` });
-      parsedShifts = [];
-      if (shiftsPreviewSlot) shiftsPreviewSlot.hidden = true;
-      if (shiftsImportBtn) shiftsImportBtn.disabled = true;
-      if (shiftsFileInput) shiftsFileInput.value = '';
-      await refreshReport();
-    }
-    if (action === 'run-expenses-import') {
-      if (!parsedExpenses.length) return;
-      let added = 0;
-      for (const r of parsedExpenses) {
-        const row = /** @type {Record<string, any>} */ (r || {});
-        const expenseData = {
-          category: row.category || 'other',
-          amount: row.amount || 0,
-          date: row.date,
-          platformId: row.platformId || row.platform || null,
-          notes: row.notes || '',
-          businessPct: row.businessPct || 100,
-          customCategory: row.customCategory || '',
-          hstPaid: row.hstPaid || 0,
-          isRecurring: row.isRecurring === 'true' || row.isRecurring === true,
-        };
-        await saveExpense(expenseData);
-        added += 1;
-      }
-      showToast({ type: 'success', message: `Imported ${added} expenses.` });
-      parsedExpenses = [];
-      if (expensesPreviewSlot) expensesPreviewSlot.hidden = true;
-      if (expensesImportBtn) expensesImportBtn.disabled = true;
-      if (expensesFileInput) expensesFileInput.value = '';
-      await refreshReport();
-    }
-    if (action === 'run-incomes-import') {
-      if (!parsedIncomes.length) return;
-      let added = 0;
-      for (const r of parsedIncomes) {
-        const row = /** @type {Record<string, any>} */ (r || {});
-        // Incomes are mapped to shifts as well
-        const shiftData = {
-          platformId: row.platformId || row.platform || 'other',
-          date: row.date,
-          gross: row.gross || row.earnings || row.amount || 0,
-          tips: row.tips || 0,
-          bonus: row.bonus || 0,
-          orders: row.orders || row.deliveries || 0,
-          notes: row.notes || 'Imported via Income Statement',
-        };
-        await saveShift(shiftData);
-        added += 1;
-      }
-      showToast({ type: 'success', message: `Imported ${added} income records.` });
-      parsedIncomes = [];
-      if (incomesPreviewSlot) incomesPreviewSlot.hidden = true;
-      if (incomesImportBtn) incomesImportBtn.disabled = true;
-      if (incomesFileInput) incomesFileInput.value = '';
-      await refreshReport();
-    }
   });
 }
+
+

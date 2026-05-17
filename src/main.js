@@ -41,6 +41,8 @@ import { initAdaptiveTheme } from './core/adaptive-theme.js';
 import { initDriveAuth } from './modules/backup/drive-auth.js';
 import { initBackupTriggers } from './modules/backup/backup-triggers.js';
 import { initChangelog, APP_VERSION } from './modules/changelog/changelog.js';
+import './libs/flatpickr.min.js';
+import './libs/clocklet.min.js';
 
 /** @type {ServiceWorkerRegistration | null} */
 let commaSwRegistration = null;

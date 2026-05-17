@@ -36,6 +36,17 @@ export async function render(root) {
 
       <div style="display: flex; flex-direction: column; gap: var(--space-12);">
         
+        <!-- Guidelines Banner (F150) -->
+        <div class="card card-raised" style="background: color-mix(in srgb, var(--color-brand) 6%, var(--color-surface)); border-left: 4px solid var(--color-brand); padding: var(--space-4); display: flex; align-items: flex-start; gap: var(--space-4); line-height: 1.6;">
+          <div style="color: var(--color-brand); margin-top: var(--space-1);">
+            ${getIcon('info', 22)}
+          </div>
+          <div style="font-size: var(--text-sm); color: var(--color-text);">
+            <strong style="color: var(--color-brand); font-weight: 800; font-size: var(--text-base); display: block; margin-bottom: var(--space-1);">Import Guidelines & Limits</strong>
+            To guarantee peak performance and prevent transaction overload in your browser's database vault, COMMA enforces a strict safety limit of <strong>150 data rows per CSV import</strong>. If your ledger or platform statement contains more than 150 rows, please split it into separate, smaller CSV files before uploading.
+          </div>
+        </div>
+
         <!-- Shifts Section -->
         <article class="card card-raised">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6);">

@@ -3,11 +3,12 @@ import { bus, EXPENSE_SAVED, SHIFT_SAVED, XP_EARNED } from '../../core/events.js
 import { store } from '../../core/store.js';
 import { calcEVCost, calcFuelCost } from '../../utils/calculations.js';
 import { t } from '../../utils/strings.js';
-import { renderEmptyState, showModal, showToast } from '../../ui/components.js';
+import { renderEmptyState, showModal, showToast, renderSkeleton } from '../../ui/components.js';
 import { destroyChart, renderBarChart, renderDonutChart } from '../../ui/charts.js';
 import { getIcon } from '../../ui/icons.js';
 import { ExpenseCategoryRegistry } from '../../registry/expense-categories/index.js';
 import { renderExpenseForm } from './expense-form.js';
+import { getDemoAnalyticsAnchorDate } from '../demo/sample-year.js';
 
 const APP_STATE_CUSTOM_CATEGORIES_KEY = 'expense_custom_categories';
 const AUTO_EXPENSE_SOURCES = new Set(['auto_fuel', 'auto_ev']);
@@ -123,7 +124,7 @@ function resolveExpenseProvinceId(input) {
   return 'ON';
 }
 
-function normalizeExpenseInput(input) {
+export function normalizeExpenseInput(input) {
   const now = nowIso();
   const date = typeof input.date === 'string' && input.date ? input.date : ymd(new Date());
   const category = String(input.category || 'other');
@@ -192,6 +193,17 @@ function categoryLabel(row) {
   const val = t(key);
   if (val !== key) return val;
   return id || t('expenses.uncategorized');
+}
+
+/**
+ * Save multiple expenses in a single transaction (Bulk Import).
+ * @param {Array<import('./expenses.js').Expense>} expenses
+ */
+export async function saveExpensesBulk(expenses) {
+  if (!expenses || expenses.length === 0) return;
+  return db.transaction('rw', db.expenses, async () => {
+    await db.expenses.bulkPut(expenses);
+  });
 }
 
 /**
@@ -712,42 +724,78 @@ export async function renderExpensesView(root, ctx = {}) {
             </div>
           </div>
 
-          <div class="expenses-records card">
-            <div class="expenses-records-toolbar">
-              <div class="expenses-records-toolbar-left">
-                <span class="expenses-records-icon" aria-hidden="true">${getIcon('layout-grid', 20)}</span>
-                <h2 class="expenses-records-title">${esc(t('expenses.recordsTitle'))}</h2>
+          <div class="financial-filter-container card" style="margin-bottom: var(--space-4); background: var(--bg-card, #27272a); border: 1px solid var(--border-color, #3f3f46); border-radius: var(--radius-lg, 12px); overflow: hidden; padding: 0;">
+            <button type="button" class="financial-dash-filter-summary" data-expenses-toggle-shortcuts aria-expanded="true" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: var(--space-3) var(--space-4); background: transparent; border: none; cursor: pointer; color: inherit; text-align: left;">
+              <span class="financial-dash-summary-left" style="display: flex; align-items: center; gap: var(--space-2); font-weight: 600;">
+                <span class="financial-dash-summary-icon" style="color: var(--color-primary, #10b981);">${getIcon('calendar', 18)}</span>
+                <span class="financial-dash-summary-text" data-expenses-summary>${esc(t('common.all'))}</span>
+              </span>
+              <span class="financial-dash-summary-right" style="display: flex; align-items: center; gap: var(--space-2);">
+                <span class="financial-dash-summary-preset badge badge--secondary" data-expenses-summary-preset style="text-transform: capitalize;">All</span>
+                <span class="financial-dash-summary-chevron" data-expenses-summary-chevron style="display: flex; align-items: center; transition: transform 0.2s ease;">${getIcon('chevron-up', 18)}</span>
+              </span>
+            </button>
+
+            <div class="financial-filter-body" data-expenses-shortcut-bar style="display: block; border-top: 1px solid var(--border-color, #3f3f46); padding: var(--space-3) var(--space-4); background: var(--bg-surface, #18181b);">
+              <div class="filter-shortcut-bar" style="display: flex; gap: var(--space-3); align-items: center; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;">
+                <div class="shifts-presets-group">
+                  <button type="button" class="btn expenses-preset-btn" data-expenses-preset="day">${esc(t('views.dashboard.financial.presetDay'))}</button>
+                  <button type="button" class="btn expenses-preset-btn" data-expenses-preset="week">${esc(t('views.dashboard.financial.presetWeek'))}</button>
+                  <button type="button" class="btn expenses-preset-btn" data-expenses-preset="month">${esc(t('views.dashboard.financial.presetMonth'))}</button>
+                  <button type="button" class="btn expenses-preset-btn" data-expenses-preset="q1">${esc(t('views.dashboard.financial.presetQ1'))}</button>
+                  <button type="button" class="btn expenses-preset-btn" data-expenses-preset="q2">${esc(t('views.dashboard.financial.presetQ2'))}</button>
+                  <button type="button" class="btn expenses-preset-btn" data-expenses-preset="q3">${esc(t('views.dashboard.financial.presetQ3'))}</button>
+                  <button type="button" class="btn expenses-preset-btn" data-expenses-preset="q4">${esc(t('views.dashboard.financial.presetQ4'))}</button>
+                  <button type="button" class="btn expenses-preset-btn" data-expenses-preset="year">${esc(t('views.dashboard.financial.presetYear'))}</button>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" data-expenses-toggle-filter style="white-space:nowrap;">Custom Filter <span data-expenses-custom-chevron>${getIcon('chevron-down', 14)}</span></button>
               </div>
-              <div class="expenses-records-toolbar-right">
-                <input class="input expenses-input-compact" type="date" name="startDate" aria-label="${esc(t('expenses.filterStartDate'))}" />
-                <input class="input expenses-input-compact" type="date" name="endDate" aria-label="${esc(t('expenses.filterEndDate'))}" />
-                <select class="select expenses-select-compact" name="category" aria-label="${esc(t('expenses.category'))}">
-                  <option value="">${esc(t('common.all'))}</option>${catOptions}
-                </select>
-                <select class="select expenses-select-compact" name="platformId" aria-label="${esc(t('expenses.platformAssignment'))}">
-                  <option value="">${esc(t('common.all'))}</option>${platformOptions}
-                </select>
-                <input class="input expenses-search" type="search" name="search" placeholder="${esc(t('expenses.searchPlaceholder'))}" autocomplete="off" />
-                <label class="expenses-page-size">
-                  <span class="sr-only">${esc(t('expenses.rowsPerPage'))}</span>
-                  <select class="select expenses-select-compact" name="pageSize" aria-label="${esc(t('expenses.rowsPerPage'))}">
-                    <option value="10">${esc(t('expenses.rowsOption').replace('{n}', '10'))}</option>
-                    <option value="15" selected>${esc(t('expenses.rowsOption').replace('{n}', '15'))}</option>
-                    <option value="25">${esc(t('expenses.rowsOption').replace('{n}', '25'))}</option>
-                    <option value="50">${esc(t('expenses.rowsOption').replace('{n}', '50'))}</option>
+
+              <div class="expenses-filter-content" data-expenses-filter style="display: none; margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px dashed var(--border-color, #3f3f46);">
+                <div style="display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; margin-bottom: var(--space-3);">
+                  <div class="expenses-filter-dates" style="display: flex; gap: var(--space-2); align-items: center;">
+                    <div class="input-with-icon" style="position: relative;">
+                      <input type="text" class="input expenses-filter-date-start" id="expenses-filter-start" placeholder="Start date" readonly style="width: 130px; padding-left: 32px; cursor: pointer;" />
+                      <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--color-primary, #10b981); pointer-events: none;">${getIcon('calendar', 16)}</span>
+                    </div>
+                    <span style="color: var(--color-text-muted, #a1a1aa); font-weight: 600;">&ndash;</span>
+                    <div class="input-with-icon" style="position: relative;">
+                      <input type="text" class="input expenses-filter-date-end" id="expenses-filter-end" placeholder="End date" readonly style="width: 130px; padding-left: 32px; cursor: pointer;" />
+                      <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--color-primary, #10b981); pointer-events: none;">${getIcon('calendar', 16)}</span>
+                    </div>
+                  </div>
+                  <select class="select expenses-select-compact" name="category" aria-label="${esc(t('expenses.category'))}">
+                    <option value="">${esc(t('common.all'))}</option>${catOptions}
                   </select>
-                </label>
-                <button type="button" class="btn btn-secondary btn-sm" data-action="reset-filters">${esc(t('expenses.resetFilters'))}</button>
+                  <select class="select expenses-select-compact" name="platformId" aria-label="${esc(t('expenses.platformAssignment'))}">
+                    <option value="">${esc(t('common.all'))}</option>${platformOptions}
+                  </select>
+                  <input class="input expenses-search" type="search" name="search" placeholder="${esc(t('expenses.searchPlaceholder'))}" autocomplete="off" />
+                  <label class="expenses-page-size" style="margin-left: auto;">
+                    <span class="sr-only">${esc(t('expenses.rowsPerPage'))}</span>
+                    <select class="select expenses-select-compact" name="pageSize" aria-label="${esc(t('expenses.rowsPerPage'))}">
+                      <option value="10">${esc(t('expenses.rowsOption').replace('{n}', '10'))}</option>
+                      <option value="15" selected>${esc(t('expenses.rowsOption').replace('{n}', '15'))}</option>
+                      <option value="25">${esc(t('expenses.rowsOption').replace('{n}', '25'))}</option>
+                      <option value="50">${esc(t('expenses.rowsOption').replace('{n}', '50'))}</option>
+                    </select>
+                  </label>
+                  <button type="button" class="btn btn-secondary btn-sm" data-action="reset-filters" style="margin-left: var(--space-2);">${esc(t('expenses.resetFilters'))}</button>
+                  <button type="button" class="btn btn-primary btn-sm" data-expenses-apply style="margin-left: var(--space-2); height: 36px;">${getIcon('filter', 16)} ${esc(t('views.dashboard.financial.apply'))}</button>
+                </div>
+                <details class="expenses-more-filters">
+                  <summary>${esc(t('expenses.moreFilters'))}</summary>
+                  <div class="expenses-more-filters-grid">
+                    <label class="field"><span class="field-label">${esc(t('expenses.minAmount'))}</span><input class="input" type="number" step="0.01" min="0" name="minAmount" /></label>
+                    <label class="field"><span class="field-label">${esc(t('expenses.maxAmount'))}</span><input class="input" type="number" step="0.01" min="0" name="maxAmount" /></label>
+                    <label class="toggle"><input type="checkbox" name="receiptOnly" /><span class="toggle-track"><span class="toggle-thumb"></span></span><span>${esc(t('expenses.receiptOnly'))}</span></label>
+                  </div>
+                </details>
               </div>
             </div>
-            <details class="expenses-more-filters">
-              <summary>${esc(t('expenses.moreFilters'))}</summary>
-              <div class="expenses-more-filters-grid">
-                <label class="field"><span class="field-label">${esc(t('expenses.minAmount'))}</span><input class="input" type="number" step="0.01" min="0" name="minAmount" /></label>
-                <label class="field"><span class="field-label">${esc(t('expenses.maxAmount'))}</span><input class="input" type="number" step="0.01" min="0" name="maxAmount" /></label>
-                <label class="toggle"><input type="checkbox" name="receiptOnly" /><span class="toggle-track"><span class="toggle-thumb"></span></span><span>${esc(t('expenses.receiptOnly'))}</span></label>
-              </div>
-            </details>
+          </div>
+
+          <div class="expenses-records card">
             <div class="expenses-list-wrap">
               <table class="expenses-table expenses-table--records">
                 <thead>
@@ -761,7 +809,11 @@ export async function renderExpensesView(root, ctx = {}) {
                     <th scope="col" class="expenses-th-actions">${esc(t('expenses.columnActions'))}</th>
                   </tr>
                 </thead>
-                <tbody data-slot="rows"></tbody>
+                <tbody data-slot="rows">
+                  <tr><td colspan="7">${renderSkeleton('list-item')}</td></tr>
+                  <tr><td colspan="7">${renderSkeleton('list-item')}</td></tr>
+                  <tr><td colspan="7">${renderSkeleton('list-item')}</td></tr>
+                </tbody>
               </table>
             </div>
             <footer class="expenses-records-footer">
@@ -825,9 +877,13 @@ export async function renderExpensesView(root, ctx = {}) {
   let sortState = { key: 'date', dir: 'desc' };
   let page = 1;
 
+  let currentStartDate = '';
+  let currentEndDate = '';
+  let currentPreset = 'all';
+
   const controls = {
-    startDate: root.querySelector('[name="startDate"]'),
-    endDate: root.querySelector('[name="endDate"]'),
+    startInput: /** @type {HTMLInputElement | null} */ (root.querySelector('#expenses-filter-start')),
+    endInput: /** @type {HTMLInputElement | null} */ (root.querySelector('#expenses-filter-end')),
     category: root.querySelector('[name="category"]'),
     platformId: root.querySelector('[name="platformId"]'),
     minAmount: root.querySelector('[name="minAmount"]'),
@@ -837,6 +893,50 @@ export async function renderExpensesView(root, ctx = {}) {
     pageSize: root.querySelector('[name="pageSize"]'),
   };
 
+  // Initialize flatpickr
+  if (controls.startInput) {
+    controls.startInput.value = currentStartDate;
+    if (window.flatpickr) {
+      if (!controls.startInput._fp) {
+        controls.startInput._fp = window.flatpickr(controls.startInput, {
+          dateFormat: 'Y-m-d',
+          defaultDate: currentStartDate || new Date(),
+          onChange: function(selectedDates) {
+            if (selectedDates.length === 1) {
+              currentStartDate = window.flatpickr.formatDate(selectedDates[0], "Y-m-d");
+              currentPreset = 'custom';
+              page = 1;
+              void refreshAllPanels();
+            }
+          }
+        });
+      } else {
+        controls.startInput._fp.setDate(currentStartDate, false);
+      }
+    }
+  }
+  if (controls.endInput) {
+    controls.endInput.value = currentEndDate;
+    if (window.flatpickr) {
+      if (!controls.endInput._fp) {
+        controls.endInput._fp = window.flatpickr(controls.endInput, {
+          dateFormat: 'Y-m-d',
+          defaultDate: currentEndDate || new Date(),
+          onChange: function(selectedDates) {
+            if (selectedDates.length === 1) {
+              currentEndDate = window.flatpickr.formatDate(selectedDates[0], "Y-m-d");
+              currentPreset = 'custom';
+              page = 1;
+              void refreshAllPanels();
+            }
+          }
+        });
+      } else {
+        controls.endInput._fp.setDate(currentEndDate, false);
+      }
+    }
+  }
+
   function listFilterPayload() {
     const globalPid = String(store.get('activePlatformId') ?? 'all');
     const localPid = controls.platformId?.value || '';
@@ -845,8 +945,8 @@ export async function renderExpensesView(root, ctx = {}) {
     const platformId = localPid || (globalPid === 'all' ? '' : globalPid);
 
     return {
-      startDate: controls.startDate?.value || '',
-      endDate: controls.endDate?.value || '',
+      startDate: currentStartDate,
+      endDate: currentEndDate,
       category: controls.category?.value || '',
       platformId,
       minAmount: controls.minAmount?.value || null,
@@ -1073,7 +1173,47 @@ export async function renderExpensesView(root, ctx = {}) {
       .join('');
   }
 
+  function updateExpensesFilterUI() {
+    const storedFilter = localStorage.getItem('comma_expenses_toolbar_collapsed');
+    const filterCollapsed = storedFilter === null ? true : storedFilter === 'true';
+    const storedShortcuts = localStorage.getItem('comma_expenses_shortcuts_collapsed');
+    const shortcutsCollapsed = storedShortcuts === null ? true : storedShortcuts === 'true';
+
+    const shortcutBarEl = root.querySelector('[data-expenses-shortcut-bar]');
+    if (shortcutBarEl) shortcutBarEl.style.display = shortcutsCollapsed ? 'none' : 'block';
+
+    const filterEl = root.querySelector('[data-expenses-filter]');
+    if (filterEl) filterEl.style.display = filterCollapsed || shortcutsCollapsed ? 'none' : 'block';
+
+    const summaryChevron = root.querySelector('[data-expenses-summary-chevron]');
+    if (summaryChevron) summaryChevron.innerHTML = getIcon(shortcutsCollapsed ? 'chevron-down' : 'chevron-up', 18);
+
+    const customChevron = root.querySelector('[data-expenses-custom-chevron]');
+    if (customChevron) customChevron.innerHTML = getIcon(filterCollapsed ? 'chevron-down' : 'chevron-up', 14);
+
+    const customBtn = root.querySelector('[data-expenses-toggle-filter]');
+    if (customBtn) {
+      customBtn.className = `btn ${filterCollapsed ? 'btn-ghost' : 'btn-primary'} btn-sm`;
+    }
+
+    const summaryEl = root.querySelector('[data-expenses-summary]');
+    if (summaryEl) {
+      summaryEl.textContent = currentStartDate && currentEndDate ? `${currentStartDate} – ${currentEndDate}` : t('common.all');
+    }
+
+    const presetSummary = root.querySelector('[data-expenses-summary-preset]');
+    if (presetSummary) {
+      presetSummary.textContent = currentPreset === 'custom' ? 'Custom' : currentPreset.charAt(0).toUpperCase() + currentPreset.slice(1);
+    }
+
+    root.querySelectorAll('[data-expenses-preset]').forEach((btn) => {
+      const p = btn.getAttribute('data-expenses-preset');
+      btn.className = `btn expenses-preset-btn ${p === currentPreset ? 'is-active' : ''}`;
+    });
+  }
+
   async function refreshAllPanels() {
+    updateExpensesFilterUI();
     await refreshRows();
     await refreshCategoryRows();
     await refreshRecurringRows();
@@ -1139,6 +1279,59 @@ export async function renderExpensesView(root, ctx = {}) {
         return;
       }
 
+      const shortcutsToggle = e.target instanceof HTMLElement ? e.target.closest('[data-expenses-toggle-shortcuts]') : null;
+      if (shortcutsToggle) {
+        const stored = localStorage.getItem('comma_expenses_shortcuts_collapsed');
+        const collapsed = stored === null ? true : stored === 'true';
+        localStorage.setItem('comma_expenses_shortcuts_collapsed', String(!collapsed));
+        if (!collapsed) {
+          localStorage.setItem('comma_expenses_toolbar_collapsed', 'true');
+        }
+        updateExpensesFilterUI();
+        return;
+      }
+
+      const filterToggle = e.target instanceof HTMLElement ? e.target.closest('[data-expenses-toggle-filter]') : null;
+      if (filterToggle) {
+        const stored = localStorage.getItem('comma_expenses_toolbar_collapsed');
+        const collapsed = stored === null ? true : stored === 'true';
+        localStorage.setItem('comma_expenses_toolbar_collapsed', String(!collapsed));
+        updateExpensesFilterUI();
+        return;
+      }
+
+      const applyBtn = e.target instanceof HTMLElement ? e.target.closest('[data-expenses-apply]') : null;
+      if (applyBtn) {
+        localStorage.setItem('comma_expenses_toolbar_collapsed', 'true');
+        updateExpensesFilterUI();
+        return;
+      }
+
+      const presetBtn = e.target instanceof HTMLElement ? e.target.closest('[data-expenses-preset]') : null;
+      if (presetBtn) {
+        const preset = presetBtn.getAttribute('data-expenses-preset');
+        if (preset) {
+          currentPreset = preset;
+          const u = store.get('user');
+          const wsd = Number(u?.locale?.weekStartDay ?? 0);
+          import('../../utils/date-range-presets.js').then((m) => {
+            const anchorDate = store.get('demoMode') ? getDemoAnalyticsAnchorDate() : new Date();
+            const r = m.defaultRangeForPreset(preset, anchorDate, wsd);
+            currentStartDate = r.start;
+            currentEndDate = r.end;
+            if (controls.startInput && controls.startInput._fp) {
+              controls.startInput._fp.setDate(r.start, false);
+            }
+            if (controls.endInput && controls.endInput._fp) {
+              controls.endInput._fp.setDate(r.end, false);
+            }
+            page = 1;
+            void refreshAllPanels();
+          });
+        }
+        return;
+      }
+
       const target = e.target instanceof HTMLElement ? e.target.closest('[data-action]') : null;
       if (!target || !root.contains(target)) return;
       const action = target.getAttribute('data-action');
@@ -1154,8 +1347,9 @@ export async function renderExpensesView(root, ctx = {}) {
         return;
       }
       if (action === 'reset-filters') {
-        if (controls.startDate) controls.startDate.value = '';
-        if (controls.endDate) controls.endDate.value = '';
+        currentStartDate = '';
+        currentEndDate = '';
+        if (controls.rangeInput && controls.rangeInput._fp) controls.rangeInput._fp.clear();
         if (controls.category) controls.category.value = '';
         if (controls.platformId) controls.platformId.value = '';
         if (controls.minAmount) controls.minAmount.value = '';
