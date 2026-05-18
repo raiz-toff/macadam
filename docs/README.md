@@ -11,8 +11,6 @@ All project specification and architecture docs live in this folder.
 | [`adding-a-province.md`](adding-a-province.md) | How to add a province / territory (registry + wiring). |
 | [`adding-a-platform.md`](adding-a-platform.md) | How to add a new platform definition. |
 | [`market_resolution.md`](market_resolution.md) | Country-first / province-override resolution, presets, identity, money boundaries. |
+| [`gps-tracking.md`](gps-tracking.md) | GPS Tracking, noise filters, and Dead/Active Mileage splits system. |
 
 Source code `@see` comments use paths like `docs/Registry_arch.md` relative to the **repository root**.
-
-
-
